@@ -10,8 +10,8 @@ Usuário
 
 UsuariosService
     crud
-    autenticar(username, senha)
-    autencicar(tokenPorEmail) // alteração futura
+    autenticar(username, senha): token
+    autencicar(tokenPorEmail): token // alteração futura
 
 Evento
     id
@@ -42,6 +42,15 @@ Atividade (Programação)
     regras_inscricao: string | List<Regra>
     vagas
     inscrever(usuario)
+        inscricao = Inscricao()
+            inscricao.status = 'pendente'
+        checaVagas()
+        cobraPagamento()
+    fila: FilaCompra(vagas)
+    checkin(usuario)
+    emitirCertificados()
+        para cada participante
+            emite "CertificadoCriado"
 
 Regra
     aplicar()
@@ -52,12 +61,15 @@ RegraCapacidade
 RegraIdadeMinima: Regra
     idade
 
+CertificadosService
+    ouve "CertificadoCriado"  
+
 RegraTicketEspecial: Regra
 
 RegraPagamento: Regra
     preco (0 == gratis)
     aplicar()
-        dispara evento RequerPagamento preco
+        emite "RequerPagamento" preco
 
 Inscricao
     id
@@ -67,19 +79,40 @@ Inscricao
     confirmar([comprovantePagamento]) // RN02
     cancelar(motivo) // RN02, RN03
 
-InscricoesCatalogo
+InscricoesAppService
     inscrever(inscricao) // RN01 - reserva vaga, entra em fila de espera.
         atividade.inscrever()
     consultar()
+    confirmar()
+        ouve "PagamentoConfirmado"
+        inscricao.confirmar()
     cancelar()
+        ouve "PagamentoExpirado"
+        ouve "PagamentoRecusado"
+        inscricao.cancelar()
+
 
 ListaEspera | FilaComprar
     entrar(id_atividade, id_usuario): senhaNumeroNaFila
     proximo(): id_usuario
 
+Pagamento
+    id
+    status
+    processar()
+        emite "PagamentoConfirmado" | "PagamentoCancelado"
 
-AtividadesService
+PagamentoAppService
+    cobrar()
+        p = Pagamento()
+        repo.salvar(p)
+        publicar(p.eventos)
 
+NotificacoesService
+    notificar(inscricao, mensagem)
+
+Checkin
+    registrarPresenca()
 
 InscricoesAppService
     confirmar(inscricao[, comprovantePagamentoAtividades])
@@ -108,12 +141,22 @@ PagamentosService
 
 
 NotificacoesService
-    escuta:
+    ouve:
         inscricaoConfirmada
         inscricaoCancelada
     notificarInscricao(id_inscricao, status) // status = confirmada | cancelada | vaga // RN04, RN05
 
-/*
-escuta: eventoTerminou(id_evento, presentes)
-*/
+
 CertificadosService
+    ouve "CertificadoCriado"
+        repo.inserir(c)
+    /* só a inscrição do usuário */
+    get(inscricao): Certificado
+
+/* Só para organizadores */
+Relatorio
+    atividades()
+        inscricoes
+        pagamentos
+        ocupação
+        lista de presença
