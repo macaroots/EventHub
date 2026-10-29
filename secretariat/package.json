@@ -1,0 +1,16 @@
+{
+  "name": "@event-hub/secretariat",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./*": "./src/*"
+  },
+  "scripts": {
+    "start": "node src/main.js",
+    "dev": "node --watch --env-file=.env src/main.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "express": "^5.3.0"
+  }
+}

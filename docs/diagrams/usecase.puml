@@ -1,0 +1,88 @@
+@startuml EventHub
+left to right direction
+actor Guest as g
+actor Participant as p
+actor Organizer as o
+actor Admin as a
+actor "Pagamento Externo" as pagamentoExterno
+
+package Identidade {
+  usecase "Cadastrar-se" as RF01UC1
+  usecase "Autenticar" as RF01UC2
+  usecase "Gerenciar usuários\n(Participant, Organizers, Admin)" as RF01UC3
+  usecase "Diferenciar permissões?" as RF01UC4
+  
+}
+package Secretaria {
+  usecase "Gerenciar eventos" as RF02UC1
+  usecase "Publicar evento" as RF02UC2
+  usecase "Cancelar evento" as RF02UC3
+  usecase "Definir organizacao" as RF02UC4
+  usecase "Gerenciar atividades" as RF03UC1
+  usecase RF11UC1 as "Relatórios
+  --
+  Disponibilizar indicadores de inscricoes, pagamentos, ocupacao e comparecimento para organizadores.
+"
+  
+}
+package Publico {
+  usecase "Listar eventos (RF04)" as RF04UC1
+  usecase "Consultar eventos (RF04)" as RF04UC2
+  usecase "Ver evento\n(programação, vagas e detalhes das atividades) (RF04)" as RF04UC3
+}
+package Credenciamento {
+  usecase "Solicitar inscrição (RF05)" as RF05UC1
+  usecase "Entrar na fila de inscrição (RF06)" as RF06UC1
+  usecase "Consultar inscrição (RF05)" as RF05UC2
+  usecase "Cancelar inscrição (RF05)" as RF05UC3
+}
+package Pagamento {
+  usecase "Iniciar pagamento (RF07)" as RF07UC1
+  usecase "Confirmar pagamento (RF07)" as RF07UC2
+}
+package Notificacoes {
+  usecase RF08UC1 as "Comunicar inscrição
+  --
+  (confirmacao, cancelamento, pagamento, alteracoes)
+  -- 
+  Escuta o pagamento e alteracoes nos eventos
+  "
+}
+package Checkin{
+  usecase RF09UC1 as "Registrar presença de participantes inscritos e evitar registros duplicados."
+}
+
+package Certificado {
+  usecase RF10UC1 as "Emitir certificado"
+}
+
+a --> RF01UC3
+a --> RF01UC4
+a --> RF11UC1
+
+g --> RF04UC1
+g --> RF04UC2
+g --> RF04UC3
+
+o --> RF01UC1
+o --> RF02UC1
+o --> RF02UC2
+o --> RF02UC3
+o --> RF02UC4
+o --> RF03UC1
+o --> RF11UC1
+
+p --> RF01UC1
+p --> RF05UC1
+p --> RF05UC2
+p --> RF05UC3
+p --> RF09UC1
+p --> RF10UC1
+
+RF05UC1 --> RF06UC1
+RF05UC1 --> RF07UC1
+RF05UC1 --> RF08UC1
+pagamentoExterno --> RF07UC2
+
+
+@enduml

@@ -1,0 +1,11 @@
+{
+  "name": "@event-hub/shared",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./*": "./*"
+  },
+  "dependencies": {
+    "amqplib": "^2.2.0"
+  }
+}

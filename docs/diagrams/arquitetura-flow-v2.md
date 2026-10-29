@@ -1,6 +1,8 @@
-
-```mermaid
-flowchart LR
+---
+config:
+  layout: dagre
+---
+flowchart RL
     RF01[RF01: Usuários e perfis]
     RF02[RF02: Eventos]
     RF03[RF03: Programação]
@@ -12,42 +14,39 @@ flowchart LR
     RF09[RF09: Check-in]
     RF10[RF10: Certificados]
     RF11[RF11: Relatórios]
-    subgraph Microserviço 1
+    subgraph Identidade
         RF01
     end
-  subgraph Gerência
-    subgraph Gerência - escrita
-        RF01
+    subgraph Eventos
         RF02
         RF03
-    end
-    subgraph Gerência - leitura
         RF11
     end
-  end
-  subgraph Cliente
-    subgraph Cliente - leitura
+    subgraph Público
         RF04
-        RF10
     end
-    subgraph Cliente - escrita - Eventos
-        direction RL
+    subgraph Credenciamento 
+        RF10
         RF05
-        RF06
         RF09
+    end
+    subgraph Bilheteria
+        RF06
     end
     subgraph Notificações
         RF08
     end
-  end
-  subgraph Pagamentos
-    RF07
-  end
-  RF04 --> RF02 &  RF03
-  RF05 --> RF01 &  RF02
-  RF05 --> RF06
-  RF05 --> RF07
-  RF05 --> RF08
-  RF09 --> RF05
-  RF10 --> RF09
-```
+    subgraph Caixa
+      RF07
+    end
+    RF02 --> RF01
+    RF04 --> RF02 &  RF03
+    RF05 --> RF01 &  RF03
+    RF06 o--o RF05
+    RF06 --> RF07
+    RF05 --> RF08
+    RF09 --> RF05
+    RF09 --> RF01
+    RF10 --> RF01
+    RF10 --> RF09
+
