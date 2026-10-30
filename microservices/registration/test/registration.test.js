@@ -7,6 +7,7 @@ test("should register", async () => {
   const activity = new Activity(1, undefined, 1)
   const registration = new Registration(user, activity);
   activity.register(registration);
+  // TODO const registration = activity.register(user);
 
   assert.equal(activity.getOccupation(), 1);
   assert.equal(activity.getConfirmedOccupation(), 1);

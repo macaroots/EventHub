@@ -1,4 +1,4 @@
-import { DuplicateError } from "../../../shared/domain/errors.js";
+import { DuplicateError } from "../../../../shared/domain/errors.js";
 import { Event } from "../domain/event.js";
 
 export class EventAppService {

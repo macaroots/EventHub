@@ -1,4 +1,4 @@
-import { BlankError } from "../../../shared/domain/errors.js"
+import { BlankError } from "../../../../shared/domain/errors.js"
 
 export class Event {
     id
