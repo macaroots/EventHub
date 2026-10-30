@@ -19,7 +19,7 @@ docker compose down            # -v para apagar o banco do secretariat
 | RabbitMQ UI  | http://localhost:15673 (guest/guest) |
 
 - Cada serviço tem seu próprio `<serviço>/Dockerfile` (permite linguagens diferentes no futuro). O build context é `microservices/` para incluir `shared/`, mantendo os imports relativos (`../../shared/...`).
-- Dentro dos containers todos escutam na 3000; `RABBITMQ_URL=amqp://rabbitmq`.
+- O compose define a porta de cada serviço `PORT`; e o endereço do broker `RABBITMQ_URL=amqp://rabbitmq`.
 - AMQP (5672) não é exposto no host, para não conflitar com outro RabbitMQ local. Para rodar um serviço fora do Docker contra este broker, adicione `"5672:5672"` em `ports` do `rabbitmq`.
 
 ## Desenvolvimento (hot reload)

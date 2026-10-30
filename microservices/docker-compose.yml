@@ -1,6 +1,6 @@
 x-service: &service
   restart: unless-stopped
-  environment:
+  environment: &env
     RABBITMQ_URL: amqp://rabbitmq
   depends_on:
     rabbitmq:
@@ -19,29 +19,34 @@ services:
   web:
     <<: *service
     build: { context: ., dockerfile: web/Dockerfile }
-    ports: ["3000:3000"]
+    environment: { <<: *env, PORT: &web-port 3000 }
+    ports: [{ published: *web-port, target: *web-port }]
 
   registration:
     <<: *service
     build: { context: ., dockerfile: registration/Dockerfile }
-    ports: ["3001:3000"]
+    environment: { <<: *env, PORT: &registration-port 3001 }
+    ports: [{ published: *registration-port, target: *registration-port }]
 
   secretariat:
     <<: *service
     build: { context: ., dockerfile: secretariat/Dockerfile }
-    ports: ["3002:3000"]
+    environment: { <<: *env, PORT: &secretariat-port 3002 }
+    ports: [{ published: *secretariat-port, target: *secretariat-port }]
     volumes:
       - secretariat-data:/app/secretariat/data
 
   identity:
     <<: *service
     build: { context: ., dockerfile: identity/Dockerfile }
-    ports: ["3003:3000"]
+    environment: { <<: *env, PORT: &identity-port 3003 }
+    ports: [{ published: *identity-port, target: *identity-port }]
 
   payment:
     <<: *service
     build: { context: ., dockerfile: payment/Dockerfile }
-    ports: ["3004:3000"]
+    environment: { <<: *env, PORT: &payment-port 3004 }
+    ports: [{ published: *payment-port, target: *payment-port }]
 
 volumes:
   secretariat-data:
