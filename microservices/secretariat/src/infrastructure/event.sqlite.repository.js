@@ -1,4 +1,4 @@
-import { SqliteRepository } from "../../../../shared/infrastructure/sqlite.repository.js";
+import { SqliteRepository } from "../../../shared/infrastructure/sqlite.repository.js";
 export class EventSqliteRepository extends SqliteRepository {
     constructor(db) {
         super(db, 'events');

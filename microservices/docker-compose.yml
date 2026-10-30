@@ -1,0 +1,50 @@
+x-service: &service
+  build: &build
+    context: .
+    dockerfile: Dockerfile
+  restart: unless-stopped
+  environment:
+    RABBITMQ_URL: amqp://rabbitmq
+  depends_on:
+    rabbitmq:
+      condition: service_healthy
+
+services:
+  rabbitmq:
+    image: rabbitmq:4-management
+    ports: ["15673:15672"] # AMQP só na rede interna; UI de gestão em :15673
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 10s
+      retries: 20
+
+  web:
+    <<: *service
+    build: { <<: *build, args: { SERVICE: web } }
+    ports: ["3000:3000"]
+
+  registration:
+    <<: *service
+    build: { <<: *build, args: { SERVICE: registration } }
+    ports: ["3001:3000"]
+
+  secretariat:
+    <<: *service
+    build: { <<: *build, args: { SERVICE: secretariat } }
+    ports: ["3002:3000"]
+    volumes:
+      - secretariat-data:/app/secretariat/data
+
+  identity:
+    <<: *service
+    build: { <<: *build, args: { SERVICE: identity } }
+    ports: ["3003:3000"]
+
+  payment:
+    <<: *service
+    build: { <<: *build, args: { SERVICE: payment } }
+    ports: ["3004:3000"]
+
+volumes:
+  secretariat-data:

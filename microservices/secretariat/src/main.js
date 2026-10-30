@@ -1,6 +1,6 @@
 import express from 'express';
 import { EventAppService } from './application/event.app-service.js';
-import { RabbitMqMessageBus } from '../../../shared/messaging/rabbitmq-message-bus.js';
+import { RabbitMqMessageBus } from '../../shared/messaging/rabbitmq-message-bus.js';
 import { DatabaseSync } from 'node:sqlite';
 import { EventSqliteRepository } from './infrastructure/event.sqlite.repository.js';
 

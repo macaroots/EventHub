@@ -7,6 +7,7 @@ const port = process.env.PORT || 3000;
 app.use(express.json()); 
 
 app.set('view engine', 'ejs');
+app.set('views', import.meta.dirname + '/views');
 
 // const messageBus = await RabbitMqMessageBus.connect();
 
