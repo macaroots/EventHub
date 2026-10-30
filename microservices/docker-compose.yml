@@ -1,7 +1,4 @@
 x-service: &service
-  build: &build
-    context: .
-    dockerfile: Dockerfile
   restart: unless-stopped
   environment:
     RABBITMQ_URL: amqp://rabbitmq
@@ -21,29 +18,29 @@ services:
 
   web:
     <<: *service
-    build: { <<: *build, args: { SERVICE: web } }
+    build: { context: ., dockerfile: web/Dockerfile }
     ports: ["3000:3000"]
 
   registration:
     <<: *service
-    build: { <<: *build, args: { SERVICE: registration } }
+    build: { context: ., dockerfile: registration/Dockerfile }
     ports: ["3001:3000"]
 
   secretariat:
     <<: *service
-    build: { <<: *build, args: { SERVICE: secretariat } }
+    build: { context: ., dockerfile: secretariat/Dockerfile }
     ports: ["3002:3000"]
     volumes:
       - secretariat-data:/app/secretariat/data
 
   identity:
     <<: *service
-    build: { <<: *build, args: { SERVICE: identity } }
+    build: { context: ., dockerfile: identity/Dockerfile }
     ports: ["3003:3000"]
 
   payment:
     <<: *service
-    build: { <<: *build, args: { SERVICE: payment } }
+    build: { context: ., dockerfile: payment/Dockerfile }
     ports: ["3004:3000"]
 
 volumes:

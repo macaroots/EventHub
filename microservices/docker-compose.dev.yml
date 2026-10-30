@@ -1,0 +1,42 @@
+# Hot reload: docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+# Monta o código do host e reinicia o processo a cada alteração (node --watch).
+# Volumes anônimos preservam os node_modules instalados na imagem.
+x-node-dev: &node-dev
+  command: ["node", "--watch", "src/main.js"]
+  restart: "no"
+
+services:
+  web:
+    <<: *node-dev
+    volumes:
+      - ./web/src:/app/web/src
+      - ./shared:/app/shared
+      - /app/shared/node_modules
+
+  registration:
+    <<: *node-dev
+    volumes:
+      - ./registration/src:/app/registration/src
+      - ./shared:/app/shared
+      - /app/shared/node_modules
+
+  secretariat:
+    <<: *node-dev
+    volumes:
+      - ./secretariat/src:/app/secretariat/src
+      - ./shared:/app/shared
+      - /app/shared/node_modules
+
+  identity:
+    <<: *node-dev
+    volumes:
+      - ./identity/src:/app/identity/src
+      - ./shared:/app/shared
+      - /app/shared/node_modules
+
+  payment:
+    <<: *node-dev
+    volumes:
+      - ./payment/src:/app/payment/src
+      - ./shared:/app/shared
+      - /app/shared/node_modules
