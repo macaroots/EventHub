@@ -1,0 +1,11 @@
+<%
+stages = locals?.stages || [locals?.stage]
+for (let stage of stages) { %>
+<br> - <%= stage %>
+<% } %>
+<br>Redireciona para 
+<%
+urls = locals?.urls || [url]
+for (let url of urls) { %>
+<br><a href="<%= url %>"><%= url %></a>
+<% } %>

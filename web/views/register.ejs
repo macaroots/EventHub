@@ -1,0 +1,16 @@
+<h2>Registration</h2>
+<section>
+    <p>Evento / Atividade</p>
+    <p>Regras de inscrição:</p>
+</section>
+<form action="/activity/<%= id %>/register/<%= token %>" method="post">
+    <label>
+        <span>User</span>
+        <input name="userId">
+    </label>
+    <label>
+        <span>Activity</span>
+        <input name="activity" value="<%= id %>">
+    </label>
+    <button>Register</button>
+</form>

@@ -1,0 +1,16 @@
+<h2>Registration</h2>
+<section>
+    <ul>
+        <li>Check token</li>
+        <li>Check occupation</li>
+        <li>Check registration rules</li>
+        <li>Reserva um lugar</li>
+    </ul>
+    <p>Evento / Atividade</p>
+    <p>Inscrição #<%= id %> pendente!</p>
+    <ul>
+<% for (const [url, reason] of Object.entries(reasons)) { %>
+        <li><a href="<%= url %>"><%= reason %></a></li>
+<% } %>
+    </ul>
+</section>

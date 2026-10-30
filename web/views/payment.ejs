@@ -1,0 +1,16 @@
+<h2>Payment</h2>
+<section>
+    <p>Evento / Atividade / Usuário</p>
+</section>
+<div><%= error %></div>
+<form action="/external/payment/<%= id %>" method="post">
+    <label>
+        <span>Payment</span>
+        <input name="paymentId" value="<%= id %>">
+    </label>
+    <label>
+        <span>Amount</span>
+        <input name="amount" value="R$ 10,00">
+    </label>
+    <button>Pay</button>
+</form>
