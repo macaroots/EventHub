@@ -14,11 +14,10 @@ app.set('views', import.meta.dirname + '/views');
 // // messageBus.listen('WaitingPayment', e => paymentService.charge(e.paymentId, e.amout));
 
 app.use((req, res, next) => {
-    res.layout = (view, data={}, layout='layout') => {
-        console.log({data, layout, view});
-        
-        res.render(layout, {view, data});
-    }
+    res.layout = (view, data = {}, layout = 'layout') =>
+        res.render(view, data, (err, body) =>
+            err ? next(err) : res.render(layout, { ...data, body }));
+
     next();
 })
 
