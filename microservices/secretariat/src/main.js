@@ -5,6 +5,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { EventSqliteRepository } from './infrastructure/event.sqlite.repository.js';
 
 import { join, resolve } from "node:path";
+import { CrudController } from '../../shared/application/CrudController.js';
 
 const database = new DatabaseSync(join(resolve('data', 'registration')));
 
@@ -17,19 +18,9 @@ const messageBus = await RabbitMqMessageBus.connect();
 const eventRepository = new EventSqliteRepository(database);
 const eventService = new EventAppService(eventRepository, messageBus);
 
-app.get('/events', (req, res) => {
-    let beans = eventRepository.list();
-    res.json(beans);
-});
-app.post('/events', async (req, res) => {
-    let bean = req.body;
-    try {
-        const id = await eventService.create(bean);
-        res.json({ id });
-    } catch (e) {
-        res.status(400).json(e.message);
-    }
-});
+const eventController = new CrudController(eventService, eventRepository);
+
+app.use('/events', eventController.getRouter());
 
 await messageBus.consume("secretariat");
 

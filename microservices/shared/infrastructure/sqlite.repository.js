@@ -13,7 +13,7 @@ export class SqliteRepository {
   }
 
   // Find a record by its ID
-  findById(id) {
+  getById(id) {
     const stmt = this.db.prepare(`SELECT * FROM ${this.tableName} WHERE id = ?`);
     return stmt.get(id);
   }

@@ -6,6 +6,7 @@
     "./*": "./*"
   },
   "dependencies": {
-    "amqplib": "^2.2.0"
+    "amqplib": "^2.2.0",
+    "express": "^5.3.0"
   }
 }
