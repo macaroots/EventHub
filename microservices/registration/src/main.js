@@ -18,8 +18,8 @@ const registrationRepository = new RegistrationRepository();
 const registrationService = new RegistrationAppService(activityRepository, registrationRepository, userRepository, messageBus);
 
 // Isso pode ser definido aqui (Coreografia) ou no gateway (Orquestração)
-messageBus.listen('EventCreated', e => registrationService.updateCapacity(e));
-messageBus.listen('EventUpdated', e => registrationService.updateCapacity(e));
+messageBus.listen('ActivityCreated', e => registrationService.upsertActivity(e));
+messageBus.listen('ActivityUpdated', e => registrationService.upsertActivity(e));
 messageBus.listen('UserCreated', e => userRepository.add({id: e.userId}));
 
 app.get('/activities', (req, res) => {

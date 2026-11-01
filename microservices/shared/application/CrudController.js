@@ -1,4 +1,5 @@
 import express from 'express';
+import { NotFoundError } from '../domain/errors.js';
 
 export class CrudController {
     constructor(service, repository) {
@@ -7,45 +8,45 @@ export class CrudController {
     }
     getRouter() {
         const router = express.Router();
-        router.post('/', this.create.bind(this));
-        router.get('/', this.list.bind(this));
-        router.get('/:id', this.get.bind(this));
-        router.put('/:id', this.update.bind(this));
-        router.delete('/:id', this.delete.bind(this));
+        router.post('/', this.handle(this.create));
+        router.get('/', this.handle(this.list));
+        router.get('/:id', this.handle(this.get));
+        router.put('/:id', this.handle(this.update));
+        router.delete('/:id', this.handle(this.delete));
         return router;
     }
     getBeanFromRequest(req) {
         const bean = req.body;
         return bean;
     }
-    async create(req, res) {
-        const bean = this.getBeanFromRequest(req)
-        try {
-            const id = await this.service.create(bean);
-            res.status(201).json({id})
-        } catch (e) {
-            res.status(400).send(e.message);
-        }
+    // NotFoundError -> 404; demais erros de domínio -> 400.
+    handle(fn) {
+        return async (req, res) => {
+            try {
+                await fn.call(this, req, res);
+            } catch (e) {
+                res.status(e instanceof NotFoundError ? 404 : 400).send(e.message);
+            }
+        };
     }
-
+    async create(req, res) {
+        const id = await this.service.create(this.getBeanFromRequest(req));
+        res.status(201).json({id});
+    }
     async list(req, res) {
-        const beans = await this.repository.list();
-        res.json(beans);
+        res.json(await this.repository.list());
     }
     async get(req, res) {
-        const id = req.params.id;
-        const bean = await this.repository.getById(id);
+        const bean = await this.repository.getById(req.params.id);
+        if (!bean) throw new NotFoundError('id');
         res.json(bean);
     }
     async update(req, res) {
-        const id = req.params.id;
-        const bean = this.getBeanFromRequest(req);
-        await this.service.update(id, bean);
-        res.json('bean alterado com sucesso!');
+        await this.service.update(req.params.id, this.getBeanFromRequest(req));
+        res.status(204).end();
     }
     async delete(req, res) {
-        const id = req.params.id;
-        this.service.delete(id);
-        res.json(`#${id} apagado com sucesso`);
+        await this.service.delete(req.params.id);
+        res.status(204).end();
     }
 }
