@@ -8,51 +8,89 @@ import { EventAppService } from "../src/application/event.app-service.js";
 import { ActivityAppService } from "../src/application/activity.app-service.js";
 import { Activity } from "../src/domain/activity.js";
 
+const alice = { id: "alice", role: "user" };
+const bob = { id: "bob", role: "user" };
+const admin = { id: "root", role: "admin" };
+const dates = { startDate: "2026-12-01", endDate: "2026-12-03" };
+
 function setup() {
   const db = new DatabaseSync(":memory:");
   const bus = new InMemoryMessageBus();
   const messages = [];
-  for (const t of ["EventCreated", "ActivityCreated", "ActivityUpdated", "ActivityDeleted"]) bus.listen(t, (m) => messages.push(m));
+  for (const t of ["EventCreated", "EventPublished", "EventCanceled", "ActivityCreated", "ActivityUpdated", "ActivityDeleted"]) bus.listen(t, (m) => messages.push(m));
   const events = new EventSqliteRepository(db);
   const activities = new ActivitySqliteRepository(db);
-  return {
-    messages,
-    activities,
-    eventService: new EventAppService(events, activities, bus),
-    activityService: new ActivityAppService(activities, events, bus),
+  const eventService = new EventAppService(events, activities, bus);
+  const activityService = new ActivityAppService(activities, events, bus);
+  const newEvent = async (user = alice, data = {}) => {
+    const eventId = await eventService.create({ name: "Congresso", ...dates, ...data }, user);
+    const activityId = await activityService.create({ eventId, name: "Workshop", capacity: 30 }, user);
+    return { eventId, activityId };
   };
+  return { messages, activities, eventService, activityService, newEvent };
 }
 
-test("activity requires eventId and valid capacity", () => {
-  assert.throws(() => new Activity({ name: "a", capacity: 1 }), /eventId/);
-  assert.throws(() => new Activity({ eventId: "e", name: "a", capacity: -1 }), /capacity/);
+test("activity validates rules and partial update keeps other fields", () => {
+  assert.throws(() => new Activity({ eventId: "e", name: "a", capacity: 1, rules: [{ type: "x" }] }), /Unknown rule/);
+  const a = new Activity({ eventId: "e", name: "a", capacity: 1 });
+  a.update({ capacity: 5 });
+  assert.equal(a.toJSON().name, "a");
+  assert.equal(a.toJSON().capacity, 5);
 });
 
-test("creating an activity publishes ActivityCreated, not EventCreated with capacity", async () => {
+test("ActivityCreated carries capacity and rules", async () => {
   const { eventService, activityService, messages } = setup();
-  const eventId = await eventService.create({ name: "Congresso" });
-  const activityId = await activityService.create({ eventId, name: "Workshop", capacity: 30, price: 50 });
-  assert.deepEqual(messages.at(-1), { type: "ActivityCreated", activityId, eventId, capacity: 30, price: 50 });
-  assert.equal(messages[0].capacity, undefined);
+  const eventId = await eventService.create({ name: "Congresso" }, alice);
+  const rules = [{ type: "payment", amount: 5, description: "Taxa" }, { type: "minimumAge", age: 18 }];
+  const activityId = await activityService.create({ eventId, name: "Workshop", capacity: 30, rules }, alice);
+  const m = messages.at(-1);
+  assert.equal(m.type, "ActivityCreated");
+  assert.equal(m.activityId, activityId);
+  assert.deepEqual(m.rules, rules);
 });
 
-test("activity needs an existing event", async () => {
-  const { activityService } = setup();
-  await assert.rejects(activityService.create({ eventId: "x", name: "a", capacity: 1 }), /event not found/);
+test("creator is organizer; other users can't manage", async () => {
+  const { eventService, newEvent } = setup();
+  const { eventId } = await newEvent();
+  assert.equal((await eventService.get(eventId, alice)).activities.length, 1);
+  await assert.rejects(eventService.get(eventId, bob), /Not allowed/);
+  await assert.rejects(eventService.update(eventId, { name: "x" }, bob), /Not allowed/);
+  assert.equal((await eventService.list({}, bob)).length, 0);
+  assert.equal((await eventService.list({}, admin)).length, 1);
 });
 
-test("update publishes ActivityUpdated and persists", async () => {
-  const { eventService, activityService, activities, messages } = setup();
-  const eventId = await eventService.create({ name: "Congresso" });
-  const id = await activityService.create({ eventId, name: "Workshop", capacity: 30 });
-  await activityService.update(id, { name: "Workshop", capacity: 40 });
-  assert.equal(activities.getById(id).capacity, 40);
-  assert.equal(messages.at(-1).type, "ActivityUpdated");
+test("organizer manages and publishes, but only the creator deletes", async () => {
+  const { eventService, activityService, newEvent } = setup();
+  const { eventId, activityId } = await newEvent();
+  await eventService.addOrganizer(eventId, { userId: bob.id }, alice);
+  await activityService.update(activityId, { capacity: 50 }, bob);
+  await assert.rejects(eventService.delete(eventId, bob), /Not allowed/);
+  await eventService.delete(eventId, alice);
 });
 
-test("event with activities cannot be deleted", async () => {
-  const { eventService, activityService } = setup();
-  const eventId = await eventService.create({ name: "Congresso" });
-  await activityService.create({ eventId, name: "Workshop", capacity: 30 });
-  await assert.rejects(eventService.delete(eventId), /has activities/);
+test("publish requires dates and activities", async () => {
+  const { eventService, newEvent, messages } = setup();
+  const empty = await eventService.create({ name: "Vazio", ...dates }, alice);
+  await assert.rejects(eventService.publish(empty, alice), /no activities/);
+  const { eventId } = await newEvent(alice, { name: "Sem data", startDate: undefined, endDate: undefined });
+  await assert.rejects(eventService.publish(eventId, alice), /startDate/);
+  await eventService.update(eventId, dates, alice);
+  await eventService.publish(eventId, alice);
+  assert.equal(messages.at(-1).type, "EventPublished");
+  await assert.rejects(eventService.publish(eventId, alice), /Cannot publish a published/);
+});
+
+test("published event must be canceled before delete; canceled can't be edited", async () => {
+  const { eventService, activityService, newEvent, messages } = setup();
+  const { eventId, activityId } = await newEvent();
+  await eventService.publish(eventId, alice);
+  await assert.rejects(activityService.delete(activityId, alice), /published/);
+  await assert.rejects(eventService.delete(eventId, alice), /Cancel the event/);
+  await assert.rejects(eventService.cancel(eventId, {}, alice), /reason/);
+  await eventService.cancel(eventId, { reason: "chuva" }, alice);
+  assert.deepEqual([messages.at(-1).type, messages.at(-1).reason], ["EventCanceled", "chuva"]);
+  await assert.rejects(eventService.update(eventId, { name: "x" }, alice), /canceled/);
+  await assert.rejects(activityService.update(activityId, { capacity: 1 }, alice), /canceled/);
+  await eventService.delete(eventId, admin);
+  assert.equal(messages.at(-1).type, "ActivityDeleted");
 });
