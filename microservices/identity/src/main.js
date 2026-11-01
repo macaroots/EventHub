@@ -28,14 +28,15 @@ app.post('/users', async (req, res) => {
 app.post('/auth', async (req, res) => {
     let bean = req.body;
     try {
-        const user = await userService.authenticate(bean);
-        res.json({ user });
+        const { user, token } = await userService.authenticate(bean);
+        res.json({ user, token });
     } catch (e) {
         res.status(400).json(e.message);
     }
 });
 
 await messageBus.consume("identity");
+await userService.seedAdmin({ username: process.env.ADMIN_USERNAME, password: process.env.ADMIN_PASSWORD });
 
 app.listen(port, () => {
     console.log(`Identity listening on port http://localhost:${port}`)
