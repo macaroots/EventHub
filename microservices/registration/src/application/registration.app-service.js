@@ -1,5 +1,5 @@
 import { NotFoundError } from "../../../shared/domain/errors.js";
-import { Activity, CapacityRule, Registration } from "../domain/activity.js";
+import { Activity, PaymentRule, Registration } from "../domain/activity.js";
 
 export class RegistrationAppService {
     constructor(activityRepository, registrationRepository, userRepository, messageBus) {
@@ -8,13 +8,16 @@ export class RegistrationAppService {
         this.userRepository = userRepository;
         this.messageBus = messageBus;
     }
-    async updateCapacity({ activityId, capacity }) {
-        let activity = this.activityRepository.getById(activityId)
+    // Projeção local da Activity da Secretaria (ActivityCreated/ActivityUpdated). Idempotente: upsert.
+    upsertActivity({ activityId, capacity, price = 0 }) {
+        const rules = price > 0 ? [new PaymentRule(price)] : [];
+        const activity = this.activityRepository.getById(activityId);
         if (!activity) {
-            this.activityRepository.add(new Activity(activityId, capacity, [new CapacityRule()]));
+            this.activityRepository.add(new Activity(capacity, rules, activityId));
         }
         else {
-            activity.updateCapacity(capacity);
+            activity.setCapacity(capacity);
+            activity.setRules(rules);
             this.activityRepository.update(activity);
         }
     }
@@ -27,5 +30,6 @@ export class RegistrationAppService {
         const registration = new Registration(user, activity);
         activity.register(registration);
         this.registrationRepository.add(registration);
+        return registration.id;
     }
 }

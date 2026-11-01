@@ -10,5 +10,12 @@ export class EventSqliteRepository extends SqliteRepository {
             ) STRICT
         `);
     }
-    findByName(name) { return this.list().find((e) => e.name === name); }
+    getByName(name) {             
+        const stmt = this.db.prepare(`SELECT * FROM ${this.tableName} WHERE name=?`);
+        return stmt.get(name);
+    }
+    findByName(name) {             
+        const stmt = this.db.prepare(`SELECT * FROM ${this.tableName} WHERE name like ?`);
+        return stmt.all(`%${name}%`);
+    }
 }

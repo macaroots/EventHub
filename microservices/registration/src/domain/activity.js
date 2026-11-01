@@ -4,13 +4,13 @@ export class ActivityLine {
     activity;
     releasedTokens = [];
     register(token, registration) {
-        if (this.isTokenReleased(token)) {
+        if (!this.isTokenReleased(token)) {
             throw new Error('Wait your turn');
         }
         this.activity.register(registration);
     }
     isTokenReleased(token) {
-        return this.releasedTokens.some(t => t.id = token.id);
+        return this.releasedTokens.some(t => t.id == token.id);
     }
     releaseToken(token) {
         this.releasedTokens.push(token);
@@ -27,14 +27,14 @@ export class Activity {
     constructor(capacity, rules=[], id=crypto.randomUUID()) {
         this.#id = id;
         this.setCapacity(capacity);
-        rules.unshift(new CapacityRule());
-        this.#registrationRules = rules;
+        this.setRules(rules);
     }
     get id() { return this.#id; }
     
     get capacity() { return this.#capacity; }
     setCapacity(capacity) {
         if (capacity < 0) throw new TypeError('Must not be lower than 0');
+        if (capacity < this.getConfirmedOccupation()) throw new TypeError('Must not be lower than confirmed occupation');
         this.#capacity = capacity;
     }
     get registrations() { return this.#registrations; }
@@ -75,7 +75,11 @@ export class Activity {
         this.#registrationRules.push(rule);
     }
     getRules() {
-        this.#registrationRules;
+        return this.#registrationRules;
+    }
+    // CapacityRule sempre primeiro; as demais vêm da Secretaria (ex.: price -> PaymentRule).
+    setRules(rules) {
+        this.#registrationRules = [new CapacityRule(), ...rules];
     }
     isRegistered(user) {
         return this.#registrations.some(r => r.user.id == user.id);
@@ -125,6 +129,11 @@ export class Registration {
     }
     getReasons() {
         return this.reasons;
+    }
+    // Só o id da atividade: evita ciclo activity -> registrations -> activity.
+    toJSON() {
+        const { id, status, reasons } = this;
+        return { id, userId: this.user.id, activityId: this.activity.id, status, reasons };
     }
     hasPendingItems() {
         return this.reasons.length > 0;

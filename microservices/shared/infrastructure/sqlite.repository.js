@@ -12,6 +12,13 @@ export class SqliteRepository {
     return result;
   }
 
+  update(bean) {
+    const { id, ...fields } = bean;
+    const keys = Object.keys(fields);
+    const stmt = this.db.prepare(`UPDATE ${this.tableName} SET ${keys.map(k => `${k} = ?`).join(',')} WHERE id = ?`);
+    return stmt.run(...Object.values(fields), id);
+  }
+
   // Find a record by its ID
   getById(id) {
     const stmt = this.db.prepare(`SELECT * FROM ${this.tableName} WHERE id = ?`);

@@ -3,21 +3,23 @@ import { BlankError } from "../../../shared/domain/errors.js"
 export class Event {
     id
     name
-    organizers = []
-    period
+    organizers = new Set()
+    dates
     information
-    schedule = []
-    registrationRules = new Set();
 
     constructor(data = {}) {
         this.id = data.id || crypto.randomUUID();
-        if (!data.name) throw new BlankError('name');
-        this.name = data.name;
+        this.update(data);
+    }
+
+    update({ name }) {
+        if (!name) throw new BlankError('name');
+        this.name = name;
     }
 
     addOrganizer(organizer) { this.organizers.add(organizer); }
-    removeOrganizer(organizer) { 
-        if (this.organizers.length <= 1) throw new Error('Must have at leat 1 organizer');
+    removeOrganizer(organizer) {
+        if (this.organizers.size <= 1) throw new Error('Must have at least 1 organizer');
         this.organizers.delete(organizer);
     }
 
