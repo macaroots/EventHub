@@ -3,38 +3,35 @@ export class SqliteRepository {
     this.db = db;
     this.tableName = tableName;
   }
-  data2object(data) { return data; }
+  // Conversões objeto <-> linha (ex.: arrays em colunas JSON).
+  toRow(bean) { return bean; }
+  fromRow(row) { return row; }
+
   add(bean) {
-    const keys = Object.keys(bean);
-    const values = Object.values(bean);
+    const row = this.toRow(bean);
+    const keys = Object.keys(row);
     const stmt = this.db.prepare(`INSERT INTO ${this.tableName} (${keys.join(',')}) VALUES (${keys.map(e => '?').join(',')})`);
-    const result = stmt.run(...values);
-    return result;
+    return stmt.run(...Object.values(row).map(v => v ?? null));
   }
 
   update(bean) {
-    const { id, ...fields } = bean;
+    const { id, ...fields } = this.toRow(bean);
     const keys = Object.keys(fields);
     const stmt = this.db.prepare(`UPDATE ${this.tableName} SET ${keys.map(k => `${k} = ?`).join(',')} WHERE id = ?`);
-    return stmt.run(...Object.values(fields), id);
+    return stmt.run(...Object.values(fields).map(v => v ?? null), id);
   }
 
-  // Find a record by its ID
   getById(id) {
-    const stmt = this.db.prepare(`SELECT * FROM ${this.tableName} WHERE id = ?`);
-    return stmt.get(id);
+    const row = this.db.prepare(`SELECT * FROM ${this.tableName} WHERE id = ?`).get(id);
+    return row && this.fromRow(row);
   }
 
-  // Get all records in the table
   list() {
-    const stmt = this.db.prepare(`SELECT * FROM ${this.tableName}`);
-    return stmt.all();
+    return this.db.prepare(`SELECT * FROM ${this.tableName}`).all().map(r => this.fromRow(r));
   }
 
-  // Delete a record by ID
   delete(id) {
-    const stmt = this.db.prepare(`DELETE FROM ${this.tableName} WHERE id = ?`);
-    const result = stmt.run(id);
+    const result = this.db.prepare(`DELETE FROM ${this.tableName} WHERE id = ?`).run(id);
     return result.changes > 0;
   }
 }
