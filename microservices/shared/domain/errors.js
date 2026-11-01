@@ -13,3 +13,8 @@ export class NotFoundError extends Error {
         super(`${field} not found`);
     }
 }
+export class ForbiddenError extends Error {
+    constructor(action) {
+        super(`Not allowed to ${action}`);
+    }
+}
