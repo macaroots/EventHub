@@ -13,7 +13,7 @@ export class UserAppService {
         if (exist) throw new DuplicateError('name');
         const user = new User(username, password, role);
         await this.userRepository.add(user);
-        this.messageBus.publish({type: 'UserCreated', userId: user.id })
+        this.messageBus.publish({type: 'UserCreated', userId: user.id, username: user.username })
         return user.id;
     }
     
