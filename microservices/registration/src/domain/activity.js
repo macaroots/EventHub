@@ -3,11 +3,11 @@ import { DuplicateError } from "../../../shared/domain/errors.js";
 export class ActivityLine {
     activity;
     releasedTokens = [];
-    register(token, user) {
+    register(token, userId) {
         if (!this.isTokenReleased(token)) {
             throw new Error('Wait your turn');
         }
-        return this.activity.register(user);
+        return this.activity.register(userId);
     }
     isTokenReleased(token) {
         return this.releasedTokens.some(t => t.id == token.id);
@@ -51,16 +51,13 @@ export class Activity {
         }
     }
 
-    // TODO qual deve ser a entrada? 
-    // só userId
-    // uma resposta para um "formulário de inscrição" definido pela atividade com as regras e informações necessárias
     // Factory: o aggregate cria a Registration e decide o status a partir das regras.
     // Regras só avaliam; quem altera a Registration é o aggregate.
-    register(user) {
-        if (this.isRegistered(user)) throw new DuplicateError('user');
-        const registration = new Registration(user, this.#id);
+    register(userId) {
+        if (this.isRegistered(userId)) throw new DuplicateError('user');
+        const registration = new Registration(userId, this.#id);
         for (const rule of this.#registrationRules) {
-            const outcome = rule.evaluate({ activity: this, user });
+            const outcome = rule.evaluate({ activity: this, userId });
             if (outcome?.deny) {
                 registration.cancel(outcome.deny);
                 break;
@@ -94,14 +91,17 @@ export class Activity {
         this.#registrationRules = [new CapacityRule(), ...rules];
     }
     // Inscrição cancelada não bloqueia nova tentativa.
-    isRegistered(user) {
-        return this.#registrations.some(r => r.user.id == user.id && r.status != 'canceled');
+    isRegistered(userId) {
+        return this.#registrations.some(r => r.userId == userId && r.status != 'canceled');
     }
 }
-export class User {
-    id;
-    constructor(id=crypto.randomUUID()) {
+
+// Projeção do User do identity (UserCreated). Só para leitura (listagens, crachá);
+// as regras de inscrição não dependem dela.
+export class Participant {
+    constructor({ id, username }) {
         this.id = id;
+        this.username = username;
     }
 }
 
@@ -109,16 +109,16 @@ export class User {
 // contextos (ex.: PaymentConfirmed.paymentId == requirement.id).
 export class Registration {
     id;
-    user;
+    userId;
     activityId;
     status = 'pending'; // pending | confirmed | canceled
     requirements = [];
     reasons = [];
     #messages = [];
     #submitted = false;
-    constructor(user, activityId, id=crypto.randomUUID()) {
+    constructor(userId, activityId, id=crypto.randomUUID()) {
         this.id = id;
-        this.user = user;
+        this.userId = userId;
         this.activityId = activityId;
     }
     require(requirement) {
@@ -131,7 +131,7 @@ export class Registration {
         this.#messages.push({ type: 'RegistrationCreated', ...this.toJSON() });
         if (this.status == 'canceled') return;
         for (const r of this.requirements.filter(r => r.type == 'payment')) {
-            this.#messages.push({ type: 'PaymentRequested', paymentId: r.id, registrationId: this.id, userId: this.user.id, amount: r.amount, description: r.description });
+            this.#messages.push({ type: 'PaymentRequested', paymentId: r.id, registrationId: this.id, userId: this.userId, amount: r.amount, description: r.description });
         }
         this.#confirmIfReady();
     }
@@ -146,12 +146,12 @@ export class Registration {
         if (this.status == 'canceled') return;
         this.status = 'canceled';
         this.reasons.push(reason);
-        if (this.#submitted) this.#messages.push({ type: 'RegistrationCanceled', registrationId: this.id, userId: this.user.id, reason });
+        if (this.#submitted) this.#messages.push({ type: 'RegistrationCanceled', registrationId: this.id, userId: this.userId, reason });
     }
     #confirmIfReady() {
         if (this.status != 'pending' || this.getPendingRequirements().length) return;
         this.status = 'confirmed';
-        this.#messages.push({ type: 'RegistrationConfirmed', registrationId: this.id, userId: this.user.id });
+        this.#messages.push({ type: 'RegistrationConfirmed', registrationId: this.id, userId: this.userId });
     }
     getPendingRequirements() {
         return this.requirements.filter(r => !r.fulfilled);
@@ -166,7 +166,7 @@ export class Registration {
     }
     toJSON() {
         const { id, activityId, status, requirements, reasons } = this;
-        return { id, userId: this.user.id, activityId, status, requirements, reasons };
+        return { id, userId: this.userId, activityId, status, requirements, reasons };
     }
 }
 
@@ -191,7 +191,7 @@ export class PaymentRule {
     }
 }
 
-// Sem data de nascimento na projeção de User: vira pendência de verificação.
+// Sem data de nascimento na projeção de Participant: vira pendência de verificação.
 export class MinimumAgeRule {
     constructor(age) {
         this.age = age;

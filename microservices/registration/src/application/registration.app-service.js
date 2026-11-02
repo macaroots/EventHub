@@ -1,11 +1,11 @@
 import { NotFoundError } from "../../../shared/domain/errors.js";
-import { Activity, ruleFromConfig } from "../domain/activity.js";
+import { Activity, Participant, ruleFromConfig } from "../domain/activity.js";
 
 export class RegistrationAppService {
-    constructor(activityRepository, registrationRepository, userRepository, eventRepository, messageBus) {
+    constructor(activityRepository, registrationRepository, participantRepository, eventRepository, messageBus) {
         this.activityRepository = activityRepository;
         this.registrationRepository = registrationRepository;
-        this.userRepository = userRepository;
+        this.participantRepository = participantRepository;
         this.eventRepository = eventRepository;
         this.messageBus = messageBus;
     }
@@ -37,15 +37,27 @@ export class RegistrationAppService {
         }
     }
 
-    async register({ activityId }, user) {
+    // Projeção do User do identity. Idempotente: upsert.
+    upsertParticipant({ userId, username }) {
+        this.participantRepository.update(new Participant({ id: userId, username }));
+    }
+
+    async register({ activityId }, userId) {
         const activity = this.activityRepository.getById(activityId);
         if (!activity) throw new NotFoundError('activity');
         if (this.eventRepository.getById(activity.eventId)?.status != 'published') throw new Error('Event is not open for registration');
-        if (!this.userRepository.getById(user.id)) throw new NotFoundError('user');
-        const registration = activity.register(user);
+        if (!this.participantRepository.getById(userId)) throw new NotFoundError('user');
+        const registration = activity.register(userId);
         this.registrationRepository.add(registration);
         await this.#publish([registration]);
         return registration.toJSON();
+    }
+
+    // Admin vê todas; os demais, só as próprias. Junta o participante para a listagem.
+    listRegistrations(user) {
+        return this.registrationRepository.list()
+            .filter(r => user.role == 'admin' || r.userId == user.id)
+            .map(r => ({ ...r.toJSON(), participant: this.participantRepository.getById(r.userId) }));
     }
 
     async confirmPayment({ registrationId, paymentId }) {
