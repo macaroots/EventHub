@@ -13,6 +13,7 @@ const ruleValidators = {
 
 const isDate = (field) => (v) => { if (v != null && isNaN(Date.parse(v))) throw new TypeError(`${field} must be an ISO date`) };
 
+// TODO não gostei dos validators. não seria melhor em um setter privado?
 // Um validador por campo: permite alterar só os campos enviados.
 const validators = {
     name: (v) => { if (!v) throw new BlankError('name') },
@@ -34,6 +35,7 @@ const validators = {
 // Aggregate separado do Event: muda com frequência (vagas, regras) e é a unidade de inscrição.
 // Estado privado: só muda por update(), que valida.
 export class Activity {
+    // TODO #data? será não é melhor como estava?
     #data = { rules: [] };
 
     constructor(data = {}) {
@@ -47,6 +49,7 @@ export class Activity {
     get id() { return this.#data.id; }
     get eventId() { return this.#data.eventId; }
 
+    // TODO não sei seria feito assim profissionalmente
     // Altera só os campos enviados (PATCH); ignora os desconhecidos.
     update(data) {
         const next = { ...this.#data };
@@ -59,5 +62,6 @@ export class Activity {
         this.#data = next;
     }
 
+    // TODO não é melhor como estava?
     toJSON() { return { ...this.#data }; }
 }

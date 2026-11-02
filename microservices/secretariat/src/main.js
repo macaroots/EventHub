@@ -30,6 +30,7 @@ const activityService = new ActivityAppService(activityRepository, eventReposito
 const eventController = new EventController(eventService);
 const activityController = new CrudController(activityService);
 
+// TODO o certo seria no activityController. mas teria que começar com activity.
 app.get('/events/:id/activities', activityController.handle(async (req, res) => {
     res.json(await activityService.list({ eventId: req.params.id }, req.user));
 }));
