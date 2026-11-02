@@ -25,7 +25,7 @@ export class Activity {
     #registrations = [];
     #registrationRules = [];
 
-    constructor({ capacity, rules = [], id = crypto.randomUUID(), eventId } = {}) {
+    constructor({ id = crypto.randomUUID(), eventId, capacity, rules = [] } = {}) {
         this.#id = id;
         this.#eventId = eventId;
         this.setCapacity(capacity);
@@ -52,8 +52,7 @@ export class Activity {
     }
 
     // TODO qual deve ser a entrada? 
-    // só userId, cria a registration dentro de register()
-    // uma registration criado fora, 
+    // só userId
     // uma resposta para um "formulário de inscrição" definido pela atividade com as regras e informações necessárias
     // Factory: o aggregate cria a Registration e decide o status a partir das regras.
     // Regras só avaliam; quem altera a Registration é o aggregate.
@@ -181,6 +180,7 @@ export class CapacityRule {
     }
 }
 
+// TODO avaliar pagamento como regra
 export class PaymentRule {
     constructor(amount, description = 'Payment') {
         this.amount = amount;
