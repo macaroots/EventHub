@@ -49,6 +49,14 @@ curl -X POST localhost:3003/auth  -H 'Content-Type: application/json' -d '{"user
 - Trade-off: com HS256, qualquer serviço que verifica tokens também consegue emiti-los. Alternativa: RS256 (identity assina com chave privada; os demais têm só a pública).
 - Limitações: senha em texto puro e usuários em memória no identity; payment ainda sem auth.
 
+## Entidades de domínio
+
+- Estado em campos privados (`#name`), validado por setters privados (`#setName`). Invariantes que envolvem mais de um campo (ex.: período) ficam em um único setter.
+- `X.create(props)` cria uma entidade nova (gera o id e define o estado inicial); `new X(props)` reconstitui a partir do banco. Os dois recebem um objeto desestruturado.
+- `update(changes)` faz PATCH (só altera campos definidos e ignora `id`). `null` limpa um campo opcional, ex.: `{ "endDate": null }`. `Event.endDate` e `Activity.endsAt` são opcionais; para publicar um evento, só o `startDate` é exigido. O id vem separado, na camada de aplicação: `service.update(id, changes)`.
+- `toJSON()` lista os campos explicitamente e é usado para persistência e mensagens.
+- Limitação: se um setter falha no meio do `update`, a instância fica parcialmente alterada em memória. Isso é inofensivo porque o repositório não salva quando há exceção.
+
 ## Mensagens
 
 | Tipo | Publicado por | Quem ouve |

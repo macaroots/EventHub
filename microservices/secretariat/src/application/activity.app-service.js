@@ -18,7 +18,7 @@ export class ActivityAppService {
     async create(data, user) {
         const event = this.#getEvent(data.eventId, user);
         event.assertEditable();
-        const activity = new Activity({ ...data, id: undefined });
+        const activity = Activity.create(data);
         this.activityRepository.add(activity.toJSON());
         this.messageBus.publish(toMessage('ActivityCreated', activity));
         return activity.id;

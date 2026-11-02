@@ -2,11 +2,14 @@ import { CrudController } from "../../../shared/application/CrudController.js";
 
 // CRUD + comandos do ciclo de vida do evento.
 export class EventController extends CrudController {
+    constructor(service) {
+        super(service, '/events');
+    }
     addRoutes(router) {
-        router.post('/:id/publish', this.handle(this.publish));
-        router.post('/:id/cancel', this.handle(this.cancel));
-        router.post('/:id/organizers', this.handle(this.addOrganizer));
-        router.delete('/:id/organizers/:userId', this.handle(this.removeOrganizer));
+        router.post('/events/:id/publish', this.handle(this.publish));
+        router.post('/events/:id/cancel', this.handle(this.cancel));
+        router.post('/events/:id/organizers', this.handle(this.addOrganizer));
+        router.delete('/events/:id/organizers/:userId', this.handle(this.removeOrganizer));
     }
     async publish(req, res) {
         await this.service.publish(req.params.id, req.user);

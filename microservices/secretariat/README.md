@@ -26,7 +26,7 @@ Erros: 401 sem token, 403 sem permissão, 404 não encontrado, 400 regra de dom�
 
 - `Activity` é um aggregate próprio que referencia `eventId`, não uma lista dentro de `Event`: muda com frequência e é a unidade de inscrição. A permissão vem do evento.
 - Estado dos aggregates é privado (`#data`): só muda por `update()`/métodos de domínio, que validam. O mesmo construtor valida na criação e na leitura do banco.
-- `CrudController` é só adaptador HTTP → service (não acessa repositório); comandos como publicar/cancelar são rotas extras em `EventController.addRoutes`.
+- `CrudController` é só adaptador HTTP → service (não acessa repositório). Gera o CRUD num `basePath` (estilo `resources` do Rails); rotas extras com path absoluto ficam em `addRoutes` (ex.: publicar/cancelar em `EventController`, `GET /events/:eventId/activities` em `ActivityController`). Routers são montados na raiz. Sem dependência extra; alternativas prontas (NestJS + `@nestjsx/crud`, Feathers) trariam um framework inteiro.
 
 Limitações:
 - Schema do SQLite mudou: apague o volume antigo (`docker compose down -v`).
