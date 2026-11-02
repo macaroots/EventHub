@@ -4,38 +4,46 @@ import { RegistrationRepository } from './infrastructure/registration.repository
 import { RegistrationAppService } from './application/registration.app-service.js';
 import { RabbitMqMessageBus } from '../../shared/messaging/rabbitmq-message-bus.js';
 import { MapRepository } from '../../shared/infrastructure/map.repository.js';
+import { authenticate } from '../../shared/auth/jwt.js';
 
 const app = express()
 const port = process.env.PORT || 3000;
 
-app.use(express.json()); 
+app.use(express.json());
+app.use(authenticate());
 
 
 const messageBus = await RabbitMqMessageBus.connect();
 const userRepository = new MapRepository();
+const eventRepository = new MapRepository();
 const activityRepository = new ActivityRepository();
 const registrationRepository = new RegistrationRepository();
-const registrationService = new RegistrationAppService(activityRepository, registrationRepository, userRepository, messageBus);
+const registrationService = new RegistrationAppService(activityRepository, registrationRepository, userRepository, eventRepository, messageBus);
 
 // Isso pode ser definido aqui (Coreografia) ou no gateway (Orquestração)
 messageBus.listen('ActivityCreated', e => registrationService.upsertActivity(e));
 messageBus.listen('ActivityUpdated', e => registrationService.upsertActivity(e));
+messageBus.listen('ActivityDeleted', e => registrationService.deleteActivity(e));
+for (const type of ['EventCreated', 'EventUpdated', 'EventPublished', 'EventCanceled']) {
+    messageBus.listen(type, e => registrationService.updateEvent(e));
+}
+messageBus.listen('PaymentConfirmed', e => registrationService.confirmPayment(e));
+messageBus.listen('PaymentDenied', e => registrationService.denyPayment(e));
 messageBus.listen('UserCreated', e => userRepository.add({id: e.userId}));
 
 app.get('/activities', (req, res) => {
     let beans = activityRepository.list();
     res.json(beans);
 });
+// Admin vê todas; os demais, só as próprias.
 app.get('/registrations', (req, res) => {
-    let beans = registrationRepository.list();
+    const beans = registrationRepository.list().filter(r => req.user.role == 'admin' || r.user.id == req.user.id);
     res.json(beans);
 });
 app.post('/registrations', async (req, res) => {
-    let bean = req.body;
-    console.log(req.body, 'post');
     try {
-        const id = await registrationService.register(bean);
-        res.json({ id });
+        const registration = await registrationService.register(req.body, req.user);
+        res.status(201).json(registration);
     } catch (e) {
         res.status(400).json(e.message);
     }
