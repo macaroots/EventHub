@@ -136,3 +136,32 @@ GET /activity/:id/register
     }
 
     Form HTML
+
+
+
+## Certificado
+
+GET /events/:eventId/certificates/eligibility  *Verifica inscrição aprovada + presença > 74%*
+
+POST /events/:eventId/certificates *Emite o certificado (idempotente)*
+
+GET /certificates *Lista os certificados do participante*
+
+GET /certificates/:id *Metadados do certificado*
+
+GET /certificates/:id/download *Gera e baixa o PDF com PDFKit*
+
+## Portaria
+
+POST	/check-ins *Registra presença a partir do QR/token da credencial. Idempotente.*
+
+GET	/check-ins?eventId=... *Lista/audita check-ins do evento.*
+
+GET	/events/:eventId/attendance *Contadores: esperados, presentes, ausentes e percentual.*
+
+## Monitoramente e relatórios
+
+POST	/events/:eventId/reports    *202 { reportId }*
+GET	/reports/:reportId  *status*
+GET	/reports/:reportId/download *CSV/XLSX/PDF*
+GET	/events/:eventId/reports
