@@ -2,6 +2,7 @@ x-service: &service
   restart: unless-stopped
   environment: &env
     RABBITMQ_URL: amqp://rabbitmq
+    JWT_SECRET: ${JWT_SECRET} # mesmo segredo em todos (HS256)
   depends_on:
     rabbitmq:
       condition: service_healthy
@@ -39,7 +40,7 @@ services:
   identity:
     <<: *service
     build: { context: ., dockerfile: identity/Dockerfile }
-    environment: { <<: *env, PORT: &identity-port 3003 }
+    environment: { <<: *env, PORT: &identity-port 3003, ADMIN_USERNAME: "${ADMIN_USERNAME:-admin}", ADMIN_PASSWORD: "${ADMIN_PASSWORD:-admin}" }
     ports: [{ published: *identity-port, target: *identity-port }]
 
   payment:
