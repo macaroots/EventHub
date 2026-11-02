@@ -31,8 +31,8 @@ function setup() {
 }
 
 test("activity validates rules and partial update keeps other fields", () => {
-  assert.throws(() => new Activity({ eventId: "e", name: "a", capacity: 1, rules: [{ type: "x" }] }), /Unknown rule/);
-  const a = new Activity({ eventId: "e", name: "a", capacity: 1 });
+  assert.throws(() => Activity.create({ eventId: "e", name: "a", capacity: 1, rules: [{ type: "x" }] }), /Unknown rule/);
+  const a = Activity.create({ eventId: "e", name: "a", capacity: 1 });
   a.update({ capacity: 5 });
   assert.equal(a.toJSON().name, "a");
   assert.equal(a.toJSON().capacity, 5);
@@ -93,4 +93,13 @@ test("published event must be canceled before delete; canceled can't be edited",
   await assert.rejects(activityService.update(activityId, { capacity: 1 }, alice), /canceled/);
   await eventService.delete(eventId, admin);
   assert.equal(messages.at(-1).type, "ActivityDeleted");
+});
+
+test("endDate and endsAt are optional and can be cleared with null", async () => {
+  const { eventService, newEvent } = setup();
+  const { eventId } = await newEvent(alice, { endDate: undefined });
+  await eventService.publish(eventId, alice);
+  const a = Activity.create({ eventId: "e", name: "a", capacity: 1, startsAt: "2026-12-01T10:00", endsAt: "2026-12-01T12:00" });
+  a.update({ endsAt: null });
+  assert.deepEqual([a.toJSON().startsAt, a.toJSON().endsAt], ["2026-12-01T10:00", null]);
 });
