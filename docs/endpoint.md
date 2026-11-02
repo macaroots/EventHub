@@ -6,14 +6,16 @@ GET /events?query - listar
     [{
         id,
         name,
-        periodo?
+        startDate,
+        endDate,
     }]
 
 GET /events/:id
     {
         id,
         name,
-        periodo?,
+        startDate,
+        endDate,
         information,
         schedule: List<Atividade>
     }
@@ -34,9 +36,9 @@ GET /activity/:id
 Event {
     id,
     name,
-    periodo?,
+    startDate,
+    endDate,
     information,
-    schedule: List<Atividade>
 }
 Activity {
     id,
@@ -45,9 +47,143 @@ Activity {
     horario?,
     locations,
     registrationRules: string | List<Regra>
-    vagas? vacancy?
+    capacity
 }
 
+## Secretaria
+Todos os endpoints precisam estar logado, ou seja
+ enviar cookie JWT Organizador | Admin {
+            userId,
+            role: 'user' | 'admin'
+        }
+
+GET /events
+    [
+        {
+            id
+            name
+            startDate,
+            endDate
+        }
+    ]
+
+POST /events
+    {
+        id
+        name
+        startDate
+        endDate
+        information
+    }
+    status = 201
+
+GET /events/:id
+    {
+        id
+        name
+        startDate,
+        endDate,
+        information
+    }
+
+PATCH /events/:id
+    {
+        name
+        startDate
+        endDate
+        information
+    }
+    status = 204
+
+DELETE /events/:id
+    status = 204
+
+POST /events/:id/publish
+    status = 204
+
+POST /events/:id/cancel
+    status = 204
+
+POST /events/:id/organizers
+    status = 204
+
+DELETE /events/:id/organizers/:userId
+    status = 204
+
+GET /activities
+    [
+        {
+            id,
+            eventId
+            name
+        }
+    ]
+    
+POST /activities
+    status = 201
+
+GET /activities/:id
+    {
+        id,
+        eventId,
+        name,
+        time,
+        location,
+        registrationRules
+        capacity
+    }
+
+PATCH /activities/:id
+    {
+        name,
+        time,
+        location,
+        registrationRules
+        capacity
+    }
+    status = 204
+
+DELETE /activities/:id
+    status = 204
+
+GET /events/:id/activities
+    [
+        {
+            id,
+            name
+        }
+    ]
+
+### Entidades
+
+Event {
+    id,
+    name,
+    startDate,
+    endDate,
+    information,
+}
+Activity {
+    id,
+    eventId,
+    name,
+    horario?,
+    locations,
+    registrationRules: string | List<Regra>
+    capacity
+}
+
+### Eventos
+
+#### Emite
+
+['EventCreated', 'EventUpdated', 'EventPublished', 'EventCanceled'] { eventId, status }
+
+ActivityCreated { activityId, eventId, capacity, price = 0, rules = [] }
+
+ActivityUpdated { activityId, eventId, capacity, price = 0, rules = [] }
+
+ActivityDeleted { activityId }
 
 ## Credenciamento
 Todos os endpoints precisam estar logado, ou seja
@@ -55,14 +191,16 @@ Todos os endpoints precisam estar logado, ou seja
             userId,
         }
 
-GET /activity/:id/register
+### Participante
+
+GET /activities/:id/register
     {
         tokenFila: JWT {
             order
         }
     }
 
-POST /activity/:id/register/
+POST /activities/:id/register/
 Entrada:
     {
         tokenFila,
@@ -85,47 +223,71 @@ Saída:
             amount
         }
 
-GET /registration/:id
+GET /registrations/:id
     {
         registrationId,
         status: 'approved' | 'pending' | 'denied'
         reasons?
     }
 
+### Organizadores
+
+GET /activities/:id/registrations
+    [
+        {
+            registrationId,
+            status: 'approved' | 'pending' | 'denied'
+            reasons?
+        }
+    ]
+
+
 ### Eventos
 
-Ouve PaymentApproved {paymentId}
+#### Ouve
+
+['EventCreated', 'EventUpdated', 'EventPublished', 'EventCanceled'] { eventId, status }
+
+ActivityCreated { activityId, eventId, capacity, price = 0, rules = [] }
+
+ActivityUpdated { activityId, eventId, capacity, price = 0, rules = [] }
+
+ActivityDeleted { activityId }
+
+PaymentConfirmed { registrationId, paymentId }
     approveRegistration()
         Emite RegistrationApproved
 
-Ouve PaymentDenied {paymentId}
+PaymentDenied {registrationId, reason='denied' | 'expired'}
     denyRegistration()
-        Emite RegistrationDenied {reason: 'payment denied'}
+        Emite RegistrationDenied {reason}
 
-Ouve PaymentExpired {paymentId}
-    cancelRegistration()
-        Emite RegistrationCanceled {reason: 'payment expired'}
+#### Emite
+
+RegistrationCreated {...registration}
+RegistrationCanceled {registrationId, userId, reason}
+RegistrationConfirmed {registrationId, userId }
+PaymentRequested {paymentId, registrationId, userId, amount, description}
 
 ### Entidades
 
 Activity {
-    id,
-    vagas? vacancy?
+    id
+    eventId
+    capacity
+    registrations
+    registrationRules
 }
 
 Registration {
-    id,
-    userId,
-    activity,
-    status: 'approved' | 'pending' | 'denied',
-    reasons,
-    payment
-}
-
-Payment {
-    id,
-    description
-    amount
+    id
+    userId
+    activityId
+    status: pending | confirmed | canceled
+    requirements
+    reasons
+    #messages 
+    #submitted
 }
 
 ## Front
