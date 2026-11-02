@@ -8,8 +8,8 @@ import { ActivitySqliteRepository } from './infrastructure/activity.sqlite.repos
 
 import { mkdirSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { CrudController } from '../../shared/application/CrudController.js';
 import { EventController } from './application/event.controller.js';
+import { ActivityController } from './application/activity.controller.js';
 import { authenticate } from '../../shared/auth/jwt.js';
 
 mkdirSync(resolve('data'), { recursive: true });
@@ -28,14 +28,10 @@ const eventService = new EventAppService(eventRepository, activityRepository, me
 const activityService = new ActivityAppService(activityRepository, eventRepository, messageBus);
 
 const eventController = new EventController(eventService);
-const activityController = new CrudController(activityService);
+const activityController = new ActivityController(activityService);
 
-// TODO o certo seria no activityController. mas teria que começar com activity.
-app.get('/events/:id/activities', activityController.handle(async (req, res) => {
-    res.json(await activityService.list({ eventId: req.params.id }, req.user));
-}));
-app.use('/events', eventController.getRouter());
-app.use('/activities', activityController.getRouter());
+app.use(eventController.getRouter());
+app.use(activityController.getRouter());
 
 await messageBus.consume("secretariat");
 

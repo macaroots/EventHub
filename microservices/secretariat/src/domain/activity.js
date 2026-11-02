@@ -11,57 +11,87 @@ const ruleValidators = {
     },
 };
 
-const isDate = (field) => (v) => { if (v != null && isNaN(Date.parse(v))) throw new TypeError(`${field} must be an ISO date`) };
+const assertDate = (field, v) => { if (v != null && isNaN(Date.parse(v))) throw new TypeError(`${field} must be an ISO date`) };
 
-// TODO não gostei dos validators. não seria melhor em um setter privado?
-// Um validador por campo: permite alterar só os campos enviados.
-const validators = {
-    name: (v) => { if (!v) throw new BlankError('name') },
-    description: () => {},
-    location: () => {},
-    startsAt: isDate('startsAt'),
-    endsAt: isDate('endsAt'),
-    capacity: (v) => { if (!Number.isInteger(v) || v < 0) throw new TypeError('capacity must be an integer >= 0') },
-    rules: (v) => {
-        if (!Array.isArray(v)) throw new TypeError('rules must be a list');
-        for (const rule of v) {
+// Aggregate separado do Event: muda com frequência (vagas, regras) e é a unidade de inscrição.
+// Estado privado: só muda pelos setters privados, que validam.
+export class Activity {
+    #id;
+    #eventId;
+    #name;
+    #description;
+    #location;
+    #startsAt;
+    #endsAt;
+    #capacity;
+    #rules = [];
+
+    // Reconstituição (banco). Para uma atividade nova, use Activity.create().
+    constructor({ id, eventId, name, description, location, startsAt, endsAt, capacity, rules = [] }) {
+        if (!id) throw new BlankError('id');
+        if (!eventId) throw new BlankError('eventId');
+        this.#id = id;
+        this.#eventId = eventId;
+        this.#setName(name);
+        this.#description = description;
+        this.#location = location;
+        this.#setPeriod(startsAt, endsAt);
+        this.#setCapacity(capacity);
+        this.#setRules(rules);
+    }
+    static create(data) {
+        return new Activity({ ...data, id: crypto.randomUUID()});
+    }
+
+    get id() { return this.#id; }
+    get eventId() { return this.#eventId; }
+
+    // PATCH: altera só os campos enviados; os desconhecidos (id, eventId...) são ignorados.
+    update({ name, description, location, startsAt, endsAt, capacity, rules }) {
+        if (name !== undefined) this.#setName(name);
+        if (description !== undefined) this.#description = description;
+        if (location !== undefined) this.#location = location;
+        if (startsAt !== undefined || endsAt !== undefined) this.#setPeriod(startsAt === undefined ? this.#startsAt : startsAt, endsAt === undefined ? this.#endsAt : endsAt);
+        if (capacity !== undefined) this.#setCapacity(capacity);
+        if (rules !== undefined) this.#setRules(rules);
+    }
+
+    #setName(name) {
+        if (!name) throw new BlankError('name');
+        this.#name = name;
+    }
+    #setPeriod(startsAt, endsAt) {
+        assertDate('startsAt', startsAt);
+        assertDate('endsAt', endsAt);
+        if (startsAt && endsAt && endsAt < startsAt) throw new TypeError('endsAt must be after startsAt');
+        this.#startsAt = startsAt;
+        this.#endsAt = endsAt;
+    }
+    #setCapacity(capacity) {
+        if (!Number.isInteger(capacity) || capacity < 0) throw new TypeError('capacity must be an integer >= 0');
+        this.#capacity = capacity;
+    }
+    #setRules(rules) {
+        if (!Array.isArray(rules)) throw new TypeError('rules must be a list');
+        for (const rule of rules) {
             const validate = ruleValidators[rule?.type];
             if (!validate) throw new TypeError(`Unknown rule ${rule?.type}`);
             validate(rule);
         }
-    },
-};
-
-// Aggregate separado do Event: muda com frequência (vagas, regras) e é a unidade de inscrição.
-// Estado privado: só muda por update(), que valida.
-export class Activity {
-    // TODO #data? será não é melhor como estava?
-    #data = { rules: [] };
-
-    constructor(data = {}) {
-        if (!data.eventId) throw new BlankError('eventId');
-        this.#data.id = data.id || crypto.randomUUID();
-        this.#data.eventId = data.eventId;
-        this.update(data);
-        validators.name(this.#data.name);
-        validators.capacity(this.#data.capacity);
-    }
-    get id() { return this.#data.id; }
-    get eventId() { return this.#data.eventId; }
-
-    // TODO não sei seria feito assim profissionalmente
-    // Altera só os campos enviados (PATCH); ignora os desconhecidos.
-    update(data) {
-        const next = { ...this.#data };
-        for (const [field, validate] of Object.entries(validators)) {
-            if (data[field] === undefined) continue;
-            validate(data[field]);
-            next[field] = data[field];
-        }
-        if (next.startsAt && next.endsAt && next.endsAt < next.startsAt) throw new TypeError('endsAt must be after startsAt');
-        this.#data = next;
+        this.#rules = rules.map(r => ({ ...r }));
     }
 
-    // TODO não é melhor como estava?
-    toJSON() { return { ...this.#data }; }
+    toJSON() {
+        return {
+            id: this.#id,
+            eventId: this.#eventId,
+            name: this.#name,
+            description: this.#description,
+            location: this.#location,
+            startsAt: this.#startsAt,
+            endsAt: this.#endsAt,
+            capacity: this.#capacity,
+            rules: this.#rules.map(r => ({ ...r })),
+        };
+    }
 }

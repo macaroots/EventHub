@@ -7,8 +7,7 @@ export class EventSqliteRepository extends SqliteRepository {
             CREATE TABLE IF NOT EXISTS ${this.tableName}(
                 id TEXT PRIMARY KEY,
                 name TEXT NOT NULL,
-                description TEXT,
-                location TEXT,
+                information TEXT,
                 startDate TEXT,
                 endDate TEXT,
                 status TEXT NOT NULL,

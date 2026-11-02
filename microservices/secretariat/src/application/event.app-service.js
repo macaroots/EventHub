@@ -17,7 +17,7 @@ export class EventAppService {
     // Qualquer usuário logado cria; vira createdBy e primeiro organizer.
     async create(data, user) {
         this.#assertUniqueName(data.name);
-        const event = new Event({ ...data, id: undefined, status: undefined, organizers: undefined, createdBy: user.id });
+        const event = Event.create({ ...data, createdBy: user.id });
         this.eventRepository.add(event.toJSON());
         this.messageBus.publish(toMessage('EventCreated', event));
         return event.id;

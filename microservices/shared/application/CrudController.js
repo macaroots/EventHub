@@ -2,20 +2,23 @@ import express from 'express';
 import { ForbiddenError, NotFoundError } from '../domain/errors.js';
 
 // Adaptador HTTP -> app service. Não acessa o repositório: leitura também passa pelo
-// service, que aplica autorização. Comandos que não são CRUD (publicar, cancelar...)
-// entram como rotas extras em subclasses (ver addRoutes).
+// service, que aplica autorização. Gera o CRUD em basePath (como `resources` do Rails);
+// rotas extras (publicar, cancelar, aninhadas...) entram em addRoutes com path absoluto.
+// O router é montado na raiz: app.use(controller.getRouter()).
 export class CrudController {
-    constructor(service) {
+    constructor(service, basePath) {
         this.service = service;
+        this.basePath = basePath;
     }
     getRouter() {
         const router = express.Router();
+        const base = this.basePath;
         this.addRoutes(router);
-        router.post('/', this.handle(this.create));
-        router.get('/', this.handle(this.list));
-        router.get('/:id', this.handle(this.get));
-        router.patch('/:id', this.handle(this.update));
-        router.delete('/:id', this.handle(this.delete));
+        router.post(base, this.handle(this.create));
+        router.get(base, this.handle(this.list));
+        router.get(`${base}/:id`, this.handle(this.get));
+        router.patch(`${base}/:id`, this.handle(this.update));
+        router.delete(`${base}/:id`, this.handle(this.delete));
         return router;
     }
     addRoutes(router) {}
