@@ -8,11 +8,11 @@ Exige login; o usuário vem do token.
 | `GET /registrations` | Admin vê todas; os demais, só as próprias. |
 | `GET /activities` | Projeção das atividades. |
 
-`Activity` e o status do evento são projeções das mensagens da secretaria (upsert, idempotente).
+`Activity` e o status do evento são projeções das mensagens da secretaria; `Participant {id, username}` é projeção de `UserCreated`/`UserUpdated` do identity (upsert, idempotente). O domínio só conhece o `userId`; o participante só entra na listagem.
 
 ### Regras de inscrição
 
-- `Activity.register(user)` cria a `Registration` (o aggregate é a factory das suas entidades).
+- `Activity.register(userId)` cria a `Registration` (o aggregate é a factory das suas entidades).
 - A regra só avalia e retorna `{deny: motivo}` | `{require: pendência}`; quem altera a `Registration` é o aggregate. Exceção numa regra é bug, não indeferimento.
 - A `Registration` só emite mensagens (`pullMessages`) depois que todas as regras rodaram: se uma regra nega, nenhuma cobrança é pedida.
 - Cada pendência tem `id`; mensagens de outros contextos a resolvem (`PaymentConfirmed.paymentId` = id da pendência). Sem pendências → `confirmed`. `PaymentDenied` cancela.
