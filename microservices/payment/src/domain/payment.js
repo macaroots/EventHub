@@ -1,23 +1,32 @@
-
 export class Payment {
     id;
     amount;
-    status;
+    description;
+    registrationId;
+    status = 'pending'; // pending | paid | denied
     receipt;
     #messages = []
-    constructor(amount, id) {
+    constructor(amount, id, { registrationId, description } = {}) {
+        if (!(amount > 0)) throw new TypeError('amount must be > 0');
         this.amount = amount;
         this.id = id;
+        this.registrationId = registrationId;
+        this.description = description;
     }
 
     pay(receipt) {
+        this.#assertPending();
         this.status = 'paid';
         this.receipt = receipt;
-        this.#messages.push({type: 'PaymentConfirmed', paymentId: this.id, receipt});
+        this.#messages.push({type: 'PaymentConfirmed', paymentId: this.id, registrationId: this.registrationId, receipt});
     }
     deny(reason) {
+        this.#assertPending();
         this.status = 'denied';
-        this.#messages.push({type: 'PaymentDenied', paymentId: this.id, reason});
+        this.#messages.push({type: 'PaymentDenied', paymentId: this.id, registrationId: this.registrationId, reason});
+    }
+    #assertPending() {
+        if (this.status != 'pending') throw new Error(`Payment already ${this.status}`);
     }
     pullMessages() {
         const m = this.#messages;
