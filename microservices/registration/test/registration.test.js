@@ -1,60 +1,70 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { Activity, PaymentRule, Registration, User } from "../src/domain/activity.js";
+import { Activity, MinimumAgeRule, PaymentRule, User } from "../src/domain/activity.js";
+
+const types = (registration) => registration.pullMessages().map(m => m.type);
 
 test("should register", async () => {
-  const user = new User(1);
-  const activity = new Activity(1, undefined, 1)
-  const registration = new Registration(user, activity);
-  activity.register(registration);
-  // TODO const registration = activity.register(user);
+  const activity = new Activity({ capacity: 1 });
+  const registration = activity.register(new User(1));
 
   assert.equal(activity.getOccupation(), 1);
   assert.equal(activity.getConfirmedOccupation(), 1);
   assert.equal(registration.status, 'confirmed');
+  assert.deepEqual(types(registration), ['RegistrationCreated', 'RegistrationConfirmed']);
 });
 test("should not register twice", async () => {
-  const user = new User(1);
-  const activity = new Activity(1, undefined, 1)
-  const registration = new Registration(user, activity);
-  activity.register(registration);
-  assert.throws(() => activity.register(registration), /Duplicated user/);
+  const activity = new Activity({ capacity: 1 });
+  activity.register(new User(1));
+  assert.throws(() => activity.register(new User(1)), /Duplicated user/);
+});
+test("should allow registering again after cancel", async () => {
+  const activity = new Activity({ capacity: 1 });
+  activity.register(new User(1)).cancel('desisti');
+  assert.equal(activity.register(new User(1)).status, 'confirmed');
 });
 test("should not exceed capacity", async () => {
-  const user = new User(1);
-  const user2 = new User(2);
-  const activity = new Activity(1, undefined, 1)
-  const registration = new Registration(user, activity);
-  const registration2 = new Registration(user2, activity);
-  activity.register(registration);
-  activity.register(registration2);
+  const activity = new Activity({ capacity: 1 });
+  const registration = activity.register(new User(1));
+  const registration2 = activity.register(new User(2));
   assert.equal(activity.getOccupation(), 1);
   assert.equal(registration.status, 'confirmed');
   assert.equal(registration2.status, 'canceled');
   assert.equal(registration2.getReasons()[0], 'Full occupation');
 });
+test("denied registration must not request payment", async () => {
+  const activity = new Activity({ capacity: 1, rules: [new PaymentRule(10)] });
+  activity.register(new User(1)); // ocupa a vaga, pendente de pagamento
+  activity.registrations[0].fulfill(activity.registrations[0].requirements[0].id);
+  const denied = activity.register(new User(2));
+  assert.equal(denied.status, 'canceled');
+  assert.deepEqual(types(denied), ['RegistrationCreated']);
+});
 test("should send overflow to wait list if full occupation is not confirmed", async () => {
-  const user = new User(1);
-  const user2 = new User(2);
-  const activity = new Activity(1, [new PaymentRule(10)], 1)
-  const registration = new Registration(user, activity);
-  const registration2 = new Registration(user2, activity);
-  activity.register(registration);
-  activity.register(registration2);
+  const activity = new Activity({ capacity: 1, rules: [new PaymentRule(10)] });
+  const registration = activity.register(new User(1));
+  const registration2 = activity.register(new User(2));
   assert.equal(activity.getOccupation(), 2);
   assert.equal(registration.status, 'pending');
   assert.equal(registration2.status, 'pending');
-  assert.equal(registration2.getReasons()[0].type, 'wait list');
-  
+  assert.equal(registration2.getPendingRequirements()[0].type, 'wait list');
 });
-test("should wait for payment", async () => {
-  const user = new User(1);
-  const activity = new Activity(1, [new PaymentRule(10)], 1);
-  const registration = new Registration(user, activity);
-  activity.register(registration);
+test("should wait for fee + ticket + age verification", async () => {
+  const activity = new Activity({ capacity: 1, rules: [new PaymentRule(5, 'Taxa'), new PaymentRule(50, 'Ingresso'), new MinimumAgeRule(18)] });
+  const registration = activity.register(new User(1));
   assert.equal(registration.status, 'pending');
-  assert.equal(activity.getOccupation(), 1);
   assert.equal(activity.getConfirmedOccupation(), 0);
-  const reason = registration.getReasons()[0];
-  assert.equal(reason.type, 'payment');
+  assert.deepEqual(registration.getPendingRequirements().map(r => r.type), ['payment', 'payment', 'age verification']);
+  const messages = registration.pullMessages();
+  assert.deepEqual(messages.filter(m => m.type == 'PaymentRequested').map(m => m.amount), [5, 50]);
+
+  for (const r of registration.requirements) registration.fulfill(r.id);
+  assert.equal(registration.status, 'confirmed');
+  assert.deepEqual(types(registration), ['RegistrationConfirmed']);
+});
+test("should not reduce capacity below confirmed occupation", async () => {
+  const activity = new Activity({ capacity: 2 });
+  activity.register(new User(1));
+  activity.register(new User(2));
+  assert.throws(() => activity.setCapacity(1), /confirmed occupation/);
 });
