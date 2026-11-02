@@ -29,6 +29,8 @@ for (const type of ['EventCreated', 'EventUpdated', 'EventPublished', 'EventCanc
 }
 messageBus.listen('PaymentConfirmed', e => registrationService.confirmPayment(e));
 messageBus.listen('PaymentDenied', e => registrationService.denyPayment(e));
+// TODO precisa mesmo escutar os usuários? ou basta pegar o userId
+// se precisar de outras informações, pode vir no formulário de inscrição
 messageBus.listen('UserCreated', e => userRepository.add({id: e.userId}));
 
 app.get('/activities', (req, res) => {

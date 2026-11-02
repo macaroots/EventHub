@@ -4,11 +4,11 @@ export const isAdmin = (user) => user?.role == 'admin';
 
 const isDate = (field) => (v) => { if (v != null && isNaN(Date.parse(v))) throw new TypeError(`${field} must be an ISO date`) };
 
+// TODO não gostei dos validators. não seria melhor em um setter privado?
 // Campos editáveis via update(); status, organizers e createdBy só mudam pelos métodos de domínio.
 const validators = {
     name: (v) => { if (!v) throw new BlankError('name') },
     description: () => {},
-    location: () => {},
     startDate: isDate('startDate'),
     endDate: isDate('endDate'),
 };
@@ -16,6 +16,7 @@ const validators = {
 // A programação (atividades) não fica dentro do Event: cada Activity referencia seu eventId.
 // Estado privado: só muda pelos métodos, que validam.
 export class Event {
+    // TODO avaliar vantagens e profissionalismo
     #data;
 
     // data vem da API (create) ou do banco (reconstituição).
