@@ -170,6 +170,14 @@ export class Registration {
     }
 }
 
+// TODO fila de espera (invariante da Activity, não serviço à parte):
+// - status 'waitlisted' na Registration (não conta na ocupação) no lugar da pendência 'wait list'
+// - todo cancelamento passa pela Activity (activity.cancel(registrationId, reason)), que promove o 1º da fila
+// - cobrar só na promoção: hoje quem cai na fila recebe PaymentRequested
+// - prazo de pagamento (expiresAt) é do registration: job chama activity.expireOverdue(now)
+// - lock otimista (version) na Activity ao persistir
+// - Activity como fonte da verdade das inscrições (registrationRepository vira leitura ou sai)
+// - ActivityLine (tokens) é sala de espera de tráfego, não fila de espera; pode ir para o gateway
 // TODO avaliar se capacidade deve ser uma regra de inscrição ou um método específico da atividade
 // Regras: avaliam e retornam { deny: motivo } | { require: pendência } | undefined.
 // Não alteram a Registration nem publicam mensagens (sem efeito colateral).
