@@ -34,3 +34,4 @@ A escolha do PostgreSQL como tecnologia de banco de dados traz as seguintes cons
 ## Referências
 - Documentação do PostgreSQL: https://www.postgresql.org/docs/
 - Comparativo entre bancos de dados SQL e NoSQL: https://www.sitepoint.com/sql-vs-nosql-differences/
+- https://medium.com/@jhonywalkeer/guia-completo-sobre-architecture-decision-records-adr-defini%C3%A7%C3%A3o-e-melhores-pr%C3%A1ticas-f63e66d33e6s
