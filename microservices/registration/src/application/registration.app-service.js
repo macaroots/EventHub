@@ -11,14 +11,15 @@ export class RegistrationAppService {
     }
 
     // Projeção local da Activity da secretaria (ActivityCreated/ActivityUpdated). Idempotente: upsert.
-    upsertActivity({ activityId, eventId, capacity, rules = [] }) {
+    upsertActivity({ activityId, eventId, capacity, price = 0, rules = [] }) {
         const registrationRules = rules.map(ruleFromConfig);
         const activity = this.activityRepository.getById(activityId);
         if (!activity) {
-            this.activityRepository.add(new Activity({ id: activityId, eventId, capacity, rules: registrationRules }));
+            this.activityRepository.add(new Activity({ id: activityId, eventId, capacity, price, rules: registrationRules }));
         }
         else {
             activity.setCapacity(capacity);
+            activity.setPrice(price);
             activity.setRules(registrationRules);
             this.activityRepository.update(activity);
         }

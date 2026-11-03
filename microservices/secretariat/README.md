@@ -12,16 +12,14 @@ Todos os endpoints exigem login (ver [README](../README.md#autenticação)). Adm
 | `POST /events/:id/cancel` | organizer | `{reason}` obrigatório. Cancelado não pode mais ser editado. |
 | `POST /events/:id/organizers` `{userId}` / `DELETE /events/:id/organizers/:userId` | organizer | O criador não pode ser removido. |
 | `DELETE /events/:id` | criador | Só se não estiver publicado (cancele antes); apaga as atividades junto. |
-| `POST/GET/PATCH/DELETE /activities[/:id]`, `GET /activities?eventId=`, `GET /events/:id/activities` | organizer do evento | Campos: `eventId, name, description, location, startsAt, endsAt, capacity, rules`. Não apaga atividade de evento publicado. |
+| `POST/GET/PATCH/DELETE /activities[/:id]`, `GET /activities?eventId=`, `GET /events/:id/activities` | organizer do evento | Campos: `eventId, name, description, location, startsAt, endsAt, capacity, price, rules` (`price` padrão 0). Não apaga atividade de evento publicado. |
 
 Erros: 401 sem token, 403 sem permissão, 404 não encontrado, 400 regra de domínio.
 
-`rules` são só configuradas aqui; quem as aplica é o [registration](../registration/README.md):
+`rules` são regras de elegibilidade, só configuradas aqui; quem as aplica é o [registration](../registration/README.md). Capacidade e preço não são regras:
 
 ```json
-[{"type": "payment", "amount": 5, "description": "Taxa"},
- {"type": "payment", "amount": 50, "description": "Ingresso"},
- {"type": "minimumAge", "age": 18}]
+[{"type": "minimumAge", "age": 18}]
 ```
 
 - `Activity` é um aggregate próprio que referencia `eventId`, não uma lista dentro de `Event`: muda com frequência e é a unidade de inscrição. A permissão vem do evento.

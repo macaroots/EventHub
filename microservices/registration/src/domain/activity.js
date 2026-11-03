@@ -22,13 +22,15 @@ export class Activity {
     #id;
     #eventId;
     #capacity;
+    #price;
     #registrations = [];
     #registrationRules = [];
 
-    constructor({ id = crypto.randomUUID(), eventId, capacity, rules = [] } = {}) {
+    constructor({ id = crypto.randomUUID(), eventId, capacity, price = 0, rules = [] } = {}) {
         this.#id = id;
         this.#eventId = eventId;
         this.setCapacity(capacity);
+        this.setPrice(price);
         this.setRules(rules);
     }
     get id() { return this.#id; }
@@ -40,29 +42,38 @@ export class Activity {
         if (capacity < this.getConfirmedOccupation()) throw new TypeError('Must not be lower than confirmed occupation');
         this.#capacity = capacity;
     }
+    get price() { return this.#price; }
+    setPrice(price) {
+        if (price < 0) throw new TypeError('Price must not be lower than 0');
+        this.#price = price;
+    }
     get registrations() { return this.#registrations; }
     toJSON() {
         return {
             id: this.#id,
             eventId: this.#eventId,
             capacity: this.#capacity,
+            price: this.#price,
             registrations: this.#registrations,
             registrationRules: this.#registrationRules
         }
     }
 
-    // Factory: o aggregate cria a Registration e decide o status a partir das regras.
+    // Factory: o aggregate cria a Registration e decide o status: vaga, regras de elegibilidade, preço.
     // Regras só avaliam; quem altera a Registration é o aggregate.
     register(userId) {
         if (this.isRegistered(userId)) throw new DuplicateError('user');
         const registration = new Registration(userId, this.#id);
+        if (this.isFullConfirmed()) registration.cancel('Full occupation');
+        else if (this.isFull()) registration.require({ type: 'wait list' });
         for (const rule of this.#registrationRules) {
+            if (registration.status == 'canceled') break;
             const outcome = rule.evaluate({ activity: this, userId });
-            if (outcome?.deny) {
-                registration.cancel(outcome.deny);
-                break;
-            }
-            if (outcome?.require) registration.require(outcome.require);
+            if (outcome?.deny) registration.cancel(outcome.deny);
+            else if (outcome?.require) registration.require(outcome.require);
+        }
+        if (this.#price > 0 && registration.status != 'canceled') {
+            registration.require({ type: 'payment', amount: this.#price, description: 'Ticket' });
         }
         registration.submit();
         this.#registrations.push(registration);
@@ -86,9 +97,9 @@ export class Activity {
     getRules() {
         return this.#registrationRules;
     }
-    // CapacityRule sempre primeiro; as demais vêm da secretaria (ver ruleFromConfig).
+    // Regras de elegibilidade vindas da secretaria (ver ruleFromConfig).
     setRules(rules) {
-        this.#registrationRules = [new CapacityRule(), ...rules];
+        this.#registrationRules = rules;
     }
     // Inscrição cancelada não bloqueia nova tentativa.
     isRegistered(userId) {
@@ -178,27 +189,10 @@ export class Registration {
 // - lock otimista (version) na Activity ao persistir
 // - Activity como fonte da verdade das inscrições (registrationRepository vira leitura ou sai)
 // - ActivityLine (tokens) é sala de espera de tráfego, não fila de espera; pode ir para o gateway
-// TODO avaliar se capacidade deve ser uma regra de inscrição ou um método específico da atividade
-// Regras: avaliam e retornam { deny: motivo } | { require: pendência } | undefined.
+
+// Regras de elegibilidade: avaliam e retornam { deny: motivo } | { require: pendência } | undefined.
 // Não alteram a Registration nem publicam mensagens (sem efeito colateral).
-export class CapacityRule {
-    evaluate({ activity }) {
-        if (activity.isFullConfirmed()) return { deny: 'Full occupation' };
-        if (activity.isFull()) return { require: { type: 'wait list' } };
-    }
-}
-
-// TODO avaliar pagamento como regra
-export class PaymentRule {
-    constructor(amount, description = 'Payment') {
-        this.amount = amount;
-        this.description = description;
-    }
-    evaluate() {
-        return { require: { type: 'payment', amount: this.amount, description: this.description } };
-    }
-}
-
+// Capacidade e preço não são regras: são atributos da Activity.
 // Sem data de nascimento na projeção de Participant: vira pendência de verificação.
 export class MinimumAgeRule {
     constructor(age) {
@@ -212,7 +206,6 @@ export class MinimumAgeRule {
 // Config da secretaria ({type, ...}) -> regra.
 export function ruleFromConfig(config) {
     switch (config.type) {
-        case 'payment': return new PaymentRule(config.amount, config.description);
         case 'minimumAge': return new MinimumAgeRule(config.age);
         default: throw new TypeError(`Unknown rule ${config.type}`);
     }
