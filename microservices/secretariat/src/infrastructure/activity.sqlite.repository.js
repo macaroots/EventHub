@@ -13,7 +13,8 @@ export class ActivitySqliteRepository extends SqliteRepository {
                 startsAt TEXT,
                 endsAt TEXT,
                 capacity INTEGER NOT NULL,
-                rules TEXT NOT NULL -- JSON: [{type: 'payment', amount, description} | {type: 'minimumAge', age}]
+                price REAL NOT NULL DEFAULT 0,
+                rules TEXT NOT NULL -- JSON: [{type: 'minimumAge', age}]
             ) STRICT
         `);
     }

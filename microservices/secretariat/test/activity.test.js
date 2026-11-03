@@ -38,14 +38,15 @@ test("activity validates rules and partial update keeps other fields", () => {
   assert.equal(a.toJSON().capacity, 5);
 });
 
-test("ActivityCreated carries capacity and rules", async () => {
+test("ActivityCreated carries capacity, price and rules", async () => {
   const { eventService, activityService, messages } = setup();
   const eventId = await eventService.create({ name: "Congresso" }, alice);
-  const rules = [{ type: "payment", amount: 5, description: "Taxa" }, { type: "minimumAge", age: 18 }];
-  const activityId = await activityService.create({ eventId, name: "Workshop", capacity: 30, rules }, alice);
+  const rules = [{ type: "minimumAge", age: 18 }];
+  const activityId = await activityService.create({ eventId, name: "Workshop", capacity: 30, price: 50, rules }, alice);
   const m = messages.at(-1);
   assert.equal(m.type, "ActivityCreated");
   assert.equal(m.activityId, activityId);
+  assert.equal(m.price, 50);
   assert.deepEqual(m.rules, rules);
 });
 

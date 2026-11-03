@@ -4,8 +4,8 @@ import { Event } from "../domain/event.js";
 
 // Integration events carregam só o que os outros contextos precisam (ver README).
 const toMessage = (type, a) => {
-    const { id, eventId, name, startsAt, endsAt, capacity, rules } = a.toJSON();
-    return { type, activityId: id, eventId, name, startsAt, endsAt, capacity, rules };
+    const { id, eventId, name, startsAt, endsAt, capacity, price, rules } = a.toJSON();
+    return { type, activityId: id, eventId, name, startsAt, endsAt, capacity, price, rules };
 };
 
 // Permissão herdada do Event: quem gerencia o evento gerencia suas atividades.
