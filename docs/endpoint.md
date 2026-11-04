@@ -15,16 +15,14 @@ User
     Dono: identity
     {
         id
-        username
-        passwordHash,
         name,
-        email
-        role: user | admin // sugestão add
-        active: boolean, // sugestão retirar para simplificar, pode adicionar quando precisar
+        email,
+        passwordHash,
+        active: boolean,
         createdAt
     }
     Projeções:
-        Credenciamento (Participant) { id, username }    ← UserCreated, UserUpdated
+        Credenciamento (Participant) { id, name }    ← UserCreated, UserUpdated
 
 Event
     Dono: Secretaria
@@ -82,6 +80,79 @@ Attendance (check-in)
     }
     Projeções: nenhuma.
 
+## Identidade
+publics: /auth/register,
+         /auth/login
+
+ obs: o JWT não tem role. Quem é owner/organizer de um evento é decidido pela Secretaria que olha o vínculo do userId com aquele evento.
+ Todo usuário nasce como participant, vira owner ao criar um evento.
+
+
+### Autenticação
+
+POST /auth/register
+Entrada:
+    { name, 
+    email,
+    password }
+
+Saída:
+    status 201 { id }
+
+    Emite UserCreated { userId, name, email }
+
+
+POST /auth/login
+Entrada:
+    { email, 
+    password }
+
+Saída:
+    Set-Cookie: token JWT { userId }
+    { expiresIn }
+
+
+POST /auth/logout
+    Limpa o cookie
+
+### Perfil
+
+GET /me
+    { id, 
+    name, 
+    email }
+
+PATCH /me
+Entrada:
+    { name?, email? }
+Saída:
+    status 204
+
+Emite UserUpdated { userId, name, email }
+
+PUT /me/password
+Entrada:
+    { currentPassword, newPassword }
+Saída:
+    204
+
+DELETE /me
+    Emite UserDeactivated { userId }
+        active = false
+    status 204
+
+inscrições antigas continuam apontando para esse userId.
+
+### Interno 
+
+GET /users/:id
+    { id, name, email }
+
+
+GET /users?email=aa@a.com
+    { id, name, email }
+
+- usado para emails, certificados e para secretaria confirmar que o usuário existe e está ativo
 ## Catálogo
 
 Público (sem login). Só eventos `published` e `canceled`; `draft` → 404.
@@ -172,11 +243,11 @@ POST /events/:id/publish
     204
 
 POST /events/:id/cancel
-    { reason }
+    { reason?='cancelado pelo organizador' }
     204
 
 POST /events/:id/organizers
-    { userId }
+    { userId } // verificar como é a conversão de email para id.
     204
 
 DELETE /events/:id/organizers/:userId
@@ -243,7 +314,7 @@ GET /queue/:token
 POST /activities/:id/registrations
     {
         token           // da fila; precisa ter sido chamado
-        ...dados do formulário
+        ...dados do formulário // por enquanto, só userId
     }
     201 Registration
         Regra negada também é 201, com status = canceled e reasons.
@@ -269,7 +340,7 @@ Organizers do evento da atividade, ou admin.
 GET /activities/:id/registrations?status
     [{
         ...Registration
-        participant: { id, username }
+        participant: { id, email }
     }]
 
 POST /registrations/:id/cancel
@@ -292,10 +363,10 @@ ActivityDeleted { activityId }
 
 UserCreated | UserUpdated { userId, username }
 
-PaymentConfirmed { registrationId, paymentId }
+PaymentApproved { registrationId, paymentId }
     fulfill(paymentId); sem pendências → RegistrationConfirmed
 
-PaymentDenied { registrationId, reason: 'denied' | 'expired' }
+PaymentDenied { registrationId, paymentId, reason: 'denied' | 'expired' }
     cancel → RegistrationCanceled
 
 ### Emite
