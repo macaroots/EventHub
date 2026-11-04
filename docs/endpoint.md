@@ -54,6 +54,7 @@ Activity
         capacity
         price = 0
         rules = []
+        qrCodeDaAtividade
     }
     Projeções:
         - Catálogo { id, eventId, name, description, location, startsAt, endsAt, capacity, price, rules }    ← ActivityCreated, ActivityUpdated, ActivityDeleted
@@ -393,3 +394,77 @@ GET /activities/:id/attendances
 
 GET /activities/:id/waitlist
     [userId]
+
+## Certificado
+
+Certificado {
+    participantName
+    eventName
+    eventDate
+    activities: [{name}]
+    token verificação
+}
+
+POST /events/:eventId/certificates *Emite o certificado (idempotente)* // credenciamento
+    status 201
+    emite CertificateRequested {participantId, participantName, eventId, eventName, eventDate, activities: [{name}]} 
+    
+certificadoService.criar
+    ouve CertificateRequested    
+        *Verifica inscrição aprovada + presença > 74%*
+
+GET /certificates *Lista os certificados do participante* pelo JWT token
+    [{certificateId, eventName}]
+
+GET /certificates/:id *Metadados do certificado*
+    {Certificado}
+
+GET /certificates/:id/download *Gera e baixa o PDF com PDFKit*
+
+GET /certificates/validate/:tokenVerificacao
+    {Certificado}
+
+
+## Portaria dentro do Credenciamento
+Attendance {
+    activityId
+    userId
+    activityName
+    userName
+}
+
+ouve ActivityCreated
+    portariaService.gerarToken()
+        gera qrCodeDaAtividade
+
+POST	/activities/:id/attendances // userId do JWT
+*Registra presença a partir do QR/token da credencial. Idempotente.* // participante
+    { qrCodeDaAtividade }
+    emite UserCheckedIn { activityId, userId }
+
+GET	/events/:id/attendances?activityId *Lista/audita check-ins do evento.*
+    [{
+        Attendance
+    }]
+
+
+## Monitoramente e relatórios
+
+GET /reports/events/:id?format=CSV/XLSX/PDF/JSON
+    {
+        totalRegistrations
+        totalRegistrationsConfirmed
+        totalAttendances
+    }
+GET /reports/activities/:id
+    {
+        totalRegistrations
+        totalRegistrationsConfirmed
+        totalAttendances
+    }
+
+### Eventos
+
+#### Ouve
+
+EventCreated, ActivityCreated, RegistrationCreated, RegistrationConfirmed, UserCheckedIn
