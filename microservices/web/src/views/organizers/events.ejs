@@ -1,0 +1,47 @@
+<section>
+    <h2>Cadastro de eventos</h2>
+    <div id="mensagem"></div>
+    <form method="post" action="/organizers/events">
+        <label>
+            <span>Name:</span>
+            <input type="text" name="name">
+        </label>   
+        <label>
+            <span>Information:</span>
+            <textarea name="information"></textarea>
+        </label>   
+        <label>
+            <span>Start date:</span>
+            <input type="date" name="startDate">
+        </label>   
+        <label>
+            <span>End date:</span>
+            <input type="date" name="endDate">
+        </label>   
+        <button>Enviar</button>
+    </form>
+</section>
+<section>
+    <h2>Lista de eventos</h2>
+    <button>Listar</button>
+    <table>
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Ações</th>
+        </tr>
+        <tbody id="events">
+<% for (let event of events) { %>
+            <tr>
+                <td><%= event.id %></td>
+                <td><%= event.name %></td>
+                <td>
+                    <button onclick="editar(<%= event.id %>)">editar</button>
+                    <button onclick="apagar(<%= event.id %>)">apagar</button>
+                </td>
+            </tr>
+<%} %>
+        </tbody>
+    </table>
+
+</section>
