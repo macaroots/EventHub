@@ -377,23 +377,6 @@ RegistrationConfirmed { registrationId, userId }
 RegistrationCanceled { registrationId, userId, reason }
 PaymentRequested { paymentId, registrationId, userId, amount, description }
 
-## CheckIn como parte do Credenciamento
-### Participante
-GET /registrations/:id/ticket
-    Só confirmed.
-    { token }       // QR do check-in
-
-### Organizador
-POST /activities/:id/attendances
-    { ticket }      // token do QR
-    201 { registrationId, checkedInAt }
-    400 se inscrição não confirmed
-
-GET /activities/:id/attendances
-    [{ registrationId, participant: { id, username }, checkedInAt }]
-
-GET /activities/:id/waitlist
-    [userId]
 
 ## Certificado
 
@@ -431,6 +414,7 @@ Attendance {
     userId
     activityName
     userName
+    checkedInAt
 }
 
 ouve ActivityCreated
@@ -440,13 +424,14 @@ ouve ActivityCreated
 POST	/activities/:id/attendances // userId do JWT
 *Registra presença a partir do QR/token da credencial. Idempotente.* // participante
     { qrCodeDaAtividade }
-    emite UserCheckedIn { activityId, userId }
+    emite UserCheckedIn { activityId, userId, checkedInAt }
+    201
+    400 se inscrição não confirmed
 
 GET	/events/:id/attendances?activityId *Lista/audita check-ins do evento.*
     [{
         Attendance
     }]
-
 
 ## Monitoramente e relatórios
 
