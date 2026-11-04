@@ -1,0 +1,6 @@
+label {
+    display: table-row;
+}
+label > * {
+    display: table-cell;
+}
