@@ -2,18 +2,14 @@ import express from 'express';
 import { EventAppService } from './application/event.app-service.js';
 import { ActivityAppService } from './application/activity.app-service.js';
 import { RabbitMqMessageBus } from '../../shared/messaging/rabbitmq-message-bus.js';
-import { DatabaseSync } from 'node:sqlite';
 import { EventSqliteRepository } from './infrastructure/event.sqlite.repository.js';
 import { ActivitySqliteRepository } from './infrastructure/activity.sqlite.repository.js';
-
-import { mkdirSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { openDatabase } from '../../shared/infrastructure/sqlite.js';
 import { EventController } from './application/event.controller.js';
 import { ActivityController } from './application/activity.controller.js';
 import { authenticate } from '../../shared/auth/jwt.js';
 
-mkdirSync(resolve('data'), { recursive: true });
-const database = new DatabaseSync(join(resolve('data'), 'secretariat.db'));
+const database = openDatabase('secretariat');
 
 const app = express()
 const port = process.env.PORT || 3000;
