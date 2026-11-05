@@ -43,13 +43,20 @@ app.get('/activities', (req, res) => {
 app.get('/registrations', (req, res) => {
     res.json(registrationService.listRegistrations(req.user));
 });
-app.get('/registrations/:id', (req, res) => {
+// Erros de domínio → status HTTP.
+const handle = (fn, status = 200) => async (req, res) => {
     try {
-        res.json(registrationService.getRegistration(req.params.id, req.user));
+        res.status(status).json(await fn(req));
     } catch (e) {
         res.status(e instanceof NotFoundError ? 404 : e instanceof ForbiddenError ? 403 : 400).send(e.message);
     }
-});
+};
+app.get('/registrations/:id', handle(req => registrationService.getRegistration(req.params.id, req.user)));
+// Gestão (organizador do evento ou admin).
+app.get('/activities/:id/registrations', handle(req => registrationService.listActivityRegistrations(req.params.id, req.user)));
+app.post('/registrations/:id/cancel', handle(req => registrationService.cancelRegistration(req.params.id, req.body, req.user)));
+app.post('/registrations/:id/requirements/:requirementId/fulfill',
+    handle(req => registrationService.fulfillRequirement(req.params.id, req.params.requirementId, req.user)));
 app.post('/registrations', async (req, res) => {
     try {
         const registration = await registrationService.register(req.body, req.user.id);

@@ -6,9 +6,13 @@ Exige login; o usuário vem do token.
 |------|-----------|
 | `POST /registrations` `{activityId}` | Inscreve o usuário logado. Só em evento `published`. Retorna `{id, status, requirements, reasons}`. |
 | `GET /registrations` | Admin vê todas; os demais, só as próprias. |
+| `GET /registrations/:id` | Dono, organizador do evento ou admin. |
+| `POST /registrations/:id/cancel` `{reason?}` | Dono, organizador do evento ou admin. |
+| `GET /activities/:id/registrations` | Organizador/admin: `{activity (com ocupação), event, registrations}`. |
+| `POST /registrations/:id/requirements/:requirementId/fulfill` | Organizador/admin. Só pendências manuais (`age verification`); `payment` vem do payment. |
 | `GET /activities` | Projeção das atividades. |
 
-`Activity` e o status do evento são projeções das mensagens da secretaria; `Participant {id, username}` é projeção de `UserCreated`/`UserUpdated` do identity (upsert, idempotente). O domínio só conhece o `userId`; o participante só entra na listagem.
+`Activity` e o evento (`status`, `organizers`) são projeções das mensagens da secretaria (que publica `EventUpdated` ao mudar organizers); `Participant {id, username}` é projeção de `UserCreated`/`UserUpdated` do identity (upsert, idempotente). O domínio só conhece o `userId`; o participante só entra na listagem.
 
 ### Regras de inscrição
 
@@ -23,4 +27,6 @@ Exige login; o usuário vem do token.
 
 Persistência: SQLite em `data/registration.db` (volume `registration-data`). A `Activity` é carregada e salva junto com as inscrições, numa transação. As projeções (atividades, eventos, participantes) também ficam no banco, porque as mensagens que as criaram já foram consumidas e não chegam de novo após um restart.
 
-Limitações: `wait list` e `age verification` ainda não têm quem as resolva; inscrição cancelada não estorna pagamento.
+Gestão: organizers vêm na projeção do evento, então a autorização é local (sem chamada à secretaria), mas eventualmente consistente. Alternativa: o BFF perguntar à secretaria e o registration confiar no BFF.
+
+Limitações: `wait list` ainda não tem quem a resolva; inscrição cancelada não estorna pagamento; eventos projetados antes de existir `organizers` ficam sem organizadores até o próximo `EventUpdated` (salve o evento de novo).

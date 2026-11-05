@@ -1,7 +1,10 @@
 import { ForbiddenError, NotFoundError } from "../../../shared/domain/errors.js";
 import { Activity, Participant, ruleFromConfig } from "../domain/activity.js";
 
-const canSee = (user, registration) => user.role == 'admin' || registration.userId == user.id;
+const isAdmin = (user) => user.role == 'admin';
+const isOwner = (user, registration) => registration.userId == user.id;
+// Pendências que o organizador resolve na mão. Pagamento só pelo payment; fila de espera pela vaga.
+const MANUAL_REQUIREMENTS = ['age verification'];
 
 export class RegistrationAppService {
     constructor(activityRepository, registrationRepository, participantRepository, eventRepository, messageBus) {
@@ -31,9 +34,9 @@ export class RegistrationAppService {
         this.activityRepository.delete(activityId);
     }
 
-    // Projeção do status do evento: só aceita inscrição em evento publicado.
-    async updateEvent({ eventId, name, status, reason }) {
-        this.eventRepository.upsert({ id: eventId, name, status });
+    // Projeção do evento: status (só aceita inscrição em evento publicado) e organizers (gestão das inscrições).
+    async updateEvent({ eventId, name, status, organizers = [], reason }) {
+        this.eventRepository.upsert({ id: eventId, name, status, organizers });
         if (status != 'canceled') return;
         for (const activity of this.activityRepository.list().filter(a => a.eventId == eventId)) {
             activity.cancelAll(`Event canceled: ${reason}`);
@@ -61,12 +64,51 @@ export class RegistrationAppService {
     // Admin vê todas; os demais, só as próprias.
     listRegistrations(user) {
         return this.registrationRepository.list()
-            .filter(r => canSee(user, r))
+            .filter(r => isAdmin(user) || isOwner(user, r))
             .map(r => this.#view(r));
     }
+    // Dono, organizador do evento ou admin.
     getRegistration(id, user) {
         const registration = this.#get(id);
-        if (!canSee(user, registration)) throw new ForbiddenError('see registration');
+        if (!isOwner(user, registration) && !this.#canManage(registration.activityId, user)) throw new ForbiddenError('see registration');
+        return this.#view(registration);
+    }
+
+    // Gestão (organizador do evento ou admin): inscrições da atividade com a ocupação.
+    listActivityRegistrations(activityId, user) {
+        const activity = this.activityRepository.getById(activityId);
+        if (!activity) throw new NotFoundError('activity');
+        this.#assertCanManage(activity.id, user);
+        const event = this.eventRepository.getById(activity.eventId);
+        return {
+            activity: {
+                id: activity.id, name: activity.name, capacity: activity.capacity, price: activity.price,
+                occupation: activity.getOccupation(), confirmedOccupation: activity.getConfirmedOccupation(),
+            },
+            event: event && { id: event.id, name: event.name, status: event.status },
+            registrations: activity.registrations.map(r => this.#view(r)),
+        };
+    }
+    // O participante cancela a própria; o organizador, qualquer uma da atividade.
+    async cancelRegistration(id, { reason } = {}, user) {
+        const registration = this.#get(id);
+        const owner = isOwner(user, registration);
+        if (!owner && !this.#canManage(registration.activityId, user)) throw new ForbiddenError('cancel registration');
+        registration.cancel(reason || (owner ? 'Canceled by participant' : 'Canceled by organizer'));
+        this.registrationRepository.update(registration);
+        await this.#publish([registration]);
+        return this.#view(registration);
+    }
+    // O organizador resolve uma pendência manual (ex.: idade conferida no credenciamento).
+    async fulfillRequirement(id, requirementId, user) {
+        const registration = this.#get(id);
+        this.#assertCanManage(registration.activityId, user);
+        const requirement = registration.requirements.find(r => r.id == requirementId);
+        if (!requirement) throw new NotFoundError('requirement');
+        if (!MANUAL_REQUIREMENTS.includes(requirement.type)) throw new Error(`Requirement ${requirement.type} cannot be fulfilled manually`);
+        registration.fulfill(requirementId);
+        this.registrationRepository.update(registration);
+        await this.#publish([registration]);
         return this.#view(registration);
     }
 
@@ -93,6 +135,15 @@ export class RegistrationAppService {
             activity: activity && { id: activity.id, name: activity.name },
             event: event && { id: event.id, name: event.name },
         };
+    }
+    #canManage(activityId, user) {
+        if (isAdmin(user)) return true;
+        const activity = this.activityRepository.getById(activityId);
+        const event = activity && this.eventRepository.getById(activity.eventId);
+        return !!event?.organizers.includes(user.id);
+    }
+    #assertCanManage(activityId, user) {
+        if (!this.#canManage(activityId, user)) throw new ForbiddenError('manage registrations');
     }
     #get(id) {
         const registration = this.registrationRepository.getById(id);
