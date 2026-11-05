@@ -1,5 +1,6 @@
 import express from 'express';
-import { UserRepository } from './infrastructure/user.repository.js';
+import { UserSqliteRepository } from './infrastructure/user.sqlite.repository.js';
+import { openDatabase } from '../../shared/infrastructure/sqlite.js';
 import { UserAppService } from './application/user.app-service.js';
 import { RabbitMqMessageBus } from '../../shared/messaging/rabbitmq-message-bus.js';
 
@@ -9,7 +10,7 @@ const port = process.env.PORT || 3000;
 app.use(express.json()); 
 
 const messageBus = await RabbitMqMessageBus.connect();
-const userRepository = new UserRepository();
+const userRepository = new UserSqliteRepository(openDatabase('identity'));
 const userService = new UserAppService(userRepository, messageBus);
 
 app.get('/users', (req, res) => {
