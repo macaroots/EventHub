@@ -4,7 +4,7 @@ import * as payment from '../clients/payment.js';
 import * as registration from '../clients/registration.js';
 import { json } from './helpers.js';
 
-// Pagamento de uma pendência da inscrição (paymentId = id da pendência).
+// Pagamento da reserva da inscrição (paymentId = registration.payment.id).
 export const router = Router();
 
 // O payment ainda não tem auth: o BFF só mostra se a inscrição do pagamento for
@@ -21,7 +21,7 @@ const load = async (req) => {
 const settled = async (req, registrationId, paymentId, tries = 10) => {
     for (let i = 0; i < tries; i++) {
         const r = await json(await registration.getRegistration(req, registrationId));
-        if (r.status == 'canceled' || r.requirements.find(x => x.id == paymentId)?.fulfilled) return;
+        if (r.status != 'awaiting_payment' || r.payment?.id != paymentId) return;
         await new Promise(ok => setTimeout(ok, 200));
     }
 };
