@@ -16,6 +16,7 @@ const paymentService = new PaymentAppService(paymentRepository, new FakePaymentG
 
 // Isso pode ser definido aqui (Coreografia) ou no gateway (Orquestração)
 messageBus.listen('PaymentRequested', e => paymentService.charge(e));
+messageBus.listen('RegistrationCanceled', e => paymentService.cancelByRegistration(e));
 
 app.get('/payments', (req, res) => {
     let beans = paymentRepository.list();
