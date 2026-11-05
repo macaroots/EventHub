@@ -25,7 +25,7 @@ Não há serviço de catálogo: a programação pública fica na Secretaria e a 
 - **Auth:** JWT HS256 emitido pelo identity e validado em `shared/auth`; admin criado na subida.
 - **Identity:** cadastro, login e o evento `UserCreated`.
 - **Secretaria:** CRUD de eventos e atividades, publicar/cancelar, organizers, permissões e os eventos `Event*` e `Activity*`.
-- **Credenciamento:** inscrição com regras (vaga, `minimumAge`, preço), pendências, saga de pagamento e projeções de atividade, evento e participante.
+- **Credenciamento:** inscrição com regras (`minimumAge`), vaga com fila de espera, reserva com pagamento e expiração e projeções de atividade, evento e participante.
 - **Caixa:** recebe `PaymentRequested`, paga por `POST /payments/:id/pay` com gateway fake e publica `PaymentConfirmed` ou `PaymentDenied`.
 - **Testes:** secretariat, registration, payment e shared.
 - **ADRs:** 001 a 007.
@@ -38,12 +38,10 @@ Não há serviço de catálogo: a programação pública fica na Secretaria e a 
 - **Credenciamento:**
   - persistência (hoje em memória);
   - oferta (`PUT /activities/:id/offer`, `/public/activities/:id/offer`, `ActivityOfferUpdated`), conforme a ADR 007;
-  - fila de acesso (`/queue`, websocket);
   - endpoints de organizador (listar e cancelar inscrições, `fulfill`);
-  - quem resolva as pendências `wait list` e `age verification`;
   - check-in (`Attendance`, ticket, [ADR 002](adrs/checkin-no-registration.md));
   - emitir `CertificateRequested`.
-- **Caixa:** auth, persistência, expiração da cobrança, estorno quando a inscrição é cancelada e gateway real (adaptador).
+- **Caixa:** auth, estorno quando a inscrição é cancelada depois de paga e gateway real (adaptador).
 - **Notificações, Certificados e Relatórios:** criar, conforme os ADRs.
 - **Web:** integrar com as APIs, ou com um API gateway/BFF. A tela de atividade compõe programação (Secretaria) e oferta (Credenciamento).
 
@@ -57,6 +55,7 @@ Não há serviço de catálogo: a programação pública fica na Secretaria e a 
 - **Monitoramento:** `/health`, logs estruturados, métricas e tracing ([ADR 006](adrs/monitoramento.md)).
 - **Segurança:** RS256 no lugar do segredo compartilhado.
 - **Entrada única:** API gateway na frente dos serviços (hoje cada um expõe sua porta).
+- **Fila de acesso:** só com pico real, e terceirizada na borda; até lá, rate limit em `POST /registrations` ([ADR 010](adrs/fila-de-acesso.md)).
 - **Docs:** status dos ADRs (todos "Proposto" ou em branco), numeração duplicada (001) e exchange chamado `loja`.
 
 ## Context map

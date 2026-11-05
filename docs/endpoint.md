@@ -392,15 +392,16 @@ ActivityDeleted { activityId }
 
 UserCreated | UserUpdated { userId, email }
 
-PaymentApproved { registrationId, paymentId }
-    fulfill(paymentId); sem pendências → RegistrationConfirmed
+PaymentConfirmed { registrationId, paymentId }
+    awaiting_payment → confirmed (RegistrationConfirmed); reserva perdida → ignora
 
-PaymentDenied { registrationId, paymentId, reason: 'denied' | 'expired' }
-    cancel → RegistrationCanceled
+PaymentDenied { registrationId, paymentId, reason }
+    cancel → RegistrationCanceled; promove a fila
 
 ### Emite
 
 RegistrationCreated { ...Registration }
+RegistrationPromoted { registrationId, userId }
 RegistrationConfirmed { registrationId, userId }
 RegistrationCanceled { registrationId, userId, reason }
 PaymentRequested { paymentId, registrationId, userId, amount, description }
