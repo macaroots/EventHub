@@ -90,9 +90,9 @@ web/src/
 | `EventDeleted {eventId}` | secretariat | — |
 | `ActivityCreated/Updated {activityId, eventId, name, startsAt, endsAt, capacity, rules}` | secretariat | registration: upsert da projeção `Activity` |
 | `ActivityDeleted {activityId}` | secretariat | registration |
-| `RegistrationCreated/Confirmed/Canceled` | registration | (notificações, futuro) |
+| `RegistrationCreated/Promoted/Confirmed/Canceled` | registration | payment: `Canceled` cancela a cobrança pendente; (notificações, futuro) |
 | `PaymentRequested {paymentId, registrationId, userId, amount, description}` | registration | payment: cria a cobrança (idempotente) |
-| `PaymentConfirmed/Denied {paymentId, registrationId}` | payment | registration: resolve a pendência / cancela |
+| `PaymentConfirmed/Denied {paymentId, registrationId}` | payment | registration: confirma a reserva / cancela |
 
 Pagar: `POST localhost:3004/payments/:id/pay {"receipt": "..."}`; consultar: `GET /payments/:id`. O gateway é uma porta (`verify(payment, receipt)`); o adaptador atual é fake e recusa o comprovante `deny`.
 

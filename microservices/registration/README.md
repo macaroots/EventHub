@@ -4,30 +4,38 @@ Exige login; o usuário vem do token.
 
 | Rota | Descrição |
 |------|-----------|
-| `POST /registrations` `{activityId}` | Inscreve o usuário logado. Só em evento `published`. Retorna `{id, status, requirements, reasons}`. |
+| `POST /registrations` `{activityId}` | Inscreve o usuário logado. Só em evento `published`. Retorna `{id, status, requirements, reasons, payment}`. |
 | `GET /registrations` | Admin vê todas; os demais, só as próprias. |
 | `GET /registrations/:id` | Dono, organizador do evento ou admin. |
 | `POST /registrations/:id/cancel` `{reason?}` | Dono, organizador do evento ou admin. |
 | `GET /activities/:id/registrations` | Organizador/admin: `{activity (com ocupação), event, registrations}`. |
-| `POST /registrations/:id/requirements/:requirementId/fulfill` | Organizador/admin. Só pendências manuais (`age verification`); `payment` vem do payment. |
+| `POST /registrations/:id/requirements/:requirementId/fulfill` | Organizador/admin. Pendências de elegibilidade (`age verification`). |
 | `GET /activities` | Projeção das atividades. |
 
 `Activity` e o evento (`status`, `organizers`) são projeções das mensagens da secretaria (que publica `EventUpdated` ao mudar organizers); `Participant {id, username}` é projeção de `UserCreated`/`UserUpdated` do identity (upsert, idempotente). O domínio só conhece o `userId`; o participante só entra na listagem.
 
-### Regras de inscrição
+### Regras de inscrição ([ADR 008](../../docs/adrs/vaga-e-pagamento-como-status.md))
 
-- `Activity.register(userId)` cria a `Registration` (o aggregate é a factory das suas entidades).
-- A regra só avalia e retorna `{deny: motivo}` | `{require: pendência}`; quem altera a `Registration` é o aggregate. Exceção numa regra é bug, não indeferimento.
-- A `Registration` só emite mensagens (`pullMessages`) depois que todas as regras rodaram: se uma regra nega, nenhuma cobrança é pedida.
-- Cada pendência tem `id`; mensagens de outros contextos a resolvem (`PaymentConfirmed.paymentId` = id da pendência). Sem pendências → `confirmed`. `PaymentDenied` cancela.
-- Ordem em `register`: vaga → regras de elegibilidade → preço.
-- Vaga: lotado com confirmados → nega; lotado com pendentes → `wait list`.
-- `price > 0` → pendência `payment` e `PaymentRequested`.
-- Capacidade: confirmados nunca passam de `capacity`. Toda confirmação (pagamento, pendência manual) passa por `Activity.fulfill`; se não houver vaga confirmada, a inscrição ganha a pendência `wait list` em vez de confirmar (ex.: capacidade reduzida com pendentes). Um trigger no SQLite rejeita (`Full occupation`) qualquer gravação que passe do limite, mesmo fora do domínio ou com várias instâncias. Num mesmo processo não há corrida: carregar, inscrever e salvar é síncrono.
-- Regras de elegibilidade: `minimumAge` → pendência `age verification` (não há data de nascimento na projeção de usuário).
+- A `Activity` é a única porta de escrita: cria a `Registration` (factory), muda o status e promove a fila. O repositório de `Registration` só lê.
+- Status: `pending` (pendências de elegibilidade) → `awaiting_payment` (vaga reservada, `PaymentRequested`) → `confirmed`; sem vaga → `waitlisted`; `canceled`. `pending`, `awaiting_payment` e `confirmed` ocupam vaga.
+- Ordem em `register`: regras de elegibilidade → vaga → pagamento. Quem está na fila não é cobrado; só é cobrado quem tem vaga e já é elegível.
+- `requirements` são só elegibilidade: `minimumAge` → `age verification`, aprovada pelo organizador (não há data de nascimento na projeção). Podem ser resolvidas na fila.
+- Uma regra só avalia e retorna `{deny: motivo}` | `{require: pendência}`. Exceção numa regra é bug, não indeferimento.
+- `PaymentConfirmed` confirma se o `paymentId` for o da reserva atual; senão, é ignorado. `PaymentDenied` cancela.
+- Liberou vaga (cancelamento, pagamento recusado, expiração, aumento de capacidade) → promove o primeiro da fila (`RegistrationPromoted`, e então o pagamento ou a confirmação). Cancelamento do evento não promove.
+- A reserva expira em `PAYMENT_WINDOW_MINUTES` (padrão 30). Um job verifica a cada minuto.
+- Reduzir a capacidade não despeja ninguém, só impede novas vagas. Abaixo dos confirmados, é recusado.
+
+### Capacidade sob concorrência
+
+- Lock otimista: `activities.version`. Se outra escrita gravou depois da leitura, o app service recarrega e refaz (até 20 vezes, com espera aleatória). Mensagens só saem depois do commit.
+- Triggers no SQLite recusam (`Full occupation`) a entrada em status que ocupa vaga sem vaga livre: rede de segurança contra bugs e outras instâncias.
+- SQLite em WAL com `busy_timeout`, para várias conexões.
+- `test/concurrency.test.js`: 8 threads, cada uma com sua conexão, fazem 200 inscrições em 30 vagas; a ocupação fica em 30.
+- Alternativa para uma disputa enorme numa só atividade: contador atômico (`UPDATE ... WHERE seatsTaken < capacity`), que tira a regra do domínio.
 
 Persistência: SQLite em `data/registration.db` (volume `registration-data`). A `Activity` é carregada e salva junto com as inscrições, numa transação. As projeções (atividades, eventos, participantes) também ficam no banco, porque as mensagens que as criaram já foram consumidas e não chegam de novo após um restart.
 
 Gestão: organizers vêm na projeção do evento, então a autorização é local (sem chamada à secretaria), mas eventualmente consistente. Alternativa: o BFF perguntar à secretaria e o registration confiar no BFF.
 
-Limitações: `wait list` ainda não tem quem a resolva; inscrição cancelada não estorna pagamento; eventos projetados antes de existir `organizers` ficam sem organizadores até o próximo `EventUpdated` (salve o evento de novo).
+Limitações: pagamento feito depois de perder a reserva é ignorado, sem estorno; mensagens saem depois do commit, sem outbox.
