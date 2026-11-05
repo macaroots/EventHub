@@ -77,6 +77,17 @@ services:
     volumes:
       - payment-data:/app/payment/data
 
+  certificate:
+    <<: *service
+    build: { context: ., dockerfile: certificate/Dockerfile }
+    environment:
+      <<: *env
+      PORT: &certificate-port 3005
+      PUBLIC_BASE_URL: http://localhost:3005
+    ports: [{ published: *certificate-port, target: *certificate-port }]
+    volumes:
+      - payment-data:/app/payment/data
+
 volumes:
   secretariat-data:
   registration-data:
@@ -85,3 +96,4 @@ volumes:
   certificate-data:
   registration-data:
   identity-data:
+  payment-data:
