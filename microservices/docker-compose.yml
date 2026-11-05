@@ -45,6 +45,8 @@ services:
     build: { context: ., dockerfile: identity/Dockerfile }
     environment: { <<: *env, PORT: &identity-port 3003, ADMIN_USERNAME: "${ADMIN_USERNAME:-admin}", ADMIN_PASSWORD: "${ADMIN_PASSWORD:-admin}" }
     ports: [{ published: *identity-port, target: *identity-port }]
+    volumes:
+      - identity-data:/app/identity/data
 
   payment:
     <<: *service
@@ -67,3 +69,4 @@ volumes:
   secretariat-data:
   certificate-data:
   registration-data:
+  identity-data:
