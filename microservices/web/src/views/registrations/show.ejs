@@ -12,7 +12,17 @@
     <p>Motivo: <%= registration.reasons.join('; ') %></p>
 <% } else { %>
 <% if (registration.status == 'waitlisted') { %>
-    <p>Sem vaga no momento: você está na fila de espera.</p>
+    <p>Sem vaga no momento: você está na fila de espera. Sua posição: <strong id="waitlist-position" data-registration-id="<%= registration.id %>"><%= registration.waitlistPosition %></strong>.</p>
+    <p><small>Esta página se atualiza sozinha. Quando abrir uma vaga, você será levado ao próximo passo.</small></p>
+    <noscript><meta http-equiv="refresh" content="15"></noscript>
+    <script type="module">
+        import { watchRegistration } from '/js/watch-registration.js';
+        const position = document.getElementById('waitlist-position');
+        watchRegistration(position.dataset.registrationId, ({ waitlistPosition, next }) => {
+            if (next) location.href = next;
+            else position.textContent = waitlistPosition;
+        });
+    </script>
 <% } %>
 <% if (registration.status == 'awaiting_payment') { %>
     <p>Vaga reservada. <a href="/payments/<%= registration.payment.id %>">Pagar R$ <%= registration.payment.amount.toFixed(2) %></a> para confirmar.</p>
