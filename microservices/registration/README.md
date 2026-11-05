@@ -19,12 +19,13 @@ Exige login; o usuário vem do token.
 
 - A `Activity` é a única porta de escrita: cria a `Registration` (factory), muda o status e promove a fila. O repositório de `Registration` só lê.
 - Status: `pending` (pendências de elegibilidade) → `awaiting_payment` (vaga reservada, `PaymentRequested`) → `confirmed`; sem vaga → `waitlisted`; `canceled`. `pending`, `awaiting_payment` e `confirmed` ocupam vaga.
-- Ordem em `register`: regras de elegibilidade → vaga → pagamento. Quem está na fila não é cobrado; só é cobrado quem tem vaga e já é elegível.
+- Ordem em `register`: lotada com confirmados → nega (`Full occupation`); regras de elegibilidade → vaga → pagamento. Quem está na fila não é cobrado; só é cobrado quem tem vaga e já é elegível.
 - `requirements` são só elegibilidade: `minimumAge` → `age verification`, aprovada pelo organizador (não há data de nascimento na projeção). Podem ser resolvidas na fila.
 - Uma regra só avalia e retorna `{deny: motivo}` | `{require: pendência}`. Exceção numa regra é bug, não indeferimento.
 - `PaymentConfirmed` confirma se o `paymentId` for o da reserva atual; senão, é ignorado. `PaymentDenied` cancela.
 - Ordem da fila: `createdAt`; empate no mesmo milissegundo, ordem de inserção.
 - Liberou vaga (cancelamento, pagamento recusado, expiração, aumento de capacidade) → promove o primeiro da fila (`RegistrationPromoted`, e então o pagamento ou a confirmação). Cancelamento do evento não promove.
+- Lotou com confirmados → a fila é cancelada (`Full occupation`, `RegistrationCanceled`): não há mais o que esperar. Trade-off: se um confirmado cancelar depois, a vaga reabre para novas inscrições, não para quem estava na fila. Alternativa: manter a fila até o evento (o confirmado ainda pode desistir).
 - A reserva expira em `PAYMENT_WINDOW_MINUTES` (padrão 30). Um job verifica a cada minuto.
 - Reduzir a capacidade não despeja ninguém, só impede novas vagas. Abaixo dos confirmados, é recusado.
 
