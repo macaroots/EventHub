@@ -87,6 +87,12 @@ export class RegistrationAppService {
             registrations: activity.registrations.map(r => this.#view(r)),
         };
     }
+    // Ordem da fila de espera, só ids (sem dados pessoais): o BFF calcula a posição com cache por atividade (ADR 009).
+    getWaitlist(activityId) {
+        const activity = this.activityRepository.getById(activityId);
+        if (!activity) throw new NotFoundError('activity');
+        return activity.getWaitlist().map(r => r.id);
+    }
     // O participante cancela a própria; o organizador, qualquer uma da atividade.
     async cancelRegistration(id, { reason } = {}, user) {
         const { activityId } = this.#get(id);
@@ -153,6 +159,7 @@ export class RegistrationAppService {
         const event = activity && this.eventRepository.getById(activity.eventId);
         return {
             ...r.toJSON(),
+            waitlistPosition: activity?.getWaitlistPosition(r.id) ?? null,
             participant: this.participantRepository.getById(r.userId),
             activity: activity && { id: activity.id, name: activity.name },
             event: event && { id: event.id, name: event.name },

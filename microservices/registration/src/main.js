@@ -56,6 +56,7 @@ const handle = (fn, status = 200) => async (req, res) => {
 };
 app.get('/registrations/:id', handle(req => registrationService.getRegistration(req.params.id, req.user)));
 // Gestão (organizador do evento ou admin).
+app.get('/activities/:id/waitlist', handle(req => registrationService.getWaitlist(req.params.id)));
 app.get('/activities/:id/registrations', handle(req => registrationService.listActivityRegistrations(req.params.id, req.user)));
 app.post('/registrations/:id/cancel', handle(req => registrationService.cancelRegistration(req.params.id, req.body, req.user)));
 app.post('/registrations/:id/requirements/:requirementId/fulfill',

@@ -106,3 +106,12 @@ test("event cancel does not promote", () => {
   activity.cancelAll('event canceled');
   assert.ok(activity.registrations.every(r => r.status == 'canceled'));
 });
+test("waitlist position follows arrival order and moves as the queue advances", () => {
+  const activity = new Activity({ capacity: 1, price: 10 });
+  const first = activity.register(1);
+  const [second, third] = [activity.register(2), activity.register(3)];
+  assert.equal(activity.getWaitlistPosition(first.id), null);
+  assert.deepEqual([activity.getWaitlistPosition(second.id), activity.getWaitlistPosition(third.id)], [1, 2]);
+  activity.cancel(first.id, 'desisti');
+  assert.deepEqual([activity.getWaitlistPosition(second.id), activity.getWaitlistPosition(third.id)], [null, 1]);
+});
