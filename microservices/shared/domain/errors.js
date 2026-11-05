@@ -18,3 +18,9 @@ export class ForbiddenError extends Error {
         super(`Not allowed to ${action}`);
     }
 }
+// Outra escrita mudou o aggregate depois que ele foi carregado (lock otimista): recarregue e tente de novo.
+export class ConcurrencyError extends Error {
+    constructor(aggregate) {
+        super(`${aggregate} was changed concurrently`);
+    }
+}
