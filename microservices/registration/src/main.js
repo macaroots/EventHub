@@ -1,7 +1,5 @@
 import express from 'express';
-import { DatabaseSync } from 'node:sqlite';
-import { mkdirSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { openDatabase } from '../../shared/infrastructure/sqlite.js';
 import { ActivitySqliteRepository } from './infrastructure/activity.sqlite.repository.js';
 import { RegistrationSqliteRepository } from './infrastructure/registration.sqlite.repository.js';
 import { EventSqliteRepository, ParticipantSqliteRepository } from './infrastructure/projection.sqlite.repository.js';
@@ -10,8 +8,7 @@ import { RabbitMqMessageBus } from '../../shared/messaging/rabbitmq-message-bus.
 import { authenticate } from '../../shared/auth/jwt.js';
 import { ForbiddenError, NotFoundError } from '../../shared/domain/errors.js';
 
-mkdirSync(resolve('data'), { recursive: true });
-const database = new DatabaseSync(join(resolve('data'), 'registration.db'));
+const database = openDatabase('registration');
 
 const app = express()
 const port = process.env.PORT || 3000;
