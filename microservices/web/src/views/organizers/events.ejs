@@ -1,6 +1,6 @@
 <section>
     <h2>Cadastro de eventos</h2>
-    <div id="mensagem"></div>
+    <div id="mensagem"><%= locals.error ?? "" %></div>
     <form method="post" action="/organizers/events">
         <label>
             <span>Name:</span>
