@@ -21,7 +21,7 @@ services:
   web:
     <<: *service
     build: { context: ., dockerfile: web/Dockerfile }
-    environment: { <<: *env, PORT: &web-port 3000 }
+    environment: { <<: *env, PORT: &web-port 3000, IDENTITY_URL: http://identity:3003, SECRETARIAT_URL: http://secretariat:3002 }
     ports: [{ published: *web-port, target: *web-port }]
 
   registration:

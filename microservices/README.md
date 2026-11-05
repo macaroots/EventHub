@@ -51,6 +51,24 @@ curl -X POST localhost:3003/auth  -H 'Content-Type: application/json' -d '{"user
 - Trade-off: com HS256, qualquer serviço que verifica tokens também consegue emiti-los. Alternativa: RS256 (identity assina com chave privada; os demais têm só a pública).
 - Limitações: senha em texto puro e usuários em memória no identity; payment ainda sem auth.
 
+## Web (BFF)
+
+`web` renderiza as páginas no servidor (Express + EJS) e é o BFF: chama os serviços pela rede interna do docker, repassando o JWT do cookie `token` (httpOnly) como `Authorization: Bearer`.
+
+```
+web/src/
+  main.js        # só monta o app
+  middleware/    # authenticate (sem token → /auth/login), layout (res.layout)
+  clients/       # um arquivo por serviço; http.js é o cliente genérico
+  routes/        # express.Router por feature
+  views/
+```
+
+- URLs dos serviços: `IDENTITY_URL`, `SECRETARIAT_URL` (definidas no compose).
+- Não há API Gateway: com SSR, o browser só fala com o `web`. Se surgir uma SPA, um app mobile ou terceiros, coloque um gateway de infra (Traefik/Nginx), que roteia por configuração e não precisa de código por endpoint.
+- Os clients expõem só o que as telas usam. Se virar repasse puro, uma alternativa é usar um proxy (`http-proxy-middleware`).
+- `registration` e `payment` em `routes/` ainda são protótipos sem chamadas aos serviços.
+
 ## Entidades de domínio
 
 - Estado em campos privados (`#name`), validado por setters privados (`#setName`). Invariantes que envolvem mais de um campo (ex.: período) ficam em um único setter.

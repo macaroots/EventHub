@@ -1,5 +1,5 @@
 {
-  "name": "@event-hub/registration",
+  "name": "@event-hub/web",
   "private": true,
   "type": "module",
   "exports": {
