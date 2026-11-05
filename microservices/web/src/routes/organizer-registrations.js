@@ -7,7 +7,7 @@ import { action, json } from './helpers.js';
 export const router = Router();
 router.use(authenticate);
 
-const STATUSES = ['pending', 'confirmed', 'canceled'];
+const STATUSES = ['pending', 'awaiting_payment', 'waitlisted', 'confirmed', 'canceled'];
 // As ações voltam para a lista da atividade (activityId vem num campo hidden).
 const listPage = (req) => `/organizers/activities/${encodeURIComponent(req.body.activityId)}/registrations`;
 

@@ -1,12 +1,13 @@
 <% const base = `/organizers/activities/${activity.id}/registrations`;
-   const filters = [['', 'Todas'], ['pending', 'Pendentes'], ['confirmed', 'Confirmadas'], ['canceled', 'Canceladas']]; %>
+   const filters = [['', 'Todas'], ['pending', 'Pendentes'], ['awaiting_payment', 'Aguardando pagamento'], ['waitlisted', 'Fila de espera'], ['confirmed', 'Confirmadas'], ['canceled', 'Canceladas']]; %>
 <p><a href="/organizers/activities/<%= activity.id %>">← Atividade</a><% if (event) { %> · <a href="/organizers/events/<%= event.id %>">Evento</a><% } %></p>
 <section>
     <h2>Inscrições: <%= activity.name %></h2>
     <% if (event) { %><p>Evento: <%= event.name %> (<%= event.status %>)</p><% } %>
     <p>
         Ocupação: <%= activity.occupation %>/<%= activity.capacity %> vagas
-        (<%= activity.confirmedOccupation %> confirmadas, <%= counts.pending %> pendentes, <%= counts.canceled %> canceladas).
+        (<%= activity.confirmedOccupation %> confirmadas, <%= counts.pending %> pendentes, <%= counts.awaiting_payment %> aguardando pagamento;
+        <%= counts.waitlisted %> na fila de espera, <%= counts.canceled %> canceladas).
         Preço: R$ <%= activity.price.toFixed(2) %>.
     </p>
     <p>
@@ -26,7 +27,9 @@
             <td>
 <% if (r.status == 'canceled') { %>
                 <%= r.reasons.join('; ') %>
-<% } else { for (const q of pending) { %>
+<% } else { if (r.status == 'awaiting_payment') { %>
+                <div>Pagamento: R$ <%= r.payment.amount.toFixed(2) %></div>
+<% } for (const q of pending) { %>
                 <div>
                     <%- include('../registrations/requirement', { requirement: q }) %>
 <% if (q.type == 'age verification') { %>

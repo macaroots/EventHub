@@ -12,6 +12,6 @@
     </form>
     <p><small>Gateway simulado: o comprovante <code>deny</code> é recusado.</small></p>
 <% } else { %>
-    <p>Pagamento <%= payment.status == 'paid' ? 'aprovado' : 'recusado' %>.</p>
+    <p>Pagamento <%= { paid: 'aprovado', denied: 'recusado', canceled: 'cancelado (a reserva expirou ou a inscrição foi cancelada)' }[payment.status] ?? payment.status %>.</p>
 <% } %>
 </section>
