@@ -1,0 +1,31 @@
+<p><a href="/">← Eventos</a></p>
+<section>
+    <h2><%= event.name %></h2>
+    <p>Período: <%= event.startDate?.slice(0, 10) ?? '' %><% if (event.endDate) { %> a <%= event.endDate.slice(0, 10) %><% } %></p>
+    <% if (event.information) { %><p><%= event.information %></p><% } %>
+</section>
+<section>
+    <h2>Atividades</h2>
+<% for (const activity of event.activities) {
+     const minimumAge = activity.rules.find(r => r.type == 'minimumAge')?.age; %>
+    <article>
+        <h3><%= activity.name %></h3>
+        <% if (activity.description) { %><p><%= activity.description %></p><% } %>
+        <p>
+            <% if (activity.startsAt) { %>Início: <%= activity.startsAt.replace('T', ' ') %>.<% } %>
+            <% if (activity.location) { %>Local: <%= activity.location %>.<% } %>
+            Vagas: <%= activity.capacity %>.
+            Valor: <%= activity.price > 0 ? `R$ ${activity.price.toFixed(2)}` : 'gratuito' %>.
+            <% if (minimumAge) { %>Idade mínima: <%= minimumAge %> anos.<% } %>
+        </p>
+        <% if (user) { %>
+        <form method="post" action="/activities/<%= activity.id %>/registrations">
+            <input type="hidden" name="eventId" value="<%= event.id %>">
+            <button>Inscrever-se</button>
+        </form>
+        <% } else { %>
+        <p><a href="/auth/login?next=/events/<%= event.id %>">Entre para se inscrever</a></p>
+        <% } %>
+    </article>
+<% } %>
+</section>

@@ -62,10 +62,10 @@ web/src/
   views/
 ```
 
-- URLs dos serviços: `IDENTITY_URL`, `SECRETARIAT_URL` (definidas no compose).
+- URLs dos serviços: `IDENTITY_URL`, `SECRETARIAT_URL`, `REGISTRATION_URL`, `PAYMENT_URL` (definidas no compose).
 - Não há API Gateway: com SSR, o browser só fala com o `web`. Se surgir uma SPA, um app mobile ou terceiros, coloque um gateway de infra (Traefik/Nginx), que roteia por configuração e não precisa de código por endpoint.
 - Os clients expõem só o que as telas usam. Se virar repasse puro, uma alternativa é usar um proxy (`http-proxy-middleware`).
-- `registration` e `payment` em `routes/` ainda são protótipos sem chamadas aos serviços.
+- Telas: ver [web/README.md](web/README.md).
 
 ## Entidades de domínio
 
@@ -87,5 +87,5 @@ web/src/
 | `PaymentRequested {paymentId, registrationId, userId, amount, description}` | registration | payment: cria a cobrança (idempotente) |
 | `PaymentConfirmed/Denied {paymentId, registrationId}` | payment | registration: resolve a pendência / cancela |
 
-Pagar: `POST localhost:3004/payments/:id/pay {"receipt": "..."}`. O gateway é uma porta (`verify(payment, receipt)`); o adaptador atual é fake e recusa o comprovante `nao`.
+Pagar: `POST localhost:3004/payments/:id/pay {"receipt": "..."}`; consultar: `GET /payments/:id`. O gateway é uma porta (`verify(payment, receipt)`); o adaptador atual é fake e recusa o comprovante `deny`.
 
