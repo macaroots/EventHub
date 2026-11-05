@@ -36,7 +36,7 @@ export class Activity {
     setCapacity(capacity) {
         this.#validateCapacity(capacity);
         this.#capacity = capacity;
-        this.#promote();
+        this.#settle();
     }
     #validateCapacity(capacity) {
         if (!(capacity >= 0)) throw new TypeError('Must not be lower than 0');
@@ -61,29 +61,35 @@ export class Activity {
     }
 
     // Factory: o aggregate cria a Registration e decide o status.
-    // Ordem: regras de elegibilidade → vaga → pagamento (só depois das pendências, para não cobrar quem pode ser negado).
+    // Ordem: lotada com confirmados → nega; regras de elegibilidade → vaga → pagamento
+    // (só depois das pendências, para não cobrar quem pode ser negado).
     register(userId) {
         if (this.isRegistered(userId)) throw new DuplicateError('user');
         const registration = new Registration({ userId, activityId: this.#id });
+        if (this.isFullConfirmed()) registration.cancel('Full occupation');
         for (const rule of this.#registrationRules) {
+            if (registration.status == 'canceled') break;
             const outcome = rule.evaluate({ activity: this, userId });
             if (outcome?.deny) { registration.cancel(outcome.deny); break; }
             if (outcome?.require) registration.require(outcome.require);
         }
         registration.submit(!this.isFull(), this.#price);
         this.#registrations.push(registration);
+        this.#settle();
         return registration;
     }
     // Pendência de elegibilidade resolvida (ex.: idade conferida).
     fulfill(registrationId, requirementId) {
         const registration = this.#find(registrationId);
         registration.fulfill(requirementId, this.#price);
+        this.#settle();
         return registration;
     }
     // Pagamento de outra reserva (expirada, cancelada) é ignorado.
     confirmPayment(registrationId, paymentId) {
         const registration = this.#find(registrationId);
         if (registration.isAwaiting(paymentId)) registration.pay();
+        this.#settle();
         return registration;
     }
     denyPayment(registrationId, paymentId, reason) {
@@ -94,14 +100,14 @@ export class Activity {
     cancel(registrationId, reason) {
         const registration = this.#find(registrationId);
         registration.cancel(reason);
-        this.#promote();
+        this.#settle();
         return registration;
     }
     // Reservas aguardando pagamento desde antes de `before` perdem a vaga.
     expireOverdue(before) {
         const overdue = this.#registrations.filter(r => r.status == 'awaiting_payment' && new Date(r.payment.requestedAt) < before);
         for (const r of overdue) r.cancel('Payment expired');
-        this.#promote();
+        this.#settle();
         return overdue;
     }
     // Evento cancelado: ninguém é promovido.
@@ -116,6 +122,9 @@ export class Activity {
     }
     isFull() {
         return this.getOccupation() >= this.#capacity;
+    }
+    isFullConfirmed() {
+        return this.getConfirmedOccupation() >= this.#capacity;
     }
     getRules() {
         return this.#registrationRules;
@@ -139,11 +148,14 @@ export class Activity {
         const i = this.getWaitlist().findIndex(r => r.id == registrationId);
         return i < 0 ? null : i + 1;
     }
-    #promote() {
+    // Fim de toda mudança: vaga livre promove a fila; lotada com confirmados, a fila não tem
+    // mais o que esperar e é cancelada.
+    #settle() {
         for (const r of this.getWaitlist()) {
             if (this.isFull()) break;
             r.promote(this.#price);
         }
+        if (this.isFullConfirmed()) for (const r of this.getWaitlist()) r.cancel('Full occupation');
     }
     #find(registrationId) {
         const registration = this.#registrations.find(r => r.id == registrationId);
