@@ -27,13 +27,14 @@
 <section>
     <h2>Atividades</h2>
     <table>
-        <tr><th>Nome</th><th>Início</th><th>Vagas</th><th>Preço</th></tr>
+        <tr><th>Nome</th><th>Início</th><th>Vagas</th><th>Preço</th><th></th></tr>
 <% for (const activity of event.activities) { %>
         <tr>
             <td><a href="/organizers/activities/<%= activity.id %>"><%= activity.name %></a></td>
             <td><%= activity.startsAt ?? '' %></td>
             <td><%= activity.capacity %></td>
             <td><%= activity.price %></td>
+            <td><a href="/organizers/activities/<%= activity.id %>/registrations">inscrições</a></td>
         </tr>
 <% } %>
     </table>

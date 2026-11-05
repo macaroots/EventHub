@@ -1,0 +1,3 @@
+<%= { payment: 'Pagamento', 'wait list': 'Fila de espera', 'age verification': 'Verificação de idade' }[requirement.type] ?? requirement.type -%>
+<% if (requirement.type == 'payment') { %> (R$ <%= requirement.amount.toFixed(2) %>)<% } -%>
+<% if (requirement.type == 'age verification') { %> (mínimo <%= requirement.minimumAge %> anos)<% } -%>
