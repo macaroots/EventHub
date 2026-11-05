@@ -7,6 +7,8 @@ export const register = (req, activityId) => call('/registrations', req, { metho
 export const listRegistrations = (req) => call('/registrations', req);
 export const getRegistration = (req, registrationId) => call(`/registrations/${id(registrationId)}`, req);
 export const cancelRegistration = (req, registrationId, reason) => call(`/registrations/${id(registrationId)}/cancel`, req, { method: 'POST', body: { reason } });
+// Ordem da fila de espera (só ids).
+export const getWaitlist = (req, activityId) => call(`/activities/${id(activityId)}/waitlist`, req);
 // Gestão (organizador do evento ou admin).
 export const listActivityRegistrations = (req, activityId) => call(`/activities/${id(activityId)}/registrations`, req);
 export const fulfillRequirement = (req, registrationId, requirementId) =>
