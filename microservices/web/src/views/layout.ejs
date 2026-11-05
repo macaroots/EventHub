@@ -15,6 +15,7 @@
         <a href="/auth/login">Login</a>
     </nav>
     <main>
+        <% if (locals.error) { %><p class="error"><%= error %></p><% } %>
         <%- body -%>
     </main>
 </body>
