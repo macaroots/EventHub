@@ -1,0 +1,54 @@
+<% const base = `/organizers/activities/${activity.id}/registrations`;
+   const filters = [['', 'Todas'], ['pending', 'Pendentes'], ['confirmed', 'Confirmadas'], ['canceled', 'Canceladas']]; %>
+<p><a href="/organizers/activities/<%= activity.id %>">← Atividade</a><% if (event) { %> · <a href="/organizers/events/<%= event.id %>">Evento</a><% } %></p>
+<section>
+    <h2>Inscrições: <%= activity.name %></h2>
+    <% if (event) { %><p>Evento: <%= event.name %> (<%= event.status %>)</p><% } %>
+    <p>
+        Ocupação: <%= activity.occupation %>/<%= activity.capacity %> vagas
+        (<%= activity.confirmedOccupation %> confirmadas, <%= counts.pending %> pendentes, <%= counts.canceled %> canceladas).
+        Preço: R$ <%= activity.price.toFixed(2) %>.
+    </p>
+    <p>
+<% for (const [value, label] of filters) { %>
+        <% if (value == status) { %><strong><%= label %></strong><% } else { %><a href="<%= base %><%= value ? `?status=${value}` : '' %>"><%= label %></a><% } %>
+<% } %>
+    </p>
+<% if (!registrations.length) { %>
+    <p>Nenhuma inscrição.</p>
+<% } else { %>
+    <table>
+        <tr><th>Participante</th><th>Status</th><th>Pendências / motivo</th><th>Ações</th></tr>
+<% for (const r of registrations) { const pending = r.requirements.filter(q => !q.fulfilled); %>
+        <tr>
+            <td><%= r.participant?.username ?? r.userId %></td>
+            <td><%- include('../registrations/status', { status: r.status }) %></td>
+            <td>
+<% if (r.status == 'canceled') { %>
+                <%= r.reasons.join('; ') %>
+<% } else { for (const q of pending) { %>
+                <div>
+                    <%- include('../registrations/requirement', { requirement: q }) %>
+<% if (q.type == 'age verification') { %>
+                    <form method="post" action="/organizers/registrations/<%= r.id %>/requirements/<%= q.id %>/fulfill" style="display:inline">
+                        <input type="hidden" name="activityId" value="<%= activity.id %>">
+                        <button>aprovar</button>
+                    </form>
+<% } %>
+                </div>
+<% } } %>
+            </td>
+            <td>
+<% if (r.status != 'canceled') { %>
+                <form method="post" action="/organizers/registrations/<%= r.id %>/cancel" onsubmit="return confirm('Cancelar a inscrição?')">
+                    <input type="hidden" name="activityId" value="<%= activity.id %>">
+                    <input name="reason" placeholder="Motivo">
+                    <button>cancelar</button>
+                </form>
+<% } %>
+            </td>
+        </tr>
+<% } %>
+    </table>
+<% } %>
+</section>

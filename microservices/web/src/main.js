@@ -6,6 +6,7 @@ import { router as auth } from './routes/auth.js';
 import { router as events } from './routes/events.js';
 import { router as activities } from './routes/activities.js';
 import { router as registration } from './routes/registration.js';
+import { router as organizerRegistrations } from './routes/organizer-registrations.js';
 import { router as payment } from './routes/payment.js';
 
 const app = express();
@@ -21,7 +22,7 @@ app.use(express.static(path.join(import.meta.dirname, 'public')));
 app.use(layout);
 
 app.use('/auth', auth);
-app.use('/organizers', events, activities);
+app.use('/organizers', events, activities, organizerRegistrations);
 app.use(registration);
 app.use(payment);
 

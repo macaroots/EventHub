@@ -28,4 +28,9 @@
     </ul>
     <p><a href="">Atualizar</a></p>
 <% } %>
+<% if (registration.status != 'canceled') { %>
+    <form method="post" action="/registrations/<%= registration.id %>/cancel" onsubmit="return confirm('Cancelar a inscrição?')">
+        <button>Cancelar inscrição</button>
+    </form>
+<% } %>
 </section>

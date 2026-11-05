@@ -7,8 +7,9 @@ import { json } from './helpers.js';
 // Pagamento de uma pendência da inscrição (paymentId = id da pendência).
 export const router = Router();
 
-// O payment ainda não tem auth: o BFF só mostra/paga se a inscrição do pagamento for
-// visível ao usuário (registration responde 403 para inscrição de outro).
+// O payment ainda não tem auth: o BFF só mostra se a inscrição do pagamento for
+// visível ao usuário (registration responde 403 para inscrição de outro; organizador vê),
+// e só paga se for do próprio usuário (ou admin).
 const load = async (req) => {
     const p = await json(await payment.getPayment(req, req.params.id));
     const r = await json(await registration.getRegistration(req, p.registrationId));
@@ -29,7 +30,8 @@ router.get('/payments/:id', authenticate, async (req, res) => {
     res.layout('payments/show', await load(req));
 });
 router.post('/payments/:id', authenticate, async (req, res) => {
-    const { payment: p } = await load(req);
+    const { payment: p, registration: r } = await load(req);
+    if (r.userId != req.user.sub && req.user.role != 'admin') throw Object.assign(new Error('Not allowed to pay'), { status: 403 });
     const response = await payment.pay(req, p.id, req.body.receipt);
     if (!response.ok) {
         return res.redirect(`/payments/${encodeURIComponent(p.id)}?error=${encodeURIComponent(await response.text())}`);
