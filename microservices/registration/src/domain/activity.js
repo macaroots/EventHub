@@ -1,23 +1,10 @@
 import { DuplicateError } from "../../../shared/domain/errors.js";
 
-export class ActivityLine {
-    activity;
-    releasedTokens = [];
-    register(token, userId) {
-        if (!this.isTokenReleased(token)) {
-            throw new Error('Wait your turn');
-        }
-        return this.activity.register(userId);
-    }
-    isTokenReleased(token) {
-        return this.releasedTokens.some(t => t.id == token.id);
-    }
-    releaseToken(token) {
-        this.releasedTokens.push(token);
-    }
-}
+// Status que ocupam vaga. A soma deles nunca passa da capacidade.
+export const SEAT_STATUSES = ['pending', 'awaiting_payment', 'confirmed'];
 
 // Entity + AggregateRoot. Projeção da Activity da secretaria + inscrições (que só existem aqui).
+// Toda mudança de inscrição passa por aqui: é quem garante a capacidade e promove a fila de espera.
 export class Activity {
     #id;
     #eventId;
@@ -27,13 +14,14 @@ export class Activity {
     #registrations = [];
     #registrationRules = [];
 
-    // registrations: só ao reconstituir do banco (vêm antes da capacidade, que as valida).
+    // registrations: só ao reconstituir do banco.
     constructor({ id = crypto.randomUUID(), eventId, name, capacity, price = 0, rules = [], registrations = [] } = {}) {
         this.#id = id;
         this.#eventId = eventId;
         this.#name = name;
         this.#registrations = registrations;
-        this.setCapacity(capacity);
+        this.#validateCapacity(capacity);
+        this.#capacity = capacity;
         this.setPrice(price);
         this.setRules(rules);
     }
@@ -44,10 +32,15 @@ export class Activity {
     setName(name) { this.#name = name; }
 
     get capacity() { return this.#capacity; }
+    // Reduzir abaixo da ocupação não despeja ninguém: só impede novas vagas até liberar.
     setCapacity(capacity) {
-        if (capacity < 0) throw new TypeError('Must not be lower than 0');
-        if (capacity < this.getConfirmedOccupation()) throw new TypeError('Must not be lower than confirmed occupation');
+        this.#validateCapacity(capacity);
         this.#capacity = capacity;
+        this.#promote();
+    }
+    #validateCapacity(capacity) {
+        if (!(capacity >= 0)) throw new TypeError('Must not be lower than 0');
+        if (capacity < this.getConfirmedOccupation()) throw new TypeError('Must not be lower than confirmed occupation');
     }
     get price() { return this.#price; }
     setPrice(price) {
@@ -67,47 +60,62 @@ export class Activity {
         }
     }
 
-    // Factory: o aggregate cria a Registration e decide o status: vaga, regras de elegibilidade, preço.
-    // Regras só avaliam; quem altera a Registration é o aggregate.
+    // Factory: o aggregate cria a Registration e decide o status.
+    // Ordem: regras de elegibilidade → vaga → pagamento (só depois das pendências, para não cobrar quem pode ser negado).
     register(userId) {
         if (this.isRegistered(userId)) throw new DuplicateError('user');
-        const registration = new Registration(userId, this.#id);
-        if (this.isFullConfirmed()) registration.cancel('Full occupation');
-        else if (this.isFull()) registration.require({ type: 'wait list' });
+        const registration = new Registration({ userId, activityId: this.#id });
         for (const rule of this.#registrationRules) {
-            if (registration.status == 'canceled') break;
             const outcome = rule.evaluate({ activity: this, userId });
-            if (outcome?.deny) registration.cancel(outcome.deny);
-            else if (outcome?.require) registration.require(outcome.require);
+            if (outcome?.deny) { registration.cancel(outcome.deny); break; }
+            if (outcome?.require) registration.require(outcome.require);
         }
-        if (this.#price > 0 && registration.status != 'canceled') {
-            registration.require({ type: 'payment', amount: this.#price, description: 'Ticket' });
-        }
-        registration.submit();
+        registration.submit(!this.isFull(), this.#price);
         this.#registrations.push(registration);
         return registration;
     }
-    // Toda confirmação passa por aqui: sem vaga confirmada, vai para a fila de espera.
+    // Pendência de elegibilidade resolvida (ex.: idade conferida).
     fulfill(registrationId, requirementId) {
-        const registration = this.#registrations.find(r => r.id == registrationId);
-        if (!registration) throw new Error('Registration not found');
-        registration.fulfill(requirementId, () => !this.isFullConfirmed());
+        const registration = this.#find(registrationId);
+        registration.fulfill(requirementId, this.#price);
         return registration;
     }
+    // Pagamento de outra reserva (expirada, cancelada) é ignorado.
+    confirmPayment(registrationId, paymentId) {
+        const registration = this.#find(registrationId);
+        if (registration.isAwaiting(paymentId)) registration.pay();
+        return registration;
+    }
+    denyPayment(registrationId, paymentId, reason) {
+        const registration = this.#find(registrationId);
+        if (registration.isAwaiting(paymentId)) this.cancel(registrationId, `Payment denied: ${reason}`);
+        return registration;
+    }
+    cancel(registrationId, reason) {
+        const registration = this.#find(registrationId);
+        registration.cancel(reason);
+        this.#promote();
+        return registration;
+    }
+    // Reservas aguardando pagamento desde antes de `before` perdem a vaga.
+    expireOverdue(before) {
+        const overdue = this.#registrations.filter(r => r.status == 'awaiting_payment' && new Date(r.payment.requestedAt) < before);
+        for (const r of overdue) r.cancel('Payment expired');
+        this.#promote();
+        return overdue;
+    }
+    // Evento cancelado: ninguém é promovido.
     cancelAll(reason) {
-        for (const r of this.#registrations) if (r.status != 'canceled') r.cancel(reason);
+        for (const r of this.#registrations) r.cancel(reason);
     }
     getOccupation() {
-        return this.#registrations.filter(r => r.status != 'canceled').length;
+        return this.#registrations.filter(r => SEAT_STATUSES.includes(r.status)).length;
     }
     getConfirmedOccupation() {
         return this.#registrations.filter(r => r.status == 'confirmed').length;
     }
     isFull() {
-        return this.getOccupation() >= this.capacity;
-    }
-    isFullConfirmed() {
-        return this.getConfirmedOccupation() >= this.capacity;
+        return this.getOccupation() >= this.#capacity;
     }
     getRules() {
         return this.#registrationRules;
@@ -120,6 +128,20 @@ export class Activity {
     isRegistered(userId) {
         return this.#registrations.some(r => r.userId == userId && r.status != 'canceled');
     }
+    // Fila de espera por ordem de chegada.
+    #promote() {
+        const waiting = this.#registrations.filter(r => r.status == 'waitlisted')
+            .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+        for (const r of waiting) {
+            if (this.isFull()) break;
+            r.promote(this.#price);
+        }
+    }
+    #find(registrationId) {
+        const registration = this.#registrations.find(r => r.id == registrationId);
+        if (!registration) throw new Error('Registration not found');
+        return registration;
+    }
 }
 
 // Projeção do User do identity (UserCreated). Só para leitura (listagens, crachá);
@@ -131,52 +153,60 @@ export class Participant {
     }
 }
 
-// Entity. Pendências (requirements) têm id para serem resolvidas por mensagens de outros
-// contextos (ex.: PaymentConfirmed.paymentId == requirement.id).
+// Entity. Só a Activity muda o status (ela sabe se há vaga).
+// status: pending (pendências de elegibilidade) | waitlisted | awaiting_payment | confirmed | canceled
+// requirements: só elegibilidade (ex.: age verification). Vaga e pagamento são status, não pendências.
+// payment: { id, amount, description, requestedAt, paid }. payment.id é o paymentId do serviço de pagamento.
 export class Registration {
     id;
     userId;
     activityId;
-    status = 'pending'; // pending | confirmed | canceled
+    status = 'pending';
     requirements = [];
     reasons = [];
+    payment = null;
+    createdAt;
     #messages = [];
     #submitted = false;
-    constructor(userId, activityId, id=crypto.randomUUID()) {
-        this.id = id;
-        this.userId = userId;
-        this.activityId = activityId;
+    constructor({ id = crypto.randomUUID(), userId, activityId, status = 'pending', requirements = [], reasons = [], payment = null, createdAt = new Date().toISOString() }) {
+        Object.assign(this, { id, userId, activityId, status, requirements, reasons, payment, createdAt });
     }
-    // TODO não dava pra fazer isso no próprio construtor?
     // Reconstitui do banco: não dispara os eventos de criação novamente.
-    static restore({ id, userId, activityId, status, requirements, reasons }) {
-        const r = new Registration(userId, activityId, id);
-        Object.assign(r, { status, requirements, reasons });
+    static restore(data) {
+        const r = new Registration(data);
         r.#submitted = true;
         return r;
     }
     require(requirement) {
         this.requirements.push({ id: crypto.randomUUID(), ...requirement, fulfilled: false });
     }
-    // Fim da avaliação das regras. Só agora emite mensagens: se uma regra negou,
-    // nenhuma cobrança deve ter sido pedida.
-    submit() {
+    // Fim da avaliação das regras. Só agora emite mensagens: se uma regra negou, nada é cobrado.
+    submit(hasSeat, price) {
         this.#submitted = true;
-        this.#messages.push({ type: 'RegistrationCreated', ...this.toJSON() });
-        if (this.status == 'canceled') return;
-        for (const r of this.requirements.filter(r => r.type == 'payment')) {
-            this.#messages.push({ type: 'PaymentRequested', paymentId: r.id, registrationId: this.id, userId: this.userId, amount: r.amount, description: r.description });
+        if (this.status != 'canceled') {
+            if (hasSeat) this.#advance(price);
+            else this.status = 'waitlisted';
         }
-        this.#confirmIfReady();
+        this.#messages.unshift({ type: 'RegistrationCreated', ...this.toJSON() });
     }
-    // hasSeat: a Activity diz se ainda há vaga (use activity.fulfill).
-    fulfill(requirementId, hasSeat = () => true) {
+    fulfill(requirementId, price) {
         const r = this.requirements.find(r => r.id == requirementId);
         if (!r) throw new Error('Requirement not found');
         if (this.status == 'canceled') throw new Error('Registration is canceled');
         r.fulfilled = true;
-        if (!this.getPendingRequirements().length && !hasSeat()) this.require({ type: 'wait list' });
-        this.#confirmIfReady();
+        if (this.status == 'pending') this.#advance(price);
+    }
+    promote(price) {
+        this.status = 'pending';
+        this.#messages.push({ type: 'RegistrationPromoted', registrationId: this.id, userId: this.userId });
+        this.#advance(price);
+    }
+    isAwaiting(paymentId) {
+        return this.status == 'awaiting_payment' && this.payment.id == paymentId;
+    }
+    pay() {
+        this.payment.paid = true;
+        this.#confirm();
     }
     cancel(reason) {
         if (this.status == 'canceled') return;
@@ -184,8 +214,19 @@ export class Registration {
         this.reasons.push(reason);
         if (this.#submitted) this.#messages.push({ type: 'RegistrationCanceled', registrationId: this.id, userId: this.userId, reason });
     }
-    #confirmIfReady() {
-        if (this.status != 'pending' || this.getPendingRequirements().length) return;
+    // Com vaga: pendências → pagamento → confirmada.
+    #advance(price) {
+        if (this.getPendingRequirements().length) return;
+        if (price > 0) {
+            this.status = 'awaiting_payment';
+            this.payment = { id: crypto.randomUUID(), amount: price, description: 'Ticket', requestedAt: new Date().toISOString(), paid: false };
+            const { id: paymentId, amount, description } = this.payment;
+            this.#messages.push({ type: 'PaymentRequested', paymentId, registrationId: this.id, userId: this.userId, amount, description });
+            return;
+        }
+        this.#confirm();
+    }
+    #confirm() {
         this.status = 'confirmed';
         this.#messages.push({ type: 'RegistrationConfirmed', registrationId: this.id, userId: this.userId });
     }
@@ -201,19 +242,10 @@ export class Registration {
         return m;
     }
     toJSON() {
-        const { id, activityId, status, requirements, reasons } = this;
-        return { id, userId: this.userId, activityId, status, requirements, reasons };
+        const { id, userId, activityId, status, requirements, reasons, payment, createdAt } = this;
+        return { id, userId, activityId, status, requirements, reasons, payment, createdAt };
     }
 }
-
-// TODO fila de espera (invariante da Activity, não serviço à parte):
-// - status 'waitlisted' na Registration (não conta na ocupação) no lugar da pendência 'wait list'
-// - todo cancelamento passa pela Activity (activity.cancel(registrationId, reason)), que promove o 1º da fila
-// - cobrar só na promoção: hoje quem cai na fila recebe PaymentRequested
-// - prazo de pagamento (expiresAt) é do registration: job chama activity.expireOverdue(now)
-// - lock otimista (version) na Activity ao persistir
-// - Activity como fonte da verdade das inscrições (registrationRepository vira leitura ou sai)
-// - ActivityLine (tokens) é sala de espera de tráfego, não fila de espera; pode ir para o gateway
 
 // Regras de elegibilidade: avaliam e retornam { deny: motivo } | { require: pendência } | undefined.
 // Não alteram a Registration nem publicam mensagens (sem efeito colateral).

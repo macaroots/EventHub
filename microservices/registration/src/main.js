@@ -22,7 +22,10 @@ const participantRepository = new ParticipantSqliteRepository(database);
 const eventRepository = new EventSqliteRepository(database);
 const registrationRepository = new RegistrationSqliteRepository(database);
 const activityRepository = new ActivitySqliteRepository(database, registrationRepository);
-const registrationService = new RegistrationAppService(activityRepository, registrationRepository, participantRepository, eventRepository, messageBus);
+const registrationService = new RegistrationAppService(activityRepository, registrationRepository, participantRepository, eventRepository, messageBus,
+    { paymentWindowMinutes: Number(process.env.PAYMENT_WINDOW_MINUTES ?? 30) });
+// Reservas sem pagamento dentro da janela liberam a vaga para a fila de espera.
+setInterval(() => registrationService.expireOverduePayments().catch(e => console.error('expireOverduePayments falhou:', e.message)), 60_000);
 
 // Isso pode ser definido aqui (Coreografia) ou no gateway (Orquestração)
 messageBus.listen('ActivityCreated', e => registrationService.upsertActivity(e));

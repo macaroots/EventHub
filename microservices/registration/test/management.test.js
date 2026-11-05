@@ -17,7 +17,7 @@ const setup = async ({ price = 0, rules = [] } = {}) => {
   const service = new RegistrationAppService(new ActivitySqliteRepository(db, registrations), registrations,
     new ParticipantSqliteRepository(db), new EventSqliteRepository(db), new InMemoryMessageBus());
   await service.updateEvent({ eventId: "e1", name: "E", status: "published", organizers: ["org"] });
-  service.upsertActivity({ activityId: "a1", eventId: "e1", name: "A", capacity: 2, price, rules });
+  await service.upsertActivity({ activityId: "a1", eventId: "e1", name: "A", capacity: 2, price, rules });
   service.upsertParticipant({ userId: "u1", username: "ana" });
   const registration = await service.register({ activityId: "a1" }, "u1");
   return { service, registration };
@@ -32,14 +32,16 @@ test("organizer lists activity registrations; others are forbidden", async () =>
   assert.ok(service.listActivityRegistrations("a1", { id: "adm", role: "admin" }));
 });
 
-test("organizer fulfills age verification but not payment", async () => {
+test("organizer fulfills age verification, then payment is requested", async () => {
   const { service, registration } = await setup({ price: 10, rules: [{ type: "minimumAge", age: 18 }] });
-  const [age, payment] = registration.requirements;
+  const [age] = registration.requirements;
   await assert.rejects(service.fulfillRequirement(registration.id, age.id, participant), /Not allowed/);
-  await assert.rejects(service.fulfillRequirement(registration.id, payment.id, organizer), /cannot be fulfilled manually/);
+  await assert.rejects(service.fulfillRequirement(registration.id, "x", organizer), /requirement not found/);
   const updated = await service.fulfillRequirement(registration.id, age.id, organizer);
   assert.equal(updated.requirements[0].fulfilled, true);
-  assert.equal(updated.status, "pending");
+  assert.equal(updated.status, "awaiting_payment");
+  await service.confirmPayment({ registrationId: registration.id, paymentId: updated.payment.id });
+  assert.equal(service.getRegistration(registration.id, participant).status, "confirmed");
 });
 
 test("participant or organizer cancels; stranger cannot", async () => {

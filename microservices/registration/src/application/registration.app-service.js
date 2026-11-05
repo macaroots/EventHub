@@ -1,34 +1,36 @@
-import { ForbiddenError, NotFoundError } from "../../../shared/domain/errors.js";
+import { ConcurrencyError, ForbiddenError, NotFoundError } from "../../../shared/domain/errors.js";
 import { Activity, Participant, ruleFromConfig } from "../domain/activity.js";
 
 const isAdmin = (user) => user.role == 'admin';
 const isOwner = (user, registration) => registration.userId == user.id;
-// Pendências que o organizador resolve na mão. Pagamento só pelo payment; fila de espera pela vaga.
+// Pendências que o organizador resolve na mão.
 const MANUAL_REQUIREMENTS = ['age verification'];
+const RETRIES = 20;
 
 export class RegistrationAppService {
-    constructor(activityRepository, registrationRepository, participantRepository, eventRepository, messageBus) {
+    // paymentWindowMinutes: quanto tempo a vaga fica reservada esperando o pagamento.
+    constructor(activityRepository, registrationRepository, participantRepository, eventRepository, messageBus, { paymentWindowMinutes = 30 } = {}) {
         this.activityRepository = activityRepository;
         this.registrationRepository = registrationRepository;
         this.participantRepository = participantRepository;
         this.eventRepository = eventRepository;
         this.messageBus = messageBus;
+        this.paymentWindowMs = paymentWindowMinutes * 60_000;
     }
 
     // Projeção local da Activity da secretaria (ActivityCreated/ActivityUpdated). Idempotente: upsert.
-    upsertActivity({ activityId, eventId, name, capacity, price = 0, rules = [] }) {
+    async upsertActivity({ activityId, eventId, name, capacity, price = 0, rules = [] }) {
         const registrationRules = rules.map(ruleFromConfig);
-        const activity = this.activityRepository.getById(activityId);
-        if (!activity) {
+        if (!this.activityRepository.getById(activityId)) {
             this.activityRepository.add(new Activity({ id: activityId, eventId, name, capacity, price, rules: registrationRules }));
+            return;
         }
-        else {
+        await this.#change(activityId, activity => {
             activity.setName(name);
-            activity.setCapacity(capacity);
             activity.setPrice(price);
             activity.setRules(registrationRules);
-            this.activityRepository.update(activity);
-        }
+            activity.setCapacity(capacity); // por último: pode promover a fila com o preço novo
+        });
     }
     deleteActivity({ activityId }) {
         this.activityRepository.delete(activityId);
@@ -38,10 +40,8 @@ export class RegistrationAppService {
     async updateEvent({ eventId, name, status, organizers = [], reason }) {
         this.eventRepository.upsert({ id: eventId, name, status, organizers });
         if (status != 'canceled') return;
-        for (const activity of this.activityRepository.list().filter(a => a.eventId == eventId)) {
-            activity.cancelAll(`Event canceled: ${reason}`);
-            this.activityRepository.update(activity);
-            await this.#publish(activity.registrations);
+        for (const { id } of this.activityRepository.list().filter(a => a.eventId == eventId)) {
+            await this.#change(id, activity => activity.cancelAll(`Event canceled: ${reason}`));
         }
     }
 
@@ -51,13 +51,11 @@ export class RegistrationAppService {
     }
 
     async register({ activityId }, userId) {
-        const activity = this.activityRepository.getById(activityId);
-        if (!activity) throw new NotFoundError('activity');
-        if (this.eventRepository.getById(activity.eventId)?.status != 'published') throw new Error('Event is not open for registration');
         if (!this.participantRepository.getById(userId)) throw new NotFoundError('user');
-        const registration = activity.register(userId);
-        this.activityRepository.update(activity); // salva a activity com a nova inscrição
-        await this.#publish([registration]);
+        const registration = await this.#change(activityId, activity => {
+            if (this.eventRepository.getById(activity.eventId)?.status != 'published') throw new Error('Event is not open for registration');
+            return activity.register(userId);
+        });
         return registration.toJSON();
     }
 
@@ -91,41 +89,62 @@ export class RegistrationAppService {
     }
     // O participante cancela a própria; o organizador, qualquer uma da atividade.
     async cancelRegistration(id, { reason } = {}, user) {
-        const registration = this.#get(id);
-        const owner = isOwner(user, registration);
-        if (!owner && !this.#canManage(registration.activityId, user)) throw new ForbiddenError('cancel registration');
-        registration.cancel(reason || (owner ? 'Canceled by participant' : 'Canceled by organizer'));
-        this.registrationRepository.update(registration);
-        await this.#publish([registration]);
+        const { activityId } = this.#get(id);
+        const registration = await this.#change(activityId, activity => {
+            const registration = activity.registrations.find(r => r.id == id);
+            const owner = isOwner(user, registration);
+            if (!owner && !this.#canManage(activityId, user)) throw new ForbiddenError('cancel registration');
+            return activity.cancel(id, reason || (owner ? 'Canceled by participant' : 'Canceled by organizer'));
+        });
         return this.#view(registration);
     }
     // O organizador resolve uma pendência manual (ex.: idade conferida no credenciamento).
     async fulfillRequirement(id, requirementId, user) {
-        const registration = this.#get(id);
-        this.#assertCanManage(registration.activityId, user);
-        const requirement = registration.requirements.find(r => r.id == requirementId);
-        if (!requirement) throw new NotFoundError('requirement');
-        if (!MANUAL_REQUIREMENTS.includes(requirement.type)) throw new Error(`Requirement ${requirement.type} cannot be fulfilled manually`);
-        return this.#view(await this.#fulfill(registration, requirementId));
+        const { activityId } = this.#get(id);
+        this.#assertCanManage(activityId, user);
+        const registration = await this.#change(activityId, activity => {
+            const requirement = activity.registrations.find(r => r.id == id).requirements.find(r => r.id == requirementId);
+            if (!requirement) throw new NotFoundError('requirement');
+            if (!MANUAL_REQUIREMENTS.includes(requirement.type)) throw new Error(`Requirement ${requirement.type} cannot be fulfilled manually`);
+            return activity.fulfill(id, requirementId);
+        });
+        return this.#view(registration);
     }
 
+    // Pago depois de perder a reserva: a inscrição não muda (estorno não implementado).
     async confirmPayment({ registrationId, paymentId }) {
-        await this.#fulfill(this.#get(registrationId), paymentId);
+        const { activityId } = this.#get(registrationId);
+        await this.#change(activityId, activity => activity.confirmPayment(registrationId, paymentId));
     }
-    // Confirmação passa pela Activity, que garante a capacidade.
-    async #fulfill({ id, activityId }, requirementId) {
-        const activity = this.activityRepository.getById(activityId);
-        const registration = activity.fulfill(id, requirementId);
-        this.activityRepository.update(activity);
-        await this.#publish([registration]);
-        return registration;
+    async denyPayment({ registrationId, paymentId, reason }) {
+        const { activityId } = this.#get(registrationId);
+        await this.#change(activityId, activity => activity.denyPayment(registrationId, paymentId, reason));
     }
-    async denyPayment({ registrationId, reason }) {
-        const registration = this.#get(registrationId);
-        registration.cancel(`Payment denied: ${reason}`);
-        this.registrationRepository.update(registration);
-        await this.#publish([registration]);
-        return registration;
+    // Job: reservas sem pagamento dentro da janela perdem a vaga, que vai para o próximo da fila.
+    async expireOverduePayments(now = new Date()) {
+        const before = new Date(now - this.paymentWindowMs);
+        for (const activityId of this.registrationRepository.listActivitiesWithOverduePayment(before)) {
+            await this.#change(activityId, activity => activity.expireOverdue(before));
+        }
+    }
+
+    // Carrega, muda e salva a Activity; se outra escrita chegou antes (ConcurrencyError), refaz do zero.
+    // Mensagens só são publicadas depois de gravar.
+    async #change(activityId, fn) {
+        for (let attempt = 1; ; attempt++) {
+            const activity = this.activityRepository.getById(activityId);
+            if (!activity) throw new NotFoundError('activity');
+            const result = fn(activity);
+            try {
+                this.activityRepository.update(activity);
+            } catch (e) {
+                if (!(e instanceof ConcurrencyError) || attempt == RETRIES) throw e;
+                await new Promise(ok => setTimeout(ok, Math.random() * 5 * attempt)); // espalha as tentativas
+                continue;
+            }
+            for (const r of activity.registrations) for (const m of r.pullMessages()) await this.messageBus.publish(m);
+            return result;
+        }
     }
 
     // Junta as projeções (participante, atividade, evento) para exibição.
@@ -152,8 +171,5 @@ export class RegistrationAppService {
         const registration = this.registrationRepository.getById(id);
         if (!registration) throw new NotFoundError('registration');
         return registration;
-    }
-    async #publish(registrations) {
-        for (const r of registrations) for (const m of r.pullMessages()) await this.messageBus.publish(m);
     }
 }
