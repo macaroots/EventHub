@@ -68,3 +68,13 @@ test("should not reduce capacity below confirmed occupation", async () => {
   activity.register(2);
   assert.throws(() => activity.setCapacity(1), /confirmed occupation/);
 });
+test("should not confirm beyond capacity (capacity reduced while pending)", async () => {
+  const activity = new Activity({ capacity: 2, price: 10 });
+  const [r1, r2] = [activity.register(1), activity.register(2)];
+  activity.setCapacity(1);
+  activity.fulfill(r1.id, r1.requirements[0].id);
+  activity.fulfill(r2.id, r2.requirements[0].id);
+  assert.equal(activity.getConfirmedOccupation(), 1);
+  assert.equal(r2.status, 'pending');
+  assert.equal(r2.getPendingRequirements()[0].type, 'wait list');
+});

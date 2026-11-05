@@ -14,7 +14,16 @@ export class ActivitySqliteRepository extends SqliteRepository {
                 capacity INTEGER NOT NULL,
                 price REAL NOT NULL DEFAULT 0,
                 rules TEXT NOT NULL -- JSON: [{type: 'minimumAge', age}]
-            ) STRICT
+            ) STRICT;
+        `);
+        // Última barreira (outros caminhos, várias instâncias): confirmados nunca passam da capacidade.
+        const guard = `WHEN NEW.status = 'confirmed' AND (SELECT count(*) FROM ${registrationRepository.tableName}
+                WHERE activityId = NEW.activityId AND status = 'confirmed' AND id != NEW.id)
+                >= (SELECT capacity FROM ${this.tableName} WHERE id = NEW.activityId)
+            BEGIN SELECT RAISE(ABORT, 'Full occupation'); END`;
+        db.exec(`
+            CREATE TRIGGER IF NOT EXISTS registrations_capacity_insert BEFORE INSERT ON ${registrationRepository.tableName} ${guard};
+            CREATE TRIGGER IF NOT EXISTS registrations_capacity_update BEFORE UPDATE OF status ON ${registrationRepository.tableName} ${guard};
         `);
     }
     toRow(activity) {

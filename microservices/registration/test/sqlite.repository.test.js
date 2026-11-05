@@ -40,3 +40,15 @@ test("restored registration keeps state and only emits new messages", () => {
   assert.equal(registrations.getById(created.id).status, "confirmed");
   assert.equal(activities.getById(activity.id).getConfirmedOccupation(), 1);
 });
+
+test("database rejects confirmations beyond capacity", () => {
+  const { activities, registrations } = repositories();
+  const activity = new Activity({ eventId: "e1", capacity: 1 });
+  activity.register("u1");
+  activities.add(activity);
+  const extra = activity.register("u2"); // cancelada por lotação
+  extra.status = "confirmed"; // burla o domínio
+  assert.throws(() => registrations.upsert(extra), /Full occupation/);
+  assert.throws(() => activities.update(activity), /Full occupation/);
+  assert.equal(activities.getById(activity.id).getConfirmedOccupation(), 1);
+});

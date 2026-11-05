@@ -87,6 +87,13 @@ export class Activity {
         this.#registrations.push(registration);
         return registration;
     }
+    // Toda confirmação passa por aqui: sem vaga confirmada, vai para a fila de espera.
+    fulfill(registrationId, requirementId) {
+        const registration = this.#registrations.find(r => r.id == registrationId);
+        if (!registration) throw new Error('Registration not found');
+        registration.fulfill(requirementId, () => !this.isFullConfirmed());
+        return registration;
+    }
     cancelAll(reason) {
         for (const r of this.#registrations) if (r.status != 'canceled') r.cancel(reason);
     }
@@ -162,11 +169,13 @@ export class Registration {
         }
         this.#confirmIfReady();
     }
-    fulfill(requirementId) {
+    // hasSeat: a Activity diz se ainda há vaga (use activity.fulfill).
+    fulfill(requirementId, hasSeat = () => true) {
         const r = this.requirements.find(r => r.id == requirementId);
         if (!r) throw new Error('Requirement not found');
         if (this.status == 'canceled') throw new Error('Registration is canceled');
         r.fulfilled = true;
+        if (!this.getPendingRequirements().length && !hasSeat()) this.require({ type: 'wait list' });
         this.#confirmIfReady();
     }
     cancel(reason) {
