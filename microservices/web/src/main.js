@@ -7,8 +7,6 @@ import { router as events } from './routes/events.js';
 import { router as activities } from './routes/activities.js';
 import { router as registration } from './routes/registration.js';
 import { router as payment } from './routes/payment.js';
-import { json } from './routes/helpers.js';
-import * as secretariat from './clients/secretariat.js';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -22,10 +20,6 @@ app.use(cookieParser());
 app.use(express.static(path.join(import.meta.dirname, 'public')));
 app.use(layout);
 
-app.get('/', async (req, res) => {
-    const events = await json(await secretariat.listEvents(req));
-    res.layout('index', { events });
-});
 app.use('/auth', auth);
 app.use('/organizers', events, activities);
 app.use(registration);

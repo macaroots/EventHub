@@ -1,29 +1,39 @@
 import { Router } from 'express';
+import { authenticate } from '../middleware/authenticate.js';
+import * as payment from '../clients/payment.js';
+import * as registration from '../clients/registration.js';
+import { json } from './helpers.js';
 
-// Protótipo do fluxo de pagamento (gateway externo simulado).
+// Pagamento de uma pendência da inscrição (paymentId = id da pendência).
 export const router = Router();
 
-router.post('/external/payment/:id', (req, res) => {
-    const { id } = req.params;
-    res.layout('redirect', { urls: [
-        `/payment/${id}/confirm`,
-        `/payment/${id}/deny`,
-        `/payment/${id}/expired`
-    ]});
+// O payment ainda não tem auth: o BFF só mostra/paga se a inscrição do pagamento for
+// visível ao usuário (registration responde 403 para inscrição de outro).
+const load = async (req) => {
+    const p = await json(await payment.getPayment(req, req.params.id));
+    const r = await json(await registration.getRegistration(req, p.registrationId));
+    return { payment: p, registration: r };
+};
+
+// PaymentConfirmed/Denied chega ao registration por mensagem (assíncrono).
+// Espera um pouco o resultado para não mostrar a inscrição ainda pendente.
+const settled = async (req, registrationId, paymentId, tries = 10) => {
+    for (let i = 0; i < tries; i++) {
+        const r = await json(await registration.getRegistration(req, registrationId));
+        if (r.status == 'canceled' || r.requirements.find(x => x.id == paymentId)?.fulfilled) return;
+        await new Promise(ok => setTimeout(ok, 200));
+    }
+};
+
+router.get('/payments/:id', authenticate, async (req, res) => {
+    res.layout('payments/show', await load(req));
 });
-router.get('/payment/:id/confirm', (req, res) => {
-    res.layout('redirect', { url: `/registration/1`, stages: [
-        'Confirma reserva de lugar'
-    ]});
-});
-router.get('/payment/:id/deny', (req, res) => {
-    res.layout('redirect', { url: `/payment/${req.params.id}?error=Payment denied` });
-});
-router.get('/payment/:id/expired', (req, res) => {
-    res.layout('redirect', { url: `/`, stages: [
-        'Cancela reserva de lugar'
-    ]});
-});
-router.get('/payment/:id', (req, res) => {
-    res.layout('payment', { id: req.params.id, error: req.query.error });
+router.post('/payments/:id', authenticate, async (req, res) => {
+    const { payment: p } = await load(req);
+    const response = await payment.pay(req, p.id, req.body.receipt);
+    if (!response.ok) {
+        return res.redirect(`/payments/${encodeURIComponent(p.id)}?error=${encodeURIComponent(await response.text())}`);
+    }
+    await settled(req, p.registrationId, p.id);
+    res.redirect(`/registrations/${encodeURIComponent(p.registrationId)}`);
 });
