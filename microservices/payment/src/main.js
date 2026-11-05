@@ -20,12 +20,17 @@ app.get('/payments', (req, res) => {
     let beans = paymentRepository.list();
     res.json(beans);
 });
+app.get('/payments/:id', (req, res) => {
+    const payment = paymentRepository.getById(req.params.id);
+    if (!payment) return res.status(404).send('payment not found');
+    res.json(payment);
+});
 app.post('/payments/:id/pay', async (req, res) => {
     try {
         const payment = await paymentService.pay({ paymentId: req.params.id, receipt: req.body.receipt });
         res.json(payment);
     } catch (e) {
-        res.status(400).json(e.message);
+        res.status(400).send(e.message);
     }
 });
 
