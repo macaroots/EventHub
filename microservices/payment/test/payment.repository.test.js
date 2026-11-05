@@ -16,3 +16,13 @@ test("should persist payment state", () => {
   assert.throws(() => loaded.pay("ok"), /already paid/);
   assert.deepEqual(loaded.pullMessages(), []);
 });
+
+test("canceled registration cancels its pending payment", async () => {
+  const { PaymentAppService } = await import("../src/application/payment.app-service.js");
+  const repository = new PaymentSqliteRepository(new DatabaseSync(":memory:"));
+  const service = new PaymentAppService(repository, null, null);
+  service.charge({ paymentId: "p1", amount: 10, registrationId: "r1" });
+  service.cancelByRegistration({ registrationId: "r1" });
+  assert.equal(repository.getById("p1").status, "canceled");
+  assert.throws(() => repository.getById("p1").pay("ok"), /already canceled/);
+});

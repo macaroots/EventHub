@@ -3,7 +3,7 @@ export class Payment {
     amount;
     description;
     registrationId;
-    status = 'pending'; // pending | paid | denied
+    status = 'pending'; // pending | paid | denied | canceled
     receipt;
     #messages = []
     constructor(amount, id, { registrationId, description } = {}) {
@@ -29,6 +29,10 @@ export class Payment {
         this.#assertPending();
         this.status = 'denied';
         this.#messages.push({type: 'PaymentDenied', paymentId: this.id, registrationId: this.registrationId, reason});
+    }
+    // A inscrição perdeu a reserva (expirou, cancelada): não aceita mais pagamento.
+    cancel() {
+        if (this.status == 'pending') this.status = 'canceled';
     }
     #assertPending() {
         if (this.status != 'pending') throw new Error(`Payment already ${this.status}`);

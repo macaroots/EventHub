@@ -19,4 +19,7 @@ export class PaymentSqliteRepository extends SqliteRepository {
         return { id, amount, description, registrationId, status, receipt };
     }
     fromRow(row) { return Payment.restore(row); }
+    listByRegistration(registrationId) {
+        return this.db.prepare(`SELECT * FROM ${this.tableName} WHERE registrationId = ?`).all(registrationId).map(r => this.fromRow(r));
+    }
 }
