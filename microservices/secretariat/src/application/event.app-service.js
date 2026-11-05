@@ -27,6 +27,9 @@ export class EventAppService {
     async list({ name } = {}, user) {
         return this.eventRepository.search({ name, organizerId: isAdmin(user) ? undefined : user.id });
     }
+    async listAll({ name } = {}) {
+        return this.eventRepository.search({ name, status: 'published' });
+    }
 
     async get(id, user) {
         const event = this.#get(id);
