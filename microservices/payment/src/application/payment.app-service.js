@@ -12,6 +12,13 @@ export class PaymentAppService {
         if (this.paymentRepository.getById(paymentId)) return;
         this.paymentRepository.add(new Payment(amount, paymentId, { registrationId, description }));
     }
+    // Ouve RegistrationCanceled.
+    cancelByRegistration({ registrationId }) {
+        for (const payment of this.paymentRepository.listByRegistration(registrationId)) {
+            payment.cancel();
+            this.paymentRepository.update(payment);
+        }
+    }
     async pay({ paymentId, receipt }) {
         const payment = this.paymentRepository.getById(paymentId);
         if (!payment) throw new NotFoundError('payment');
