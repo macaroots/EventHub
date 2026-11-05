@@ -63,6 +63,8 @@ services:
       JWT_EXPIRES_IN: 1h
       CORS_ORIGIN: http://localhost:3000
     ports: [{ published: *identity-port, target: *identity-port }]
+    volumes:
+      - identity-data:/app/identity/data
     depends_on:
       rabbitmq: { condition: service_healthy }
       identity-db: { condition: service_healthy }
@@ -82,3 +84,4 @@ volumes:
   payment-data:
   certificate-data:
   registration-data:
+  identity-data:
