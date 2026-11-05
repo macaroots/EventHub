@@ -25,12 +25,13 @@ export class EventSqliteRepository extends SqliteRepository {
         return row && this.fromRow(row);
     }
     // organizerId ausente = todos (admin).
-    search({ name, organizerId } = {}) {
+    search({ name, organizerId, status } = {}) {
         const stmt = this.db.prepare(`
             SELECT * FROM ${this.tableName}
             WHERE (:name IS NULL OR name LIKE '%' || :name || '%')
+              AND (:status IS NULL OR status LIKE '%' || :status || '%')
               AND (:organizerId IS NULL OR EXISTS (SELECT 1 FROM json_each(organizers) WHERE value = :organizerId))
         `);
-        return stmt.all({ name: name ?? null, organizerId: organizerId ?? null }).map(r => this.fromRow(r));
+        return stmt.all({ name: name ?? null, status: status ?? null, organizerId: organizerId ?? null }).map(r => this.fromRow(r));
     }
 }

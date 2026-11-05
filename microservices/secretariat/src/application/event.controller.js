@@ -6,10 +6,18 @@ export class EventController extends CrudController {
         super(service, '/events');
     }
     addRoutes(router) {
+        router.post('/public/events', this.handle(this.public));
         router.post('/events/:id/publish', this.handle(this.publish));
         router.post('/events/:id/cancel', this.handle(this.cancel));
         router.post('/events/:id/organizers', this.handle(this.addOrganizer));
         router.delete('/events/:id/organizers/:userId', this.handle(this.removeOrganizer));
+    }
+    async public(req, res) {
+        res.json(await this.service.listAll(req.query));
+    }
+    async publish(req, res) {
+        await this.service.publish(req.params.id, req.user);
+        res.status(204).end();
     }
     async publish(req, res) {
         await this.service.publish(req.params.id, req.user);
