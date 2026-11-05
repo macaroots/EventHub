@@ -6,7 +6,7 @@
 cd microservices
 docker compose up -d --build   # sobe tudo
 docker compose logs -f <serviço>
-docker compose down            # -v para apagar os bancos (secretariat, registration)
+docker compose down            # -v para apagar os bancos
 ```
 
 | Serviço      | Host                   |
@@ -37,6 +37,13 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 - Alternativa não usada: `docker compose watch` (`develop.watch`), que sincroniza arquivos em vez de bind mount.
 - Sem dev override: mudanças de código exigem `docker compose up -d --build`.
 
+## Persistência
+
+Cada serviço tem seu SQLite (`node:sqlite`) em `<serviço>/data/<serviço>.db`, num volume `<serviço>-data` do compose. O banco é aberto por [shared/infrastructure/sqlite.js](shared/infrastructure/sqlite.js), e os repositórios estendem [SqliteRepository](shared/infrastructure/sqlite.repository.js), que tem `upsert` para as projeções. `MapRepository` (em memória) fica para os testes.
+
+- Um banco por serviço: nenhum serviço lê a tabela de outro. O que vem de fora chega por mensagem e vira projeção local.
+- Limitação: o banco é salvo antes de publicar as mensagens, sem outbox. Se o serviço cair entre as duas coisas, a mensagem se perde. Alternativa: tabela outbox na mesma transação.
+
 ## Autenticação
 
 Todos os endpoints de secretariat e registration exigem `Authorization: Bearer <token>`.
@@ -49,7 +56,7 @@ curl -X POST localhost:3003/auth  -H 'Content-Type: application/json' -d '{"user
 - JWT HS256 ([shared/auth/jwt.js](shared/auth/jwt.js), lib `jsonwebtoken`), validade 8h, payload `{sub, username, role}`. Todos os serviços usam o mesmo `JWT_SECRET` (compose: padrão `dev-secret-change-me`; sem ele o serviço não sobe).
 - Admin: criado na subida do identity a partir de `ADMIN_USERNAME`/`ADMIN_PASSWORD` (padrão `admin`/`admin`). O cadastro público só cria `role: user`.
 - Trade-off: com HS256, qualquer serviço que verifica tokens também consegue emiti-los. Alternativa: RS256 (identity assina com chave privada; os demais têm só a pública).
-- Limitações: senha em texto puro e usuários em memória no identity; payment ainda sem auth.
+- Limitações: senha em texto puro no identity; payment ainda sem auth.
 
 ## Web (BFF)
 
