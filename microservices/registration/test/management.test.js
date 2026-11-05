@@ -56,3 +56,16 @@ test("organizer change in the event updates the projection", async () => {
   await service.updateEvent({ eventId: "e1", name: "E", status: "published", organizers: ["org", "x"] });
   assert.ok(service.listActivityRegistrations("a1", stranger));
 });
+
+test("waitlist exposes only ids in order; registration shows its position", async () => {
+  const { service } = await setup();
+  for (const u of ["u2", "u3", "u4"]) {
+    service.upsertParticipant({ userId: u, username: u });
+    await service.register({ activityId: "a1" }, u);
+  }
+  const waitlist = service.getWaitlist("a1");
+  assert.equal(waitlist.length, 2);
+  assert.ok(waitlist.every(id => typeof id == "string"));
+  assert.equal(service.getRegistration(waitlist[1], { id: "u4", role: "user" }).waitlistPosition, 2);
+  assert.equal(service.getRegistration(waitlist[1], organizer).userId, "u4");
+});

@@ -17,10 +17,10 @@ A fila de acesso (`/queue`, sala de espera de tráfego) é outro assunto: ver o 
 Começar pela **opção 2 (polling com cache por atividade no BFF)**, desacoplada para poder migrar para a **opção 3 (push por SSE)** trocando só o transporte.
 
 - **Posição:** é o número de inscrições `waitlisted` da mesma atividade com `createdAt` menor, mais um, calculado na leitura, sem guardar nada. É exposta como `waitlistPosition` em `GET /registrations/:id`.
-- **Fila da atividade no registration:** `GET /activities/:id/waitlist` devolve `[{registrationId, userId}]` em ordem. É de uso interno do BFF.
+- **Fila da atividade no registration:** `GET /activities/:id/waitlist` devolve os `registrationId` em ordem, sem dados pessoais, porque qualquer usuário logado pode consultar. Um id sozinho não dá acesso à inscrição.
 - **Cache no BFF:** um `WaitlistSource` por atividade guarda essa lista por cerca de 2 s. O registration recebe uma consulta por atividade a cada intervalo, não uma por pessoa.
 - **Endpoint da página:** `GET /registrations/:id/status.json` devolve `{status, waitlistPosition, next}`.
-  - Enquanto a inscrição está na lista em cache, a posição sai da memória. A autorização também é local: o `userId` da lista é comparado com o do JWT, sem chamar o registration.
+  - Na primeira consulta, o BFF pede a inscrição ao registration, que autoriza (dono, organizador ou admin). O par inscrição + usuário fica num cache de acesso. Depois disso, enquanto a inscrição está na lista em cache, a posição sai da memória, sem chamar o registration.
   - Quando a inscrição sai da lista, o BFF consulta a inscrição uma única vez e devolve `next` (`/payments/:id` ou `/registrations/:id`), e a página redireciona.
 - **Página:** um único `watchRegistration(id, onUpdate)` esconde o transporte. Hoje é `fetch` a cada 3 a 5 s; sem JavaScript, `<meta refresh>` como fallback.
 
