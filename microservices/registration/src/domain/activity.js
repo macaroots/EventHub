@@ -21,20 +21,25 @@ export class ActivityLine {
 export class Activity {
     #id;
     #eventId;
+    #name;
     #capacity;
     #price;
     #registrations = [];
     #registrationRules = [];
 
-    constructor({ id = crypto.randomUUID(), eventId, capacity, price = 0, rules = [] } = {}) {
+    constructor({ id = crypto.randomUUID(), eventId, name, capacity, price = 0, rules = [] } = {}) {
         this.#id = id;
         this.#eventId = eventId;
+        this.#name = name;
         this.setCapacity(capacity);
         this.setPrice(price);
         this.setRules(rules);
     }
     get id() { return this.#id; }
     get eventId() { return this.#eventId; }
+    // Só para exibição (listagens).
+    get name() { return this.#name; }
+    setName(name) { this.#name = name; }
 
     get capacity() { return this.#capacity; }
     setCapacity(capacity) {
@@ -52,6 +57,7 @@ export class Activity {
         return {
             id: this.#id,
             eventId: this.#eventId,
+            name: this.#name,
             capacity: this.#capacity,
             price: this.#price,
             registrations: this.#registrations,

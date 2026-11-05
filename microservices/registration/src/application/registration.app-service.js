@@ -1,5 +1,7 @@
-import { NotFoundError } from "../../../shared/domain/errors.js";
+import { ForbiddenError, NotFoundError } from "../../../shared/domain/errors.js";
 import { Activity, Participant, ruleFromConfig } from "../domain/activity.js";
+
+const canSee = (user, registration) => user.role == 'admin' || registration.userId == user.id;
 
 export class RegistrationAppService {
     constructor(activityRepository, registrationRepository, participantRepository, eventRepository, messageBus) {
@@ -11,13 +13,14 @@ export class RegistrationAppService {
     }
 
     // Projeção local da Activity da secretaria (ActivityCreated/ActivityUpdated). Idempotente: upsert.
-    upsertActivity({ activityId, eventId, capacity, price = 0, rules = [] }) {
+    upsertActivity({ activityId, eventId, name, capacity, price = 0, rules = [] }) {
         const registrationRules = rules.map(ruleFromConfig);
         const activity = this.activityRepository.getById(activityId);
         if (!activity) {
-            this.activityRepository.add(new Activity({ id: activityId, eventId, capacity, price, rules: registrationRules }));
+            this.activityRepository.add(new Activity({ id: activityId, eventId, name, capacity, price, rules: registrationRules }));
         }
         else {
+            activity.setName(name);
             activity.setCapacity(capacity);
             activity.setPrice(price);
             activity.setRules(registrationRules);
@@ -29,8 +32,8 @@ export class RegistrationAppService {
     }
 
     // Projeção do status do evento: só aceita inscrição em evento publicado.
-    async updateEvent({ eventId, status, reason }) {
-        this.eventRepository.update({ id: eventId, status });
+    async updateEvent({ eventId, name, status, reason }) {
+        this.eventRepository.update({ id: eventId, name, status });
         if (status != 'canceled') return;
         for (const activity of this.activityRepository.list().filter(a => a.eventId == eventId)) {
             activity.cancelAll(`Event canceled: ${reason}`);
@@ -54,11 +57,16 @@ export class RegistrationAppService {
         return registration.toJSON();
     }
 
-    // Admin vê todas; os demais, só as próprias. Junta o participante para a listagem.
+    // Admin vê todas; os demais, só as próprias.
     listRegistrations(user) {
         return this.registrationRepository.list()
-            .filter(r => user.role == 'admin' || r.userId == user.id)
-            .map(r => ({ ...r.toJSON(), participant: this.participantRepository.getById(r.userId) }));
+            .filter(r => canSee(user, r))
+            .map(r => this.#view(r));
+    }
+    getRegistration(id, user) {
+        const registration = this.#get(id);
+        if (!canSee(user, registration)) throw new ForbiddenError('see registration');
+        return this.#view(registration);
     }
 
     async confirmPayment({ registrationId, paymentId }) {
@@ -72,6 +80,17 @@ export class RegistrationAppService {
         await this.#publish([registration]);
     }
 
+    // Junta as projeções (participante, atividade, evento) para exibição.
+    #view(r) {
+        const activity = this.activityRepository.getById(r.activityId);
+        const event = activity && this.eventRepository.getById(activity.eventId);
+        return {
+            ...r.toJSON(),
+            participant: this.participantRepository.getById(r.userId),
+            activity: activity && { id: activity.id, name: activity.name },
+            event: event && { id: event.id, name: event.name },
+        };
+    }
     #get(id) {
         const registration = this.registrationRepository.getById(id);
         if (!registration) throw new NotFoundError('registration');
