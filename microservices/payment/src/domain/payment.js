@@ -14,6 +14,11 @@ export class Payment {
         this.description = description;
     }
 
+    // Reconstitui do banco (sem mensagens pendentes).
+    static restore({ id, amount, description, registrationId, status, receipt }) {
+        return Object.assign(new Payment(amount, id, { registrationId, description }), { status, receipt });
+    }
+
     pay(receipt) {
         this.#assertPending();
         this.status = 'paid';

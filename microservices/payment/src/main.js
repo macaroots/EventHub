@@ -1,6 +1,7 @@
 import express from 'express';
 import { RabbitMqMessageBus } from '../../shared/messaging/rabbitmq-message-bus.js';
-import { MapRepository } from '../../shared/infrastructure/map.repository.js';
+import { openDatabase } from '../../shared/infrastructure/sqlite.js';
+import { PaymentSqliteRepository } from './infrastructure/payment.sqlite.repository.js';
 import { PaymentAppService } from './application/payment.app-service.js';
 import { FakePaymentGateway } from './infrastructure/fake-payment.gateway.js';
 
@@ -10,7 +11,7 @@ const port = process.env.PORT || 3000;
 app.use(express.json()); 
 
 const messageBus = await RabbitMqMessageBus.connect();
-const paymentRepository = new MapRepository();
+const paymentRepository = new PaymentSqliteRepository(openDatabase('payment'));
 const paymentService = new PaymentAppService(paymentRepository, new FakePaymentGateway(), messageBus);
 
 // Isso pode ser definido aqui (Coreografia) ou no gateway (Orquestração)

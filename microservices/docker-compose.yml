@@ -53,6 +53,8 @@ services:
     build: { context: ., dockerfile: payment/Dockerfile }
     environment: { <<: *env, PORT: &payment-port 3004 }
     ports: [{ published: *payment-port, target: *payment-port }]
+    volumes:
+      - payment-data:/app/payment/data
 
   certificate:
     <<: *service
@@ -70,3 +72,4 @@ volumes:
   certificate-data:
   registration-data:
   identity-data:
+  payment-data:

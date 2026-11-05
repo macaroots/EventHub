@@ -18,6 +18,7 @@ export class PaymentAppService {
         const { approved, reason } = await this.paymentGateway.verify(payment, receipt);
         if (approved) payment.pay(receipt);
         else payment.deny(reason);
+        this.paymentRepository.update(payment);
         await this.#sendMessages(payment);
         return payment;
     }
