@@ -11,6 +11,7 @@ RUN npm ci --omit=dev
 
 COPY shared /app/shared
 COPY payment/src ./src
+RUN mkdir -p data && chown node:node data
 
 USER node
 ENV PORT=3000
