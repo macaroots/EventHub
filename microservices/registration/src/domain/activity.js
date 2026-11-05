@@ -128,11 +128,19 @@ export class Activity {
     isRegistered(userId) {
         return this.#registrations.some(r => r.userId == userId && r.status != 'canceled');
     }
-    // Fila de espera por ordem de chegada.
-    #promote() {
-        const waiting = this.#registrations.filter(r => r.status == 'waitlisted')
+    // Fila de espera por ordem de chegada. Empate no milissegundo: ordem de inserção (sort estável;
+    // o repositório carrega por createdAt, rowid).
+    getWaitlist() {
+        return this.#registrations.filter(r => r.status == 'waitlisted')
             .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-        for (const r of waiting) {
+    }
+    // 1, 2, ...; null fora da fila.
+    getWaitlistPosition(registrationId) {
+        const i = this.getWaitlist().findIndex(r => r.id == registrationId);
+        return i < 0 ? null : i + 1;
+    }
+    #promote() {
+        for (const r of this.getWaitlist()) {
             if (this.isFull()) break;
             r.promote(this.#price);
         }

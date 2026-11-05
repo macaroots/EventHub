@@ -27,7 +27,7 @@ export class RegistrationSqliteRepository extends SqliteRepository {
         return Registration.restore({ ...row, requirements: JSON.parse(row.requirements), reasons: JSON.parse(row.reasons), payment: JSON.parse(row.payment) });
     }
     listByActivity(activityId) {
-        return this.db.prepare(`SELECT * FROM ${this.tableName} WHERE activityId = ?`).all(activityId).map(r => this.fromRow(r));
+        return this.db.prepare(`SELECT * FROM ${this.tableName} WHERE activityId = ? ORDER BY createdAt, rowid`).all(activityId).map(r => this.fromRow(r));
     }
     // Atividades com reserva aguardando pagamento desde antes de `before`.
     listActivitiesWithOverduePayment(before) {
