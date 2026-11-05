@@ -1,0 +1,31 @@
+<% const pending = registration.requirements.filter(r => !r.fulfilled);
+   const labels = { payment: 'Pagamento', 'wait list': 'Fila de espera', 'age verification': 'Verificação de idade' }; %>
+<p><a href="/registrations">← Minhas inscrições</a></p>
+<section>
+    <h2>Inscrição <small>(<%- include('status', { status: registration.status }) %>)</small></h2>
+    <p>
+        <% if (registration.event) { %>Evento: <a href="/events/<%= registration.event.id %>"><%= registration.event.name %></a>.<% } %>
+        Atividade: <%= registration.activity?.name ?? registration.activityId %>.
+    </p>
+<% if (registration.status == 'confirmed') { %>
+    <p>Inscrição confirmada!</p>
+<% } else if (registration.status == 'canceled') { %>
+    <p>Motivo: <%= registration.reasons.join('; ') %></p>
+<% } else { %>
+    <p>Pendências:</p>
+    <ul>
+<% for (const r of pending) { %>
+        <li>
+<% if (r.type == 'payment') { %>
+            <a href="/payments/<%= r.id %>"><%= labels[r.type] %>: R$ <%= r.amount.toFixed(2) %></a>
+<% } else if (r.type == 'age verification') { %>
+            <%= labels[r.type] %> (mínimo <%= r.minimumAge %> anos): aguardando a organização
+<% } else { %>
+            <%= labels[r.type] ?? r.type %>: aguardando vaga
+<% } %>
+        </li>
+<% } %>
+    </ul>
+    <p><a href="">Atualizar</a></p>
+<% } %>
+</section>

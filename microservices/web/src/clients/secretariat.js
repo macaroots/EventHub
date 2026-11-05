@@ -17,3 +17,7 @@ export const getActivity = (req, activityId) => call(`/activities/${id(activityI
 export const createActivity = (req, activity) => call('/activities', req, { method: 'POST', body: activity });
 export const updateActivity = (req, activityId, changes) => call(`/activities/${id(activityId)}`, req, { method: 'PATCH', body: changes });
 export const deleteActivity = (req, activityId) => call(`/activities/${id(activityId)}`, req, { method: 'DELETE' });
+
+// Públicos (sem login): só eventos publicados.
+export const listPublicEvents = () => call('/public/events');
+export const getPublicEvent = (eventId) => call(`/public/events/${id(eventId)}`);

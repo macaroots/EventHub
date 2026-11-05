@@ -1,28 +1,37 @@
 import { Router } from 'express';
+import { authenticate } from '../middleware/authenticate.js';
+import * as secretariat from '../clients/secretariat.js';
+import * as registration from '../clients/registration.js';
+import { action, json } from './helpers.js';
 
-// Protótipo do fluxo de inscrição (ainda sem chamadas aos serviços).
+// Fluxo do participante: evento público → inscrição → pendências (pagamento).
+// Montado na raiz: authenticate por rota, não router.use (pegaria todas as rotas do app).
 export const router = Router();
 
-router.get('/activity/:id/register/', (req, res) => {
-    const { id } = req.params;
-    const token = crypto.randomUUID();
-    res.layout('redirect', { url: `/activity/${id}/register/${token}`, stages: [
-        'Entra na fila, recebe uma senha (token)',
-        'Espera chamar por websocket'
-    ]});
+const eventPage = (eventId) => `/events/${encodeURIComponent(eventId)}`;
+const registrationPage = (id) => `/registrations/${encodeURIComponent(id)}`;
+
+router.get('/', async (req, res) => {
+    const events = await json(await secretariat.listPublicEvents());
+    res.layout('index', { events });
 });
-router.get('/activity/:id/register/:token', (req, res) => {
-    const { id, token } = req.params;
-    res.layout('register', { id, token });
+
+// Público. Só eventos publicados (404 nos demais).
+router.get('/events/:id', async (req, res) => {
+    const event = await json(await secretariat.getPublicEvent(req.params.id));
+    res.layout('public/event', { event });
 });
-router.post('/activity/:id/register/:token', (req, res) => {
-    const { id } = req.params;
-    res.layout('registration-pending', { id, reasons: {
-        '/payment/1': 'Pagamento taxa inscrição',
-        '/payment/2': 'Pagamento taxa conveniência',
-        '/age-confirmation': 'Verificação de idade'
-    }});
+
+router.post('/activities/:id/registrations', authenticate, action(
+    (req) => registration.register(req, req.params.id),
+    async (req, response) => registrationPage((await response.json()).id),
+    (req) => eventPage(req.body.eventId)));
+
+router.get('/registrations', authenticate, async (req, res) => {
+    const registrations = await json(await registration.listRegistrations(req));
+    res.layout('registrations/list', { registrations: registrations.filter(r => r.userId == req.user.sub) });
 });
-router.get('/registration/:id', (req, res) => {
-    res.layout('registration-sucess', { id: req.params.id });
+router.get('/registrations/:id', authenticate, async (req, res) => {
+    const item = await json(await registration.getRegistration(req, req.params.id));
+    res.layout('registrations/show', { registration: item });
 });
