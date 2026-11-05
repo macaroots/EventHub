@@ -1,10 +1,10 @@
 import { DuplicateError, NotFoundError } from "../../../shared/domain/errors.js";
 import { Event, isAdmin } from "../domain/event.js";
 
-// Integration events: só dados públicos (sem organizers).
+// Integration events. organizers (só ids) vão para o registration autorizar a gestão de inscrições.
 const toMessage = (type, e) => {
-    const { id, name, description, location, startDate, endDate, status } = e.toJSON();
-    return { type, eventId: id, name, description, location, startDate, endDate, status };
+    const { id, name, description, location, startDate, endDate, status, organizers } = e.toJSON();
+    return { type, eventId: id, name, description, location, startDate, endDate, status, organizers };
 };
 
 const toPublic = ({ id, name, information, startDate, endDate, status }) =>
@@ -74,14 +74,14 @@ export class EventAppService {
         const event = this.#get(id);
         event.assertCanManage(user);
         event.addOrganizer(userId);
-        this.eventRepository.update(event.toJSON());
+        this.#save(event, 'EventUpdated');
     }
 
     async removeOrganizer(id, userId, user) {
         const event = this.#get(id);
         event.assertCanManage(user);
         event.removeOrganizer(userId);
-        this.eventRepository.update(event.toJSON());
+        this.#save(event, 'EventUpdated');
     }
 
     // Só o criador (ou admin); apaga junto as atividades.
