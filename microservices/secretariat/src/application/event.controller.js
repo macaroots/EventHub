@@ -1,3 +1,4 @@
+import express from "express";
 import { CrudController } from "../../../shared/application/CrudController.js";
 
 // CRUD + comandos do ciclo de vida do evento.
@@ -6,18 +7,17 @@ export class EventController extends CrudController {
         super(service, '/events');
     }
     addRoutes(router) {
-        router.post('/public/events', this.handle(this.public));
         router.post('/events/:id/publish', this.handle(this.publish));
         router.post('/events/:id/cancel', this.handle(this.cancel));
         router.post('/events/:id/organizers', this.handle(this.addOrganizer));
         router.delete('/events/:id/organizers/:userId', this.handle(this.removeOrganizer));
     }
-    async public(req, res) {
-        res.json(await this.service.listAll(req.query));
-    }
-    async publish(req, res) {
-        await this.service.publish(req.params.id, req.user);
-        res.status(204).end();
+    // Sem login: só eventos publicados. Montar antes do authenticate.
+    getPublicRouter() {
+        const router = express.Router();
+        router.get('/public/events', this.handle(async (req, res) => res.json(await this.service.listPublished(req.query))));
+        router.get('/public/events/:id', this.handle(async (req, res) => res.json(await this.service.getPublished(req.params.id))));
+        return router;
     }
     async publish(req, res) {
         await this.service.publish(req.params.id, req.user);

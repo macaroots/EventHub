@@ -7,6 +7,9 @@ const toMessage = (type, e) => {
     return { type, eventId: id, name, description, location, startDate, endDate, status };
 };
 
+const toPublic = ({ id, name, information, startDate, endDate, status }) =>
+    ({ id, name, information, startDate, endDate, status });
+
 export class EventAppService {
     constructor(eventRepository, activityRepository, messageBus) {
         this.eventRepository = eventRepository;
@@ -27,8 +30,14 @@ export class EventAppService {
     async list({ name } = {}, user) {
         return this.eventRepository.search({ name, organizerId: isAdmin(user) ? undefined : user.id });
     }
-    async listAll({ name } = {}) {
-        return this.eventRepository.search({ name, status: 'published' });
+    // Públicos (sem login): só publicados e sem organizers.
+    async listPublished({ name } = {}) {
+        return this.eventRepository.search({ name, status: 'published' }).map(toPublic);
+    }
+    async getPublished(id) {
+        const data = this.eventRepository.getById(id);
+        if (data?.status != 'published') throw new NotFoundError('event');
+        return { ...toPublic(data), activities: this.activityRepository.listByEvent(id) };
     }
 
     async get(id, user) {
