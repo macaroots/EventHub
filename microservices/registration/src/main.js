@@ -5,6 +5,7 @@ import { RegistrationAppService } from './application/registration.app-service.j
 import { RabbitMqMessageBus } from '../../shared/messaging/rabbitmq-message-bus.js';
 import { MapRepository } from '../../shared/infrastructure/map.repository.js';
 import { authenticate } from '../../shared/auth/jwt.js';
+import { ForbiddenError, NotFoundError } from '../../shared/domain/errors.js';
 
 const app = express()
 const port = process.env.PORT || 3000;
@@ -39,12 +40,19 @@ app.get('/activities', (req, res) => {
 app.get('/registrations', (req, res) => {
     res.json(registrationService.listRegistrations(req.user));
 });
+app.get('/registrations/:id', (req, res) => {
+    try {
+        res.json(registrationService.getRegistration(req.params.id, req.user));
+    } catch (e) {
+        res.status(e instanceof NotFoundError ? 404 : e instanceof ForbiddenError ? 403 : 400).send(e.message);
+    }
+});
 app.post('/registrations', async (req, res) => {
     try {
         const registration = await registrationService.register(req.body, req.user.id);
         res.status(201).json(registration);
     } catch (e) {
-        res.status(400).json(e.message);
+        res.status(400).send(e.message);
     }
 });
 
