@@ -106,23 +106,26 @@ export class RegistrationAppService {
         const requirement = registration.requirements.find(r => r.id == requirementId);
         if (!requirement) throw new NotFoundError('requirement');
         if (!MANUAL_REQUIREMENTS.includes(requirement.type)) throw new Error(`Requirement ${requirement.type} cannot be fulfilled manually`);
-        registration.fulfill(requirementId);
-        this.registrationRepository.update(registration);
-        await this.#publish([registration]);
-        return this.#view(registration);
+        return this.#view(await this.#fulfill(registration, requirementId));
     }
 
     async confirmPayment({ registrationId, paymentId }) {
-        const registration = this.#get(registrationId);
-        registration.fulfill(paymentId);
-        this.registrationRepository.update(registration);
+        await this.#fulfill(this.#get(registrationId), paymentId);
+    }
+    // Confirmação passa pela Activity, que garante a capacidade.
+    async #fulfill({ id, activityId }, requirementId) {
+        const activity = this.activityRepository.getById(activityId);
+        const registration = activity.fulfill(id, requirementId);
+        this.activityRepository.update(activity);
         await this.#publish([registration]);
+        return registration;
     }
     async denyPayment({ registrationId, reason }) {
         const registration = this.#get(registrationId);
         registration.cancel(`Payment denied: ${reason}`);
         this.registrationRepository.update(registration);
         await this.#publish([registration]);
+        return registration;
     }
 
     // Junta as projeções (participante, atividade, evento) para exibição.

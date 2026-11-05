@@ -23,6 +23,7 @@ Exige login; o usuário vem do token.
 - Ordem em `register`: vaga → regras de elegibilidade → preço.
 - Vaga: lotado com confirmados → nega; lotado com pendentes → `wait list`.
 - `price > 0` → pendência `payment` e `PaymentRequested`.
+- Capacidade: confirmados nunca passam de `capacity`. Toda confirmação (pagamento, pendência manual) passa por `Activity.fulfill`; se não houver vaga confirmada, a inscrição ganha a pendência `wait list` em vez de confirmar (ex.: capacidade reduzida com pendentes). Um trigger no SQLite rejeita (`Full occupation`) qualquer gravação que passe do limite, mesmo fora do domínio ou com várias instâncias. Num mesmo processo não há corrida: carregar, inscrever e salvar é síncrono.
 - Regras de elegibilidade: `minimumAge` → pendência `age verification` (não há data de nascimento na projeção de usuário).
 
 Persistência: SQLite em `data/registration.db` (volume `registration-data`). A `Activity` é carregada e salva junto com as inscrições, numa transação. As projeções (atividades, eventos, participantes) também ficam no banco, porque as mensagens que as criaram já foram consumidas e não chegam de novo após um restart.
