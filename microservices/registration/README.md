@@ -21,4 +21,6 @@ Exige login; o usuário vem do token.
 - `price > 0` → pendência `payment` e `PaymentRequested`.
 - Regras de elegibilidade: `minimumAge` → pendência `age verification` (não há data de nascimento na projeção de usuário).
 
-Limitações: repositórios em memória; `wait list` e `age verification` ainda não têm quem as resolva; inscrição cancelada não estorna pagamento.
+Persistência: SQLite em `data/registration.db` (volume `registration-data`). A `Activity` é carregada e salva junto com as inscrições, numa transação. As projeções (atividades, eventos, participantes) também ficam no banco, porque as mensagens que as criaram já foram consumidas e não chegam de novo após um restart.
+
+Limitações: `wait list` e `age verification` ainda não têm quem as resolva; inscrição cancelada não estorna pagamento.

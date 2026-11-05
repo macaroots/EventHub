@@ -17,5 +17,6 @@ Fluxo do participante:
 - Login: sem sessão, as páginas protegidas redirecionam para `/auth/login?next=<página>` (num POST, a página de origem). O `next` só aceita caminhos locais.
 - Limitações:
   - `age verification` e `wait list` só aparecem como pendência, porque ainda não há quem as resolva.
-  - O registration guarda tudo em memória, inclusive a projeção de usuários. O admin criado na subida do identity pode não chegar ao registration (corrida com o consumer), e aí a inscrição dele falha com `user not found`.
+  - O admin criado na subida do identity pode não chegar ao registration (corrida com o consumer), e aí a inscrição dele falha com `user not found`. O identity guarda os usuários em memória.
+  - Dados criados antes de o registration ter banco não estão nas projeções dele. Para recuperar, salve de novo a atividade e o evento (as mensagens `Updated` refazem a projeção).
   - A sala de espera com tokens (`ActivityLine`) não foi para a tela.

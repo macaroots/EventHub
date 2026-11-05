@@ -21,6 +21,16 @@ export class SqliteRepository {
     return stmt.run(...Object.values(fields).map(v => v ?? null), id);
   }
 
+  // Insere ou atualiza (projeções idempotentes).
+  upsert(bean) {
+    const row = this.toRow(bean);
+    const keys = Object.keys(row);
+    const updates = keys.filter(k => k != 'id').map(k => `${k} = excluded.${k}`);
+    const stmt = this.db.prepare(`INSERT INTO ${this.tableName} (${keys.join(',')}) VALUES (${keys.map(() => '?').join(',')})
+      ON CONFLICT(id) DO ${updates.length ? `UPDATE SET ${updates.join(',')}` : 'NOTHING'}`);
+    return stmt.run(...Object.values(row).map(v => v ?? null));
+  }
+
   getById(id) {
     const row = this.db.prepare(`SELECT * FROM ${this.tableName} WHERE id = ?`).get(id);
     return row && this.fromRow(row);
