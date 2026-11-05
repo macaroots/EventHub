@@ -19,7 +19,6 @@ const app = express()
 const port = process.env.PORT || 3000;
 
 app.use(express.json());
-app.use(authenticate());
 
 const messageBus = await RabbitMqMessageBus.connect();
 const eventRepository = new EventSqliteRepository(database);
@@ -30,6 +29,8 @@ const activityService = new ActivityAppService(activityRepository, eventReposito
 const eventController = new EventController(eventService);
 const activityController = new ActivityController(activityService);
 
+app.use(eventController.getPublicRouter());
+app.use(authenticate());
 app.use(eventController.getRouter());
 app.use(activityController.getRouter());
 

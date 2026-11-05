@@ -29,7 +29,7 @@ export class EventSqliteRepository extends SqliteRepository {
         const stmt = this.db.prepare(`
             SELECT * FROM ${this.tableName}
             WHERE (:name IS NULL OR name LIKE '%' || :name || '%')
-              AND (:status IS NULL OR status LIKE '%' || :status || '%')
+              AND (:status IS NULL OR status = :status)
               AND (:organizerId IS NULL OR EXISTS (SELECT 1 FROM json_each(organizers) WHERE value = :organizerId))
         `);
         return stmt.all({ name: name ?? null, status: status ?? null, organizerId: organizerId ?? null }).map(r => this.fromRow(r));
