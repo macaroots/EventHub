@@ -6,7 +6,7 @@
 cd microservices
 docker compose up -d --build   # sobe tudo
 docker compose logs -f <serviço>
-docker compose down            # -v para apagar o banco do secretariat
+docker compose down            # -v para apagar os bancos (secretariat, registration)
 ```
 
 | Serviço      | Host                   |

@@ -27,10 +27,12 @@ export class Activity {
     #registrations = [];
     #registrationRules = [];
 
-    constructor({ id = crypto.randomUUID(), eventId, name, capacity, price = 0, rules = [] } = {}) {
+    // registrations: só ao reconstituir do banco (vêm antes da capacidade, que as valida).
+    constructor({ id = crypto.randomUUID(), eventId, name, capacity, price = 0, rules = [], registrations = [] } = {}) {
         this.#id = id;
         this.#eventId = eventId;
         this.#name = name;
+        this.#registrations = registrations;
         this.setCapacity(capacity);
         this.setPrice(price);
         this.setRules(rules);
@@ -138,6 +140,14 @@ export class Registration {
         this.userId = userId;
         this.activityId = activityId;
     }
+    // TODO não dava pra fazer isso no próprio construtor?
+    // Reconstitui do banco: não dispara os eventos de criação novamente.
+    static restore({ id, userId, activityId, status, requirements, reasons }) {
+        const r = new Registration(userId, activityId, id);
+        Object.assign(r, { status, requirements, reasons });
+        r.#submitted = true;
+        return r;
+    }
     require(requirement) {
         this.requirements.push({ id: crypto.randomUUID(), ...requirement, fulfilled: false });
     }
@@ -207,9 +217,12 @@ export class MinimumAgeRule {
     evaluate() {
         return { require: { type: 'age verification', minimumAge: this.age } };
     }
+    toJSON() {
+        return { type: 'minimumAge', age: this.age };
+    }
 }
 
-// Config da secretaria ({type, ...}) -> regra.
+// Config da secretaria ({type, ...}) -> regra. O inverso é rule.toJSON() (persistência).
 export function ruleFromConfig(config) {
     switch (config.type) {
         case 'minimumAge': return new MinimumAgeRule(config.age);
