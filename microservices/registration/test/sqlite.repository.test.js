@@ -43,14 +43,14 @@ test("restored registration keeps state and only emits new messages", () => {
 
 test("cancel + promotion in the same save passes the database guard", () => {
   const { activities } = repositories();
-  const activity = new Activity({ eventId: "e1", capacity: 1 });
+  const activity = new Activity({ eventId: "e1", capacity: 1, price: 10 });
   activity.register("u1");
   const second = activity.register("u2");
   activities.add(activity);
   const loaded = activities.getById(activity.id);
   loaded.cancel(loaded.registrations.find(r => r.userId == "u1").id, "desisti");
   activities.update(loaded);
-  assert.equal(activities.getById(activity.id).registrations.find(r => r.id == second.id).status, "confirmed");
+  assert.equal(activities.getById(activity.id).registrations.find(r => r.id == second.id).status, "awaiting_payment");
 });
 
 test("stale activity is rejected (optimistic lock)", () => {

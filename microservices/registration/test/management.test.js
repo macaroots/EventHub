@@ -58,7 +58,7 @@ test("organizer change in the event updates the projection", async () => {
 });
 
 test("waitlist exposes only ids in order; registration shows its position", async () => {
-  const { service } = await setup();
+  const { service } = await setup({ price: 10 });
   for (const u of ["u2", "u3", "u4"]) {
     service.upsertParticipant({ userId: u, username: u });
     await service.register({ activityId: "a1" }, u);

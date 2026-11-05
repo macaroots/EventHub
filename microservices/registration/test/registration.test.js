@@ -92,15 +92,46 @@ test("waitlisted can fulfill eligibility while waiting", () => {
   assert.equal(second.status, 'confirmed');
 });
 test("capacity increase promotes; decrease never evicts", () => {
-  const activity = new Activity({ capacity: 1 });
-  activity.register(1);
+  const activity = new Activity({ capacity: 1, price: 10 });
+  const first = activity.register(1);
   const second = activity.register(2);
   activity.setCapacity(2);
-  assert.equal(second.status, 'confirmed');
+  assert.equal(second.status, 'awaiting_payment');
+  activity.confirmPayment(first.id, first.payment.id);
+  activity.confirmPayment(second.id, second.payment.id);
   assert.throws(() => activity.setCapacity(1), /confirmed occupation/);
 });
-test("event cancel does not promote", () => {
+test("full with confirmed registrations cancels the wait list", () => {
+  const activity = new Activity({ capacity: 2, price: 10 });
+  const [a, b] = [activity.register(1), activity.register(2)];
+  const [c, d] = [activity.register(3), activity.register(4)];
+  activity.confirmPayment(a.id, a.payment.id);
+  assert.deepEqual([c.status, d.status], ['waitlisted', 'waitlisted']);
+  types(c);
+  activity.confirmPayment(b.id, b.payment.id);
+  assert.deepEqual([c.status, d.status], ['canceled', 'canceled']);
+  assert.equal(c.getReasons()[0], 'Full occupation');
+  assert.deepEqual(types(c), ['RegistrationCanceled']);
+});
+test("full with confirmed registrations denies new ones", () => {
   const activity = new Activity({ capacity: 1 });
+  activity.register(1);
+  const late = activity.register(2);
+  assert.equal(late.status, 'canceled');
+  assert.equal(late.getReasons()[0], 'Full occupation');
+  assert.deepEqual(types(late), ['RegistrationCreated']);
+});
+test("promotion that fills with confirmed cancels the rest of the wait list", () => {
+  const activity = new Activity({ capacity: 1, rules: [new MinimumAgeRule(18)] });
+  const first = activity.register(1);
+  const [second, third] = [activity.register(2), activity.register(3)];
+  activity.fulfill(second.id, second.requirements[0].id);
+  activity.cancel(first.id, 'desisti');
+  assert.equal(second.status, 'confirmed');
+  assert.equal(third.status, 'canceled');
+});
+test("event cancel does not promote", () => {
+  const activity = new Activity({ capacity: 1, price: 10 });
   activity.register(1);
   activity.register(2);
   activity.cancelAll('event canceled');
