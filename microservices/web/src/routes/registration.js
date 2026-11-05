@@ -35,3 +35,6 @@ router.get('/registrations/:id', authenticate, async (req, res) => {
     const item = await json(await registration.getRegistration(req, req.params.id));
     res.layout('registrations/show', { registration: item });
 });
+router.post('/registrations/:id/cancel', authenticate, action(
+    (req) => registration.cancelRegistration(req, req.params.id, req.body.reason),
+    (req) => registrationPage(req.params.id)));
