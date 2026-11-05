@@ -9,6 +9,7 @@ export class MapRepository {
   }
   list() { return [...this.#data.values()].map(this.data2object); }
   update(bean) { this.#data.set(bean.id, bean); }
+  upsert(bean) { this.#data.set(bean.id, bean); }
   delete(id) { this.#data.delete(id); }
   getById(id) {
     const d = this.#data.get(id);

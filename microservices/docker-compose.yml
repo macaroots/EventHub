@@ -29,6 +29,8 @@ services:
     build: { context: ., dockerfile: registration/Dockerfile }
     environment: { <<: *env, PORT: &registration-port 3001 }
     ports: [{ published: *registration-port, target: *registration-port }]
+    volumes:
+      - registration-data:/app/registration/data
 
   secretariat:
     <<: *service
@@ -64,3 +66,4 @@ services:
 volumes:
   secretariat-data:
   certificate-data:
+  registration-data:

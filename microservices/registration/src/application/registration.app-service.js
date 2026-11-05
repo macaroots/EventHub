@@ -33,17 +33,18 @@ export class RegistrationAppService {
 
     // Projeção do status do evento: só aceita inscrição em evento publicado.
     async updateEvent({ eventId, name, status, reason }) {
-        this.eventRepository.update({ id: eventId, name, status });
+        this.eventRepository.upsert({ id: eventId, name, status });
         if (status != 'canceled') return;
         for (const activity of this.activityRepository.list().filter(a => a.eventId == eventId)) {
             activity.cancelAll(`Event canceled: ${reason}`);
+            this.activityRepository.update(activity);
             await this.#publish(activity.registrations);
         }
     }
 
     // Projeção do User do identity. Idempotente: upsert.
     upsertParticipant({ userId, username }) {
-        this.participantRepository.update(new Participant({ id: userId, username }));
+        this.participantRepository.upsert(new Participant({ id: userId, username }));
     }
 
     async register({ activityId }, userId) {
@@ -52,7 +53,7 @@ export class RegistrationAppService {
         if (this.eventRepository.getById(activity.eventId)?.status != 'published') throw new Error('Event is not open for registration');
         if (!this.participantRepository.getById(userId)) throw new NotFoundError('user');
         const registration = activity.register(userId);
-        this.registrationRepository.add(registration);
+        this.activityRepository.update(activity); // salva a activity com a nova inscrição
         await this.#publish([registration]);
         return registration.toJSON();
     }
@@ -72,11 +73,13 @@ export class RegistrationAppService {
     async confirmPayment({ registrationId, paymentId }) {
         const registration = this.#get(registrationId);
         registration.fulfill(paymentId);
+        this.registrationRepository.update(registration);
         await this.#publish([registration]);
     }
     async denyPayment({ registrationId, reason }) {
         const registration = this.#get(registrationId);
         registration.cancel(`Payment denied: ${reason}`);
+        this.registrationRepository.update(registration);
         await this.#publish([registration]);
     }
 
