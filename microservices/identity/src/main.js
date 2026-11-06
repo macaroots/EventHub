@@ -5,6 +5,7 @@ import { UserSqliteRepository } from './infrastructure/user.sqlite.repository.js
 import { openDatabase } from '../../shared/infrastructure/sqlite.js';
 import { UserAppService } from './application/user.app-service.js';
 import { RabbitMqMessageBus } from '../../shared/messaging/rabbitmq-message-bus.js';
+import { OutboxMessageBus } from '../../shared/messaging/outbox-message-bus.js';
 import { authenticate } from '../../shared/auth/jwt.js';
 
 const app = express()
@@ -13,8 +14,10 @@ const port = process.env.PORT || 3000;
 app.use(express.json());
 app.use(apiDocs(path.join(import.meta.dirname, 'openapi.yaml')));
 
-const messageBus = await RabbitMqMessageBus.connect();
-const userRepository = new UserSqliteRepository(openDatabase('identity'));
+const database = openDatabase('identity');
+// Outbox/inbox no banco do serviço; RabbitMQ como transporte.
+const messageBus = new OutboxMessageBus(database, await RabbitMqMessageBus.connect());
+const userRepository = new UserSqliteRepository(database);
 const userService = new UserAppService(userRepository, messageBus);
 
 app.get('/users', authenticate(), (req, res) => {
