@@ -1,10 +1,15 @@
 import { DuplicateError, NotFoundError } from "../../../shared/domain/errors.js";
 import { Event, isAdmin } from "../domain/event.js";
 
-// Integration events. organizers (só ids) vão para o registration autorizar a gestão de inscrições.
-const toMessage = (type, e) => {
-    const { id, name, description, location, startDate, endDate, status, organizers } = e.toJSON();
-    return { type, eventId: id, name, description, location, startDate, endDate, status, organizers };
+// Integration events. Só o que é publicado sai daqui: rascunho é assunto interno da secretaria.
+// EventPublished leva o retrato imutável do evento e das atividades (capacidade, preço, regras).
+const publishedMessage = (event, activities) => {
+    const { id, name, startDate, endDate, organizers } = event.toJSON();
+    return {
+        type: 'EventPublished', eventId: id, name, startDate, endDate, organizers,
+        activities: activities.map(({ id, name, startsAt, endsAt, capacity, price, rules }) =>
+            ({ activityId: id, name, startsAt, endsAt, capacity, price, rules })),
+    };
 };
 
 const toPublic = ({ id, name, information, startDate, endDate, status }) =>
@@ -22,7 +27,6 @@ export class EventAppService {
         this.#assertUniqueName(data.name);
         const event = Event.create({ ...data, createdBy: user.id });
         this.eventRepository.add(event.toJSON());
-        this.messageBus.publish(toMessage('EventCreated', event));
         return event.id;
     }
 
@@ -51,15 +55,17 @@ export class EventAppService {
         event.assertCanManage(user);
         if (data.name) this.#assertUniqueName(data.name, id);
         event.update(data);
-        this.#save(event, 'EventUpdated');
+        this.eventRepository.update(event.toJSON());
     }
 
     async publish(id, user) {
         const event = this.#get(id);
         event.assertCanManage(user);
-        if (!this.activityRepository.listByEvent(id).length) throw new Error('Event has no activities');
+        const activities = this.activityRepository.listByEvent(id);
+        if (!activities.length) throw new Error('Event has no activities');
         event.publish();
-        this.#save(event, 'EventPublished');
+        this.eventRepository.update(event.toJSON());
+        this.messageBus.publish(publishedMessage(event, activities));
     }
 
     async cancel(id, { reason } = {}, user) {
@@ -67,39 +73,39 @@ export class EventAppService {
         event.assertCanManage(user);
         event.cancel(reason);
         this.eventRepository.update(event.toJSON());
-        this.messageBus.publish({ ...toMessage('EventCanceled', event), reason });
+        this.messageBus.publish({ type: 'EventCanceled', eventId: id, reason });
     }
 
     async addOrganizer(id, { userId } = {}, user) {
         const event = this.#get(id);
         event.assertCanManage(user);
         event.addOrganizer(userId);
-        this.#save(event, 'EventUpdated');
+        this.#saveOrganizers(event);
     }
 
     async removeOrganizer(id, userId, user) {
         const event = this.#get(id);
         event.assertCanManage(user);
         event.removeOrganizer(userId);
-        this.#save(event, 'EventUpdated');
+        this.#saveOrganizers(event);
     }
 
-    // Só o criador (ou admin); apaga junto as atividades.
+    // Só o criador (ou admin); apaga junto as atividades. Sem mensagem: rascunho nunca saiu daqui,
+    // e o cancelado continua no registration como histórico das inscrições.
     async delete(id, user) {
         const event = this.#get(id);
         event.assertCanDelete(user);
         event.assertDeletable();
-        for (const { id: activityId } of this.activityRepository.listByEvent(id)) {
-            this.activityRepository.delete(activityId);
-            this.messageBus.publish({ type: 'ActivityDeleted', activityId });
-        }
+        for (const { id: activityId } of this.activityRepository.listByEvent(id)) this.activityRepository.delete(activityId);
         this.eventRepository.delete(id);
-        this.messageBus.publish({ type: 'EventDeleted', eventId: id });
     }
 
-    #save(event, messageType) {
+    // O registration usa os organizers para autorizar a gestão das inscrições; em rascunho, ele ainda não conhece o evento.
+    #saveOrganizers(event) {
         this.eventRepository.update(event.toJSON());
-        this.messageBus.publish(toMessage(messageType, event));
+        if (event.status == 'published') {
+            this.messageBus.publish({ type: 'EventOrganizersChanged', eventId: event.id, organizers: event.toJSON().organizers });
+        }
     }
     #assertUniqueName(name, id) {
         const same = name && this.eventRepository.getByName(name);

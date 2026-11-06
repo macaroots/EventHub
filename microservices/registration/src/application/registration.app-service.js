@@ -18,31 +18,30 @@ export class RegistrationAppService {
         this.paymentWindowMs = paymentWindowMinutes * 60_000;
     }
 
-    // Projeção local da Activity da secretaria (ActivityCreated/ActivityUpdated). Idempotente: upsert.
-    async upsertActivity({ activityId, eventId, name, capacity, price = 0, rules = [] }) {
-        const registrationRules = rules.map(ruleFromConfig);
-        if (!this.activityRepository.getById(activityId)) {
-            this.activityRepository.add(new Activity({ id: activityId, eventId, name, capacity, price, rules: registrationRules }));
-            return;
+    // EventPublished: cópia imutável do evento e das atividades (a secretaria não muda o publicado).
+    // Idempotente: mensagem repetida não recria nada. As atividades entram antes do evento,
+    // que é o que libera as inscrições.
+    publishEvent({ eventId, name, organizers = [], activities = [] }) {
+        if (this.eventRepository.getById(eventId)) return;
+        for (const { activityId, name, capacity, price, rules = [] } of activities) {
+            if (this.activityRepository.getById(activityId)) continue;
+            this.activityRepository.add(new Activity({ id: activityId, eventId, name, capacity, price, rules: rules.map(ruleFromConfig) }));
         }
-        await this.#change(activityId, activity => {
-            activity.setName(name);
-            activity.setPrice(price);
-            activity.setRules(registrationRules);
-            activity.setCapacity(capacity); // por último: pode promover a fila com o preço novo
-        });
+        this.eventRepository.add({ id: eventId, name, status: 'published', organizers });
     }
-    deleteActivity({ activityId }) {
-        this.activityRepository.delete(activityId);
-    }
-
-    // Projeção do evento: status (só aceita inscrição em evento publicado) e organizers (gestão das inscrições).
-    async updateEvent({ eventId, name, status, organizers = [], reason }) {
-        this.eventRepository.upsert({ id: eventId, name, status, organizers });
-        if (status != 'canceled') return;
-        for (const { id } of this.activityRepository.list().filter(a => a.eventId == eventId)) {
-            await this.#change(id, activity => activity.cancelAll(`Event canceled: ${reason}`));
+    // Evento cancelado em rascunho nunca chegou aqui: ignora.
+    async cancelEvent({ eventId, reason }) {
+        const event = this.eventRepository.getById(eventId);
+        if (!event || event.status == 'canceled') return;
+        this.eventRepository.update({ ...event, status: 'canceled' });
+        for (const activityId of this.activityRepository.listIdsByEvent(eventId)) {
+            await this.#change(activityId, activity => activity.cancelAll(`Event canceled: ${reason}`));
         }
+    }
+    // Organizadores autorizam a gestão das inscrições.
+    changeOrganizers({ eventId, organizers }) {
+        const event = this.eventRepository.getById(eventId);
+        if (event) this.eventRepository.update({ ...event, organizers });
     }
 
     // Projeção do User do identity. Idempotente: upsert.

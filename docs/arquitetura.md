@@ -24,7 +24,7 @@ Não há serviço de catálogo: a programação pública fica na Secretaria e a 
 - **Comunicação:** coreografia por eventos ([ADR 001](adrs/comunicacao-assincrona.md)); cada serviço guarda projeções dos dados de outros contextos.
 - **Auth:** JWT HS256 emitido pelo identity e validado em `shared/auth`; admin criado na subida.
 - **Identity:** cadastro, login e o evento `UserCreated`.
-- **Secretaria:** CRUD de eventos e atividades, publicar/cancelar, organizers, permissões e os eventos `Event*` e `Activity*`.
+- **Secretaria:** CRUD de eventos e atividades, publicar/cancelar, organizers, permissões; edição só em rascunho e `EventPublished` com o retrato imutável ([ADR 011](adrs/evento-imutavel-apos-publicacao.md)).
 - **Credenciamento:** inscrição com regras (`minimumAge`), vaga com fila de espera, reserva com pagamento e expiração e projeções de atividade, evento e participante.
 - **Caixa:** recebe `PaymentRequested`, paga por `POST /payments/:id/pay` com gateway fake e publica `PaymentConfirmed` ou `PaymentDenied`.
 - **Testes:** secretariat, registration, payment e shared.
@@ -33,12 +33,8 @@ Não há serviço de catálogo: a programação pública fica na Secretaria e a 
 ## O que falta
 
 ### Por contexto
-- **Secretaria:** tirar `capacity`, `price` e `rules` (entidade, SQLite e mensagens) e criar os endpoints `/public` ([ADR 007](adrs/fronteiras-secretaria-credenciamento.md)).
 - **Identity:** persistência (hoje em memória), hash de senha, `name` e `email` (pré-requisito de certificados e notificações) e `UserUpdated`.
 - **Credenciamento:**
-  - persistência (hoje em memória);
-  - oferta (`PUT /activities/:id/offer`, `/public/activities/:id/offer`, `ActivityOfferUpdated`), conforme a ADR 007;
-  - endpoints de organizador (listar e cancelar inscrições, `fulfill`);
   - check-in (`Attendance`, ticket, [ADR 002](adrs/checkin-no-registration.md));
   - emitir `CertificateRequested`.
 - **Caixa:** auth, estorno quando a inscrição é cancelada depois de paga e gateway real (adaptador).
@@ -78,7 +74,7 @@ flowchart LR
 
     Identity -- "U: OHS/PL (UserCreated)<br/>D: CF (Participant)" --> Credenciamento
     Identity -. "SK: JWT (shared/auth)" .- Secretaria
-    Secretaria -- "U: OHS/PL (Event*, ActivityCreated/Deleted)<br/>D: CF (só ids, status, organizers)" --> Credenciamento
+    Secretaria -- "U: OHS/PL (EventPublished com atividades, EventCanceled, EventOrganizersChanged)<br/>D: CF (cópia imutável, ADR 011)" --> Credenciamento
     Credenciamento -- "Customer/Supplier<br/>PaymentRequested ⇄ PaymentConfirmed/Denied" --> Caixa
     Caixa -- "ACL (PaymentGateway)" --> Gateway
     Certificados -. "U: OHS/PL (CertificateRequested)<br/>D: Credenciamento CF" .-> Credenciamento
@@ -151,8 +147,8 @@ C4Container
 
     Rel(secretariat, secretariatDb, "Lê/grava")
     Rel(identity, rabbit, "UserCreated")
-    Rel(secretariat, rabbit, "Event*, Activity*")
-    Rel(registration, rabbit, "Registration*, PaymentRequested / ouve Event*, Activity*, User*, Payment*")
+    Rel(secretariat, rabbit, "EventPublished, EventCanceled, EventOrganizersChanged")
+    Rel(registration, rabbit, "Registration*, PaymentRequested / ouve Event*, User*, Payment*")
     Rel(payment, rabbit, "PaymentConfirmed/Denied / ouve PaymentRequested")
     Rel(rabbit, notification, "Registration*, EventCanceled...")
     Rel(rabbit, certificate, "CertificateRequested")

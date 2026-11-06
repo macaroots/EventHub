@@ -91,16 +91,6 @@ test("waitlisted can fulfill eligibility while waiting", () => {
   activity.cancel(first.id, 'desisti');
   assert.equal(second.status, 'confirmed');
 });
-test("capacity increase promotes; decrease never evicts", () => {
-  const activity = new Activity({ capacity: 1, price: 10 });
-  const first = activity.register(1);
-  const second = activity.register(2);
-  activity.setCapacity(2);
-  assert.equal(second.status, 'awaiting_payment');
-  activity.confirmPayment(first.id, first.payment.id);
-  activity.confirmPayment(second.id, second.payment.id);
-  assert.throws(() => activity.setCapacity(1), /confirmed occupation/);
-});
 test("full with confirmed registrations cancels the wait list", () => {
   const activity = new Activity({ capacity: 2, price: 10 });
   const [a, b] = [activity.register(1), activity.register(2)];

@@ -2,25 +2,17 @@ import { BlankError, NotFoundError } from "../../../shared/domain/errors.js";
 import { Activity } from "../domain/activity.js";
 import { Event } from "../domain/event.js";
 
-// Integration events carregam só o que os outros contextos precisam (ver README).
-const toMessage = (type, a) => {
-    const { id, eventId, name, startsAt, endsAt, capacity, price, rules } = a.toJSON();
-    return { type, activityId: id, eventId, name, startsAt, endsAt, capacity, price, rules };
-};
-
 // Permissão herdada do Event: quem gerencia o evento gerencia suas atividades.
+// Sem mensagens: as atividades só saem daqui na publicação do evento (EventPublished).
 export class ActivityAppService {
-    constructor(activityRepository, eventRepository, messageBus) {
+    constructor(activityRepository, eventRepository) {
         this.activityRepository = activityRepository;
         this.eventRepository = eventRepository;
-        this.messageBus = messageBus;
     }
     async create(data, user) {
-        const event = this.#getEvent(data.eventId, user);
-        event.assertEditable();
+        this.#getEvent(data.eventId, user).assertEditable();
         const activity = Activity.create(data);
         this.activityRepository.add(activity.toJSON());
-        this.messageBus.publish(toMessage('ActivityCreated', activity));
         return activity.id;
     }
 
@@ -30,10 +22,11 @@ export class ActivityAppService {
         return this.activityRepository.listByEvent(eventId);
     }
 
+    // eventStatus: a tela só permite editar em rascunho.
     async get(id, user) {
         const activity = this.#get(id);
-        this.#getEvent(activity.eventId, user);
-        return activity.toJSON();
+        const event = this.#getEvent(activity.eventId, user);
+        return { ...activity.toJSON(), eventStatus: event.status };
     }
 
     async update(id, data, user) {
@@ -41,16 +34,12 @@ export class ActivityAppService {
         this.#getEvent(activity.eventId, user).assertEditable();
         activity.update(data);
         this.activityRepository.update(activity.toJSON());
-        this.messageBus.publish(toMessage('ActivityUpdated', activity));
     }
 
-    // Só em evento não publicado: depois de publicado pode haver inscrições.
     async delete(id, user) {
         const activity = this.#get(id);
-        const event = this.#getEvent(activity.eventId, user);
-        if (event.status == 'published') throw new Error('Cannot delete an activity of a published event');
+        this.#getEvent(activity.eventId, user).assertEditable();
         this.activityRepository.delete(id);
-        this.messageBus.publish({ type: 'ActivityDeleted', activityId: id });
     }
 
     #get(id) {

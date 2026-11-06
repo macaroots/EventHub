@@ -11,9 +11,9 @@ Exige login; o usuário vem do token.
 | `GET /activities/:id/registrations` | Organizador/admin: `{activity (com ocupação), event, registrations}`. |
 | `POST /registrations/:id/requirements/:requirementId/fulfill` | Organizador/admin. Pendências de elegibilidade (`age verification`). |
 | `GET /activities/:id/waitlist` | Ordem da fila de espera: só os `registrationId`. Qualquer usuário logado. Usada pelo BFF ([ADR 009](../../docs/adrs/posicao-na-fila-de-espera.md)). |
-| `GET /activities` | Projeção das atividades. |
+| `GET /activities` | Atividades publicadas. |
 
-`Activity` e o evento (`status`, `organizers`) são projeções das mensagens da secretaria (que publica `EventUpdated` ao mudar organizers); `Participant {id, username}` é projeção de `UserCreated`/`UserUpdated` do identity (upsert, idempotente). O domínio só conhece o `userId`; o participante só entra na listagem.
+`Activity` (nome, capacidade, preço, regras) e o evento (`status`, `organizers`) são cópias imutáveis criadas uma vez pelo `EventPublished` ([ADR 011](../../docs/adrs/evento-imutavel-apos-publicacao.md)); depois, só `EventCanceled` (cancela as inscrições) e `EventOrganizersChanged` os alteram; `Participant {id, username}` é projeção de `UserCreated`/`UserUpdated` do identity (upsert, idempotente). O domínio só conhece o `userId`; o participante só entra na listagem.
 
 ### Regras de inscrição ([ADR 008](../../docs/adrs/vaga-e-pagamento-como-status.md))
 
@@ -24,10 +24,9 @@ Exige login; o usuário vem do token.
 - Uma regra só avalia e retorna `{deny: motivo}` | `{require: pendência}`. Exceção numa regra é bug, não indeferimento.
 - `PaymentConfirmed` confirma se o `paymentId` for o da reserva atual; senão, é ignorado. `PaymentDenied` cancela.
 - Ordem da fila: `createdAt`; empate no mesmo milissegundo, ordem de inserção.
-- Liberou vaga (cancelamento, pagamento recusado, expiração, aumento de capacidade) → promove o primeiro da fila (`RegistrationPromoted`, e então o pagamento ou a confirmação). Cancelamento do evento não promove.
+- Liberou vaga (cancelamento, pagamento recusado, expiração) → promove o primeiro da fila (`RegistrationPromoted`, e então o pagamento ou a confirmação). Cancelamento do evento não promove.
 - Lotou com confirmados → a fila é cancelada (`Full occupation`, `RegistrationCanceled`): não há mais o que esperar. Trade-off: se um confirmado cancelar depois, a vaga reabre para novas inscrições, não para quem estava na fila. Alternativa: manter a fila até o evento (o confirmado ainda pode desistir).
 - A reserva expira em `PAYMENT_WINDOW_MINUTES` (padrão 30). Um job verifica a cada minuto.
-- Reduzir a capacidade não despeja ninguém, só impede novas vagas. Abaixo dos confirmados, é recusado.
 
 ### Capacidade sob concorrência
 
