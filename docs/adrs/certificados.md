@@ -30,7 +30,8 @@ Criar um microsserviço `certificate` só para emitir e validar:
 
 ## Consequências
 - Mais um serviço para implantar e operar.
-- O registration passa a emitir `CertificateRequested` depois do evento.
+- O registration passa a emitir `CertificateRequested`, um por participante, ao receber `EventEnded` da secretaria. O encerramento é manual, pelo organizador, para permitir correções de presença antes da emissão.
+- O critério de elegibilidade (por atividade ou por evento, presença mínima) ainda precisa de um ADR.
 - Pré-requisito: o identity ainda não tem nome completo, só `username`.
 - O certificado é uma cópia dos dados no momento da emissão. Mudanças posteriores (nome, carga horária) exigem reemissão.
 
