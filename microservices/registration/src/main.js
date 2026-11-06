@@ -27,7 +27,7 @@ app.use(authenticate());
 
 
 // Outbox/inbox no banco do serviço; RabbitMQ como transporte.
-const messageBus = new OutboxMessageBus(database, await RabbitMqMessageBus.connect());
+const messageBus = new OutboxMessageBus(database, await RabbitMqMessageBus.connect(), { source: 'registration' });
 const participantRepository = new ParticipantSqliteRepository(database);
 const eventRepository = new EventSqliteRepository(database);
 const registrationRepository = new RegistrationSqliteRepository(database);
