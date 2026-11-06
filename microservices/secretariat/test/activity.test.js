@@ -17,7 +17,7 @@ function setup() {
   const db = new DatabaseSync(":memory:");
   const bus = new InMemoryMessageBus();
   const messages = [];
-  for (const t of ["EventPublished", "EventCanceled", "EventOrganizersChanged"]) bus.listen(t, (m) => messages.push(m));
+  for (const t of ["EventPublished", "EventCanceled", "EventOrganizersChanged", "EventEnded"]) bus.listen(t, (m) => messages.push(m));
   const events = new EventSqliteRepository(db);
   const activities = new ActivitySqliteRepository(db);
   const eventService = new EventAppService(events, activities, bus);
@@ -121,4 +121,18 @@ test("endDate and endsAt are optional and can be cleared with null", async () =>
   const a = Activity.create({ eventId: "e", name: "a", capacity: 1, startsAt: "2026-12-01T10:00", endsAt: "2026-12-01T12:00" });
   a.update({ endsAt: null });
   assert.deepEqual([a.toJSON().startsAt, a.toJSON().endsAt], ["2026-12-01T10:00", null]);
+});
+
+test("ended only after endDate; publishes EventEnded and can't be canceled or deleted", async () => {
+  const { eventService, newEvent, messages } = setup();
+  const { eventId } = await newEvent();
+  await assert.rejects(eventService.end(eventId, alice, new Date("2026-12-04")), /Cannot end a draft event/);
+  await eventService.publish(eventId, alice);
+  await assert.rejects(eventService.end(eventId, alice, new Date("2026-12-02")), /not reached its endDate/);
+  await assert.rejects(eventService.end(eventId, bob, new Date("2026-12-04")), /Not allowed/);
+  await eventService.end(eventId, alice, new Date("2026-12-04"));
+  assert.deepEqual(messages.at(-1), { type: "EventEnded", eventId });
+  assert.equal((await eventService.get(eventId, alice)).status, "ended");
+  await assert.rejects(eventService.cancel(eventId, { reason: "x" }, alice), /ended/);
+  await assert.rejects(eventService.delete(eventId, alice), /ended/);
 });

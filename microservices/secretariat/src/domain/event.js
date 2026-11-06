@@ -12,7 +12,7 @@ export class Event {
     #information;
     #startDate;
     #endDate;
-    #status; // draft | published | canceled
+    #status; // draft | published | ended | canceled
     #cancelReason;
     #createdBy;
     #organizers;
@@ -63,15 +63,24 @@ export class Event {
         if (!this.#startDate) throw new BlankError('startDate');
         this.#status = 'published';
     }
+    // Encerrado pelo organizador depois do endDate: libera a emissão dos certificados no registration.
+    // Manual, para dar tempo de corrigir presenças antes.
+    end(now = new Date()) {
+        if (this.#status != 'published') throw new Error(`Cannot end a ${this.#status} event`);
+        if (now < new Date(this.#endDate)) throw new Error('Event has not reached its endDate');
+        this.#status = 'ended';
+    }
     cancel(reason) {
         if (this.#status == 'canceled') throw new Error('Event already canceled');
+        if (this.#status == 'ended') throw new Error('Cannot cancel an ended event');
         if (!reason) throw new BlankError('reason');
         this.#status = 'canceled';
         this.#cancelReason = reason;
     }
-    // Publicado tem inscrições: precisa ser cancelado antes.
+    // Publicado tem inscrições: precisa ser cancelado antes. Encerrado é histórico (certificados).
     assertDeletable() {
         if (this.#status == 'published') throw new Error('Cancel the event before deleting it');
+        if (this.#status == 'ended') throw new Error('Cannot delete an ended event');
     }
     // Conteúdo (evento e atividades) só muda em rascunho: o publicado é o contrato com os inscritos.
     assertEditable() {
