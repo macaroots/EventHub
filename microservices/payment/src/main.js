@@ -2,6 +2,7 @@ import express from 'express';
 import path from 'node:path';
 import { apiDocs } from '../../shared/application/api-docs.js';
 import { RabbitMqMessageBus } from '../../shared/messaging/rabbitmq-message-bus.js';
+import { OutboxMessageBus } from '../../shared/messaging/outbox-message-bus.js';
 import { openDatabase } from '../../shared/infrastructure/sqlite.js';
 import { PaymentSqliteRepository } from './infrastructure/payment.sqlite.repository.js';
 import { PaymentAppService } from './application/payment.app-service.js';
@@ -13,8 +14,10 @@ const port = process.env.PORT || 3000;
 app.use(express.json());
 app.use(apiDocs(path.join(import.meta.dirname, 'openapi.yaml')));
 
-const messageBus = await RabbitMqMessageBus.connect();
-const paymentRepository = new PaymentSqliteRepository(openDatabase('payment'));
+const database = openDatabase('payment');
+// Outbox/inbox no banco do serviço; RabbitMQ como transporte.
+const messageBus = new OutboxMessageBus(database, await RabbitMqMessageBus.connect());
+const paymentRepository = new PaymentSqliteRepository(database);
 const paymentService = new PaymentAppService(paymentRepository, new FakePaymentGateway(), messageBus);
 
 // Isso pode ser definido aqui (Coreografia) ou no gateway (Orquestração)

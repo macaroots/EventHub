@@ -25,12 +25,10 @@ export class PaymentAppService {
         const { approved, reason } = await this.paymentGateway.verify(payment, receipt);
         if (approved) payment.pay(receipt);
         else payment.deny(reason);
-        this.paymentRepository.update(payment);
-        await this.#sendMessages(payment);
+        this.messageBus.transaction(() => {
+            this.paymentRepository.update(payment);
+            for (const m of payment.pullMessages()) this.messageBus.publish(m);
+        });
         return payment;
-    }
-
-    async #sendMessages(payment) {
-        for (const m of payment.pullMessages()) await this.messageBus.publish(m);
     }
 }
