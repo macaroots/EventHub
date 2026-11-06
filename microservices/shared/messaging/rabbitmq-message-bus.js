@@ -2,7 +2,7 @@
 // Os objetos de domínio não percebem a troca. Nos serviços, fica atrás do OutboxMessageBus.
 import amqp from "amqplib";
 
-const EXCHANGE = "loja";
+const EXCHANGE = "event-hub";
 const MAX_ATTEMPTS = Number(process.env.MESSAGE_MAX_ATTEMPTS ?? 5);
 const RETRY_DELAY_MS = Number(process.env.MESSAGE_RETRY_DELAY_MS ?? 5000);
 
@@ -54,12 +54,14 @@ export class RabbitMqMessageBus {
     for (const type of Object.keys(this.#listeners)) await this.channel.bindQueue(queue, EXCHANGE, type);
     await this.channel.prefetch(1); // um evento por vez, na ordem
     await this.channel.consume(queue, async (message) => {
+      const context = describe(queue, message);
       try {
-        await this.#handle(message, inbox);
+        await this.#handle(message, inbox, context);
       } catch (e) {
         try {
-          await this.#reject(queue, message, e);
+          await this.#reject(queue, message, e, context);
         } catch {
+          console.error(`${context} failed and did not retry/DLQ, returned to the queue`);
           return this.channel.nack(message); // nem a retry aceitou: devolve à fila
         }
       }
@@ -67,21 +69,34 @@ export class RabbitMqMessageBus {
     });
   }
 
-  async #handle(message, inbox) {
+  async #handle(message, inbox, context) {
     const event = JSON.parse(message.content);
     const id = event.messageId ?? message.properties.messageId;
-    if (id && inbox?.has(id)) return console.log(`[${event.type}] ${id} repetida, ignorada`);
+    if (id && inbox?.has(id)) return console.log(`${context} repeated, ignored`);
+    console.log(`${context} received`);
     for (const fn of this.#listeners[event.type] ?? []) await fn(event);
     if (id) inbox?.add(id);
   }
 
-  #reject(queue, message, error) {
+  #reject(queue, message, error, context) {
     const headers = message.properties.headers ?? {};
     const attempt = Number(headers["x-attempt"] ?? 1);
     const target = attempt < MAX_ATTEMPTS ? `${queue}.retry` : `${queue}.dlq`;
-    console.error(`[${queue}] tentativa ${attempt}/${MAX_ATTEMPTS} falhou (→ ${target}):`, error.message);
+    console.error(`${context} failed (→ ${target}):`, error.message);
     return new Promise((ok, fail) => this.channel.sendToQueue(target, message.content,
       { ...message.properties, persistent: true, headers: { ...headers, "x-attempt": attempt + 1, "x-error": error.message } },
       (e) => (e ? fail(e) : ok())));
   }
+}
+
+// Contexto para os logs do consumo: fila, tipo, ids e tentativa. Não quebra se o corpo não for JSON.
+function describe(queue, message) {
+  let event = {};
+  try { event = JSON.parse(message.content); } catch { /* o handler acusa o erro */ }
+  const { messageId, correlationId, headers = {} } = message.properties;
+  const attempt = Number(headers["x-attempt"] ?? 1);
+  return `[${queue}] ${event.type ?? message.properties.type ?? "?"}`
+    + ` messageId=${event.messageId ?? messageId ?? "-"}`
+    + ` correlationId=${event.correlationId ?? correlationId ?? "-"}`
+    + ` attempt=${attempt}/${MAX_ATTEMPTS}`;
 }
