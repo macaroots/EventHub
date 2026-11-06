@@ -1,5 +1,6 @@
 import { SqliteRepository } from "../../../shared/infrastructure/sqlite.repository.js";
 import { ConcurrencyError } from "../../../shared/domain/errors.js";
+import { transaction } from "../../../shared/infrastructure/transaction.js";
 import { Activity } from "../domain/activity.js";
 import { SEAT_STATUSES } from "../domain/registration.js";
 import { ruleFromConfig } from "../domain/rules/rule-from-config.js";
@@ -67,19 +68,14 @@ export class ActivitySqliteRepository extends SqliteRepository {
     listIdsByEvent(eventId) {
         return this.db.prepare(`SELECT id FROM ${this.tableName} WHERE eventId = ?`).all(eventId).map(r => r.id);
     }
-    // IMMEDIATE: pega o lock de escrita já no início (sem deadlock entre leitores que viram escritores).
+    // Participa da transação de fora, se houver (outbox: estado e mensagens juntos).
     #transaction(activity, write) {
-        this.db.exec('BEGIN IMMEDIATE');
-        try {
+        transaction(this.db, () => {
             write();
             // Quem libera vaga é gravado antes de quem a ocupa (senão o trigger vê a vaga ainda ocupada).
             const seated = (r) => SEAT_STATUSES.includes(r.status);
             for (const r of [...activity.registrations].sort((a, b) => seated(a) - seated(b))) this.registrationRepository.upsert(r);
-            this.db.exec('COMMIT');
-        } catch (e) {
-            this.db.exec('ROLLBACK');
-            throw e;
-        }
+        });
         this.#versions.set(activity, (this.#versions.get(activity) ?? -1) + 1);
     }
 }

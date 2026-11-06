@@ -73,8 +73,11 @@ export class CheckInAppService {
 
     // Idempotente: a segunda vez devolve a presença existente (alreadyCheckedIn) e não publica de novo.
     async #attend(registration, by) {
-        const { attendance, created } = this.attendanceRepository.addOnce(Attendance.of(registration, by));
-        if (created) await this.messageBus.publish(attendance.toMessage());
+        const { attendance, created } = this.messageBus.transaction(() => {
+            const result = this.attendanceRepository.addOnce(Attendance.of(registration, by));
+            if (result.created) this.messageBus.publish(result.attendance.toMessage());
+            return result;
+        });
         return { ...attendance, alreadyCheckedIn: !created };
     }
     #manageable(activityId, user) {
