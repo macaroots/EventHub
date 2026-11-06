@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://event-hub.local/contracts/messages/PaymentConfirmed.schema.json",
+  "title": "PaymentConfirmed",
+  "description": "payment → registration. Pagamento aprovado; o registration confirma a inscrição se ela ainda espera esse paymentId (senão ignora).",
+  "allOf": [{ "$ref": "envelope.schema.json" }],
+  "type": "object",
+  "required": ["type", "paymentId", "registrationId"],
+  "properties": {
+    "type": { "const": "PaymentConfirmed" },
+    "paymentId": { "$ref": "envelope.schema.json#/$defs/uuid" },
+    "registrationId": { "$ref": "envelope.schema.json#/$defs/uuid" },
+    "receipt": { "type": "string", "description": "Comprovante informado no pagamento." }
+  },
+  "examples": [{ "type": "PaymentConfirmed", "messageId": "0b9c6c1e-3f0a-4d38-9d2e-6f1c2a7b8e01", "occurredAt": "2026-11-06T13:00:00.000Z", "paymentId": "7f6e5d00-0000-4000-8000-000000000b01", "registrationId": "5e4d3c00-0000-4000-8000-000000000f01", "receipt": "pix-123" }]
+}
