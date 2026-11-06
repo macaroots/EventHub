@@ -17,7 +17,7 @@ Exige login; o usuário vem do token.
 | `POST /activities/:id/checkin` `{code}` | Participante confirmado informa o código mostrado na sala. |
 | `POST /registrations/:id/checkin` | Organizador/admin marca a presença na mão. |
 
-`Activity` (nome, capacidade, preço, regras) e o evento (`status`, `organizers`) são cópias imutáveis criadas uma vez pelo `EventPublished` ([ADR 011](../../docs/adrs/evento-imutavel-apos-publicacao.md)); depois, só `EventCanceled` (cancela as inscrições) e `EventOrganizersChanged` os alteram; `Participant {id, username}` é projeção de `UserCreated`/`UserUpdated` do identity (upsert, idempotente). O domínio só conhece o `userId`; o participante só entra na listagem.
+`Activity` (nome, horário, capacidade, preço, regras) e o evento (`status`, `organizers`) são cópias imutáveis criadas uma vez pelo `EventPublished` ([ADR 011](../../docs/adrs/evento-imutavel-apos-publicacao.md)); depois, só `EventCanceled` (cancela as inscrições), `EventEnded` (certificados) e `EventOrganizersChanged` os alteram; `Participant {id, username}` é projeção de `UserCreated`/`UserUpdated` do identity (upsert, idempotente). O domínio só conhece o `userId`; o participante só entra na listagem.
 
 ### Regras de inscrição ([ADR 008](../../docs/adrs/vaga-e-pagamento-como-status.md))
 
@@ -40,6 +40,18 @@ Exige login; o usuário vem do token.
 - `CheckIn` e `Attendance` ficam fora da `Activity`: não disputam o lock das inscrições. A inscrição é lida no momento do check-in.
 - `GET /registrations/:id` traz `attendance`; `GET /activities/:id/registrations` traz `activity.present` (comparecimento, RF11).
 - Limitações: sem janela de horário (o organizador abre e fecha), sem desfazer presença e um código repassado vale enquanto aquela abertura durar. Alternativa: código rotativo (TOTP).
+
+### Certificados ([ADR 003](../../docs/adrs/certificados.md))
+
+- `EventEnded` (organizador encerra na secretaria) → o evento fica `ended` e sai um `CertificateRequested` por participante, na mesma transação. Encerrado, não há mais inscrição nem check-in: corrigir presenças antes de encerrar.
+- Quem decide o direito é o [CertificatePolicy](src/domain/certificate-policy.js). Critério provisório: um certificado por evento para quem fez check-in em ao menos uma atividade (mesmo se cancelou a inscrição depois), listando as atividades com presença. Alternativas: presença mínima (ex.: X% das atividades inscritas) ou carga horária mínima.
+- Mensagem: `{requestId (= eventId:userId, para idempotência), eventId, userId, participantName, eventName, activities: [{activityId, name, workload, date}], totalWorkload}`.
+  - `workload`: duração da atividade em horas (`endsAt - startsAt`); `null` sem horário (conta 0 no `totalWorkload`).
+  - `date`: dia de `startsAt` ou, sem horário, do check-in.
+  - `participantName` é o `username`: o identity ainda não tem nome completo.
+- Idempotente: evento já encerrado, cancelado ou desconhecido não pede de novo.
+- `GET /registrations[/:id]` traz `event.status`; `ended` com `attendance` = certificado solicitado.
+- Limitações: sem reemissão (presença não se desfaz) e sem retorno do serviço de certificados (link do PDF). A projeção da atividade ganhou `startsAt`/`endsAt` (colunas adicionadas na subida); atividades publicadas antes ficam sem horário.
 
 ### Capacidade sob concorrência
 

@@ -1,6 +1,6 @@
 import { SqliteRepository } from "../../../shared/infrastructure/sqlite.repository.js";
 
-// Cópia do evento publicado pela secretaria: {id, name, status: published | canceled, organizers}.
+// Cópia do evento publicado pela secretaria: {id, name, status: published | ended | canceled, organizers}.
 export class EventSqliteRepository extends SqliteRepository {
     constructor(db) {
         super(db, 'events');

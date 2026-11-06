@@ -14,7 +14,7 @@ Também se deseja implantar o serviço de certificados sem precisar implantar o 
 
 ## Decisão
 Criar um microsserviço `certificate` só para emitir e validar:
-- **Entrada:** uma mensagem que carrega todos os dados do certificado, por exemplo `CertificateRequested {participantName, eventName, activityName, workload, date}`. A mesma entrada pode chegar por API ou importação (CSV).
+- **Entrada:** uma mensagem que carrega todos os dados do certificado, por exemplo `CertificateRequested {participantName, eventName, activities: [{name, workload, date}], totalWorkload}`. A mesma entrada pode chegar por API ou importação (CSV).
 - **Saída:** um PDF, um código de validação e um endpoint público de validação.
 - **Quem decide o direito ao certificado** (presença, carga horária mínima) é o registration, que emite `CertificateRequested`. O serviço de certificados não conhece essas regras.
 
@@ -31,7 +31,7 @@ Criar um microsserviço `certificate` só para emitir e validar:
 ## Consequências
 - Mais um serviço para implantar e operar.
 - O registration passa a emitir `CertificateRequested`, um por participante, ao receber `EventEnded` da secretaria. O encerramento é manual, pelo organizador, para permitir correções de presença antes da emissão.
-- O critério de elegibilidade (por atividade ou por evento, presença mínima) ainda precisa de um ADR.
+- O critério de elegibilidade (por atividade ou por evento, presença mínima) ainda precisa de um ADR. Implementado provisoriamente: um certificado por evento, com as atividades em que houve check-in (basta uma) ([registration](../../microservices/registration/README.md#certificados-adr-003)).
 - Pré-requisito: o identity ainda não tem nome completo, só `username`.
 - O certificado é uma cópia dos dados no momento da emissão. Mudanças posteriores (nome, carga horária) exigem reemissão.
 
