@@ -1,4 +1,6 @@
 import express from 'express';
+import path from 'node:path';
+import { apiDocs } from '../../shared/application/api-docs.js';
 import { openDatabase } from '../../shared/infrastructure/sqlite.js';
 import { ActivitySqliteRepository } from './infrastructure/activity.sqlite.repository.js';
 import { RegistrationSqliteRepository } from './infrastructure/registration.sqlite.repository.js';
@@ -15,6 +17,7 @@ const app = express()
 const port = process.env.PORT || 3000;
 
 app.use(express.json());
+app.use(apiDocs(path.join(import.meta.dirname, 'openapi.yaml')));
 app.use(authenticate());
 
 
