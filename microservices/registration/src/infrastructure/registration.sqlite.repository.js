@@ -29,6 +29,11 @@ export class RegistrationSqliteRepository extends SqliteRepository {
     listByActivity(activityId) {
         return this.db.prepare(`SELECT * FROM ${this.tableName} WHERE activityId = ? ORDER BY createdAt, rowid`).all(activityId).map(r => this.fromRow(r));
     }
+    // Inscrição ativa (não cancelada) do usuário na atividade: há no máximo uma.
+    findActive(activityId, userId) {
+        const row = this.db.prepare(`SELECT * FROM ${this.tableName} WHERE activityId = ? AND userId = ? AND status != 'canceled'`).get(activityId, userId);
+        return row && this.fromRow(row);
+    }
     // Atividades com reserva aguardando pagamento desde antes de `before`.
     listActivitiesWithOverduePayment(before) {
         return this.db.prepare(`SELECT DISTINCT activityId FROM ${this.tableName}
