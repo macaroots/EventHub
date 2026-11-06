@@ -58,9 +58,8 @@ export class ActivitySqliteRepository extends SqliteRepository {
             if (!changes) throw new ConcurrencyError('activity');
         });
     }
-    delete(id) {
-        this.db.prepare(`DELETE FROM ${this.registrationRepository.tableName} WHERE activityId = ?`).run(id);
-        return super.delete(id);
+    listIdsByEvent(eventId) {
+        return this.db.prepare(`SELECT id FROM ${this.tableName} WHERE eventId = ?`).all(eventId).map(r => r.id);
     }
     // IMMEDIATE: pega o lock de escrita já no início (sem deadlock entre leitores que viram escritores).
     #transaction(activity, write) {

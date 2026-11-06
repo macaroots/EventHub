@@ -28,12 +28,9 @@ const registrationService = new RegistrationAppService(activityRepository, regis
 setInterval(() => registrationService.expireOverduePayments().catch(e => console.error('expireOverduePayments falhou:', e.message)), 60_000);
 
 // Isso pode ser definido aqui (Coreografia) ou no gateway (Orquestração)
-messageBus.listen('ActivityCreated', e => registrationService.upsertActivity(e));
-messageBus.listen('ActivityUpdated', e => registrationService.upsertActivity(e));
-messageBus.listen('ActivityDeleted', e => registrationService.deleteActivity(e));
-for (const type of ['EventCreated', 'EventUpdated', 'EventPublished', 'EventCanceled']) {
-    messageBus.listen(type, e => registrationService.updateEvent(e));
-}
+messageBus.listen('EventPublished', e => registrationService.publishEvent(e));
+messageBus.listen('EventCanceled', e => registrationService.cancelEvent(e));
+messageBus.listen('EventOrganizersChanged', e => registrationService.changeOrganizers(e));
 messageBus.listen('PaymentConfirmed', e => registrationService.confirmPayment(e));
 messageBus.listen('PaymentDenied', e => registrationService.denyPayment(e));
 messageBus.listen('UserCreated', e => registrationService.upsertParticipant(e));

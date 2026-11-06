@@ -86,10 +86,9 @@ web/src/
 
 | Tipo | Publicado por | Quem ouve |
 |------|---------------|-----------|
-| `EventCreated/Updated/Published/Canceled` `{eventId, name, description, location, startDate, endDate, status[, reason]}` | secretariat | registration: só aceita inscrição em evento `published`; ao cancelar, cancela as inscrições |
-| `EventDeleted {eventId}` | secretariat | — |
-| `ActivityCreated/Updated {activityId, eventId, name, startsAt, endsAt, capacity, rules}` | secretariat | registration: upsert da projeção `Activity` |
-| `ActivityDeleted {activityId}` | secretariat | registration |
+| `EventPublished {eventId, name, startDate, endDate, organizers, activities: [{activityId, name, startsAt, endsAt, capacity, price, rules}]}` | secretariat | registration: cria a cópia imutável do evento e das atividades (uma vez) e abre as inscrições |
+| `EventCanceled {eventId, reason}` | secretariat | registration: cancela as inscrições |
+| `EventOrganizersChanged {eventId, organizers}` | secretariat (só evento publicado) | registration: autorização da gestão das inscrições |
 | `RegistrationCreated/Promoted/Confirmed/Canceled` | registration | payment: `Canceled` cancela a cobrança pendente; (notificações, futuro) |
 | `PaymentRequested {paymentId, registrationId, userId, amount, description}` | registration | payment: cria a cobrança (idempotente) |
 | `PaymentConfirmed/Denied {paymentId, registrationId}` | payment | registration: confirma a reserva / cancela |

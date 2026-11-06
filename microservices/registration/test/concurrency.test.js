@@ -45,8 +45,7 @@ test(`${WORKERS * PER_WORKER} concurrent registrations never exceed capacity ${C
   const registrations = new RegistrationSqliteRepository(db);
   const activities = new ActivitySqliteRepository(db, registrations);
   const service = new RegistrationAppService(activities, registrations, new ParticipantSqliteRepository(db), new EventSqliteRepository(db), new InMemoryMessageBus());
-  await service.updateEvent({ eventId: "e1", name: "E", status: "published" });
-  await service.upsertActivity({ activityId: "a1", eventId: "e1", name: "A", capacity: CAPACITY, price: 10 });
+  service.publishEvent({ eventId: "e1", name: "E", activities: [{ activityId: "a1", name: "A", capacity: CAPACITY, price: 10 }] });
   const users = Array.from({ length: WORKERS * PER_WORKER }, (_, i) => `u${i}`);
   for (const u of users) service.upsertParticipant({ userId: u, username: u });
 

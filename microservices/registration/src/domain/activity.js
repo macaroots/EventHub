@@ -3,8 +3,8 @@ import { DuplicateError } from "../../../shared/domain/errors.js";
 // Status que ocupam vaga. A soma deles nunca passa da capacidade.
 export const SEAT_STATUSES = ['pending', 'awaiting_payment', 'confirmed'];
 
-// Entity + AggregateRoot. Projeção da Activity da secretaria + inscrições (que só existem aqui).
-// Toda mudança de inscrição passa por aqui: é quem garante a capacidade e promove a fila de espera.
+// Entity + AggregateRoot. Cópia imutável da Activity publicada pela secretaria (nome, capacidade, preço, regras)
+// + inscrições, que só existem aqui. Toda mudança de inscrição passa por aqui: garante a capacidade e anda a fila.
 export class Activity {
     #id;
     #eventId;
@@ -16,37 +16,22 @@ export class Activity {
 
     // registrations: só ao reconstituir do banco.
     constructor({ id = crypto.randomUUID(), eventId, name, capacity, price = 0, rules = [], registrations = [] } = {}) {
+        if (!(capacity >= 0)) throw new TypeError('Capacity must not be lower than 0');
+        if (!(price >= 0)) throw new TypeError('Price must not be lower than 0');
         this.#id = id;
         this.#eventId = eventId;
         this.#name = name;
-        this.#registrations = registrations;
-        this.#validateCapacity(capacity);
         this.#capacity = capacity;
-        this.setPrice(price);
-        this.setRules(rules);
+        this.#price = price;
+        this.#registrationRules = rules;
+        this.#registrations = registrations;
     }
     get id() { return this.#id; }
     get eventId() { return this.#eventId; }
     // Só para exibição (listagens).
     get name() { return this.#name; }
-    setName(name) { this.#name = name; }
-
     get capacity() { return this.#capacity; }
-    // Reduzir abaixo da ocupação não despeja ninguém: só impede novas vagas até liberar.
-    setCapacity(capacity) {
-        this.#validateCapacity(capacity);
-        this.#capacity = capacity;
-        this.#settle();
-    }
-    #validateCapacity(capacity) {
-        if (!(capacity >= 0)) throw new TypeError('Must not be lower than 0');
-        if (capacity < this.getConfirmedOccupation()) throw new TypeError('Must not be lower than confirmed occupation');
-    }
     get price() { return this.#price; }
-    setPrice(price) {
-        if (price < 0) throw new TypeError('Price must not be lower than 0');
-        this.#price = price;
-    }
     get registrations() { return this.#registrations; }
     toJSON() {
         return {
@@ -126,12 +111,9 @@ export class Activity {
     isFullConfirmed() {
         return this.getConfirmedOccupation() >= this.#capacity;
     }
+    // Regras de elegibilidade vindas da secretaria (ver ruleFromConfig).
     getRules() {
         return this.#registrationRules;
-    }
-    // Regras de elegibilidade vindas da secretaria (ver ruleFromConfig).
-    setRules(rules) {
-        this.#registrationRules = rules;
     }
     // Inscrição cancelada não bloqueia nova tentativa.
     isRegistered(userId) {
@@ -148,7 +130,7 @@ export class Activity {
         const i = this.getWaitlist().findIndex(r => r.id == registrationId);
         return i < 0 ? null : i + 1;
     }
-    // Fim de toda mudança: vaga livre promove a fila; lotada com confirmados, a fila não tem
+    // Fim de toda mudança de inscrição: vaga livre promove a fila; lotada com confirmados, a fila não tem
     // mais o que esperar e é cancelada.
     #settle() {
         for (const r of this.getWaitlist()) {

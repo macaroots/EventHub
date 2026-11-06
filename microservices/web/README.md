@@ -25,4 +25,3 @@ Fluxo do participante:
 - Limitações:
   - Cancelar uma inscrição já paga não estorna o pagamento.
   - O admin criado na subida do identity pode não chegar ao registration (corrida com o consumer), e aí a inscrição dele falha com `user not found`.
-  - Dados criados antes de o registration ter banco não estão nas projeções dele. Para recuperar, salve de novo a atividade e o evento (as mensagens `Updated` refazem a projeção).
