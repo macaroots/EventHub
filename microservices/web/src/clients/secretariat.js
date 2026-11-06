@@ -9,6 +9,8 @@ export const createEvent = (req, event) => call('/events', req, { method: 'POST'
 export const updateEvent = (req, eventId, changes) => call(`/events/${id(eventId)}`, req, { method: 'PATCH', body: changes });
 export const deleteEvent = (req, eventId) => call(`/events/${id(eventId)}`, req, { method: 'DELETE' });
 export const publishEvent = (req, eventId) => call(`/events/${id(eventId)}/publish`, req, { method: 'POST' });
+// Encerrar (depois do endDate) dispara os pedidos de certificado no registration.
+export const endEvent = (req, eventId) => call(`/events/${id(eventId)}/end`, req, { method: 'POST' });
 export const cancelEvent = (req, eventId, reason) => call(`/events/${id(eventId)}/cancel`, req, { method: 'POST', body: { reason } });
 export const addOrganizer = (req, eventId, userId) => call(`/events/${id(eventId)}/organizers`, req, { method: 'POST', body: { userId } });
 export const removeOrganizer = (req, eventId, userId) => call(`/events/${id(eventId)}/organizers/${id(userId)}`, req, { method: 'DELETE' });
