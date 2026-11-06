@@ -14,7 +14,7 @@ Fluxo do participante:
 - "Inscrever-se" faz `POST /activities/:id/registrations` e redireciona para `/registrations/:id`, que mostra o status (pendente, na fila de espera, aguardando pagamento, confirmada, cancelada) e as pendências e permite cancelar. `/registrations` lista as inscrições do usuário.
 - Na fila de espera (`waitlisted`), a página mostra a posição e se atualiza sozinha; quando a inscrição sai da fila, redireciona para o pagamento ou para a própria inscrição ([ADR 009](../../docs/adrs/posicao-na-fila-de-espera.md)):
   - o navegador consulta `GET /registrations/:id/status.json` (`{status, waitlistPosition, next}`) a cada 4 s ([watch-registration.js](src/public/js/watch-registration.js)); sem JavaScript, a página recarrega a cada 15 s;
-  - o BFF guarda a ordem da fila por atividade por `WAITLIST_CACHE_MS` (padrão 2000), então o registration recebe uma consulta por atividade nesse intervalo, não uma por pessoa ([waitlist.js](src/waitlist.js));
+  - o BFF guarda a ordem da fila por atividade por `WAITLIST_CACHE_MS` (padrão 2000), então o registration recebe uma consulta por atividade nesse intervalo, não uma por pessoa ([waitlist/](src/waitlist/));
   - a autorização é do registration, na primeira consulta de cada inscrição + usuário; depois, enquanto a inscrição está na fila, a resposta sai da memória;
   - limitações: a posição pode atrasar até o cache mais o intervalo (cerca de 6 s); cada instância do BFF tem seu cache;
   - para migrar ao push (SSE), troca-se o `PollingWaitlistSource` e o `watchRegistration`; o payload continua o mesmo.

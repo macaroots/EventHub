@@ -30,7 +30,7 @@ Exige login; o usuário vem do token.
 
 ### Capacidade sob concorrência
 
-- Lock otimista: `activities.version`. Se outra escrita gravou depois da leitura, o app service recarrega e refaz (até 20 vezes, com espera aleatória). Mensagens só saem depois do commit.
+- Lock otimista: `activities.version`. Se outra escrita gravou depois da leitura, o app service recarrega e refaz (até 20 vezes, backoff exponencial com jitter até 200 ms; esgotou → erro `changed concurrently`, sem passar da capacidade). Mensagens só saem depois do commit.
 - Triggers no SQLite recusam (`Full occupation`) a entrada em status que ocupa vaga sem vaga livre: rede de segurança contra bugs e outras instâncias.
 - SQLite em WAL com `busy_timeout`, para várias conexões.
 - `test/concurrency.test.js`: 8 threads, cada uma com sua conexão, fazem 200 inscrições em 30 vagas; a ocupação fica em 30.
