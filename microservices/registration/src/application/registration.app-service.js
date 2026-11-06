@@ -146,7 +146,7 @@ export class RegistrationAppService {
                 this.activityRepository.update(activity);
             } catch (e) {
                 if (!(e instanceof ConcurrencyError) || attempt == RETRIES) throw e;
-                await new Promise(ok => setTimeout(ok, Math.random() * 5 * attempt)); // espalha as tentativas
+                await new Promise(ok => setTimeout(ok, Math.random() * Math.min(200, 2 ** attempt))); // backoff exponencial com jitter
                 continue;
             }
             for (const r of activity.registrations) for (const m of r.pullMessages()) await this.messageBus.publish(m);
