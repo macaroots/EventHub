@@ -13,10 +13,10 @@ const setup = () => {
   const db = new DatabaseSync(":memory:");
   db.exec("CREATE TABLE things (id TEXT PRIMARY KEY)");
   const broker = fakeBroker();
-  return { db, broker, bus: new OutboxMessageBus(db, broker) };
+  return { db, broker, bus: new OutboxMessageBus(db, broker, { source: "test" }) };
 };
 
-test("outbox: message is sent only if the transaction commits, with messageId", async () => {
+test("outbox: message is sent only if the transaction commits, in the envelope", async () => {
   const { db, broker, bus } = setup();
   assert.throws(() => bus.transaction(() => {
     db.prepare("INSERT INTO things VALUES ('a')").run();
@@ -29,8 +29,11 @@ test("outbox: message is sent only if the transaction commits, with messageId", 
   });
   await bus.flush();
   assert.deepEqual(broker.sent.map((m) => m.type), ["Kept"]);
-  assert.equal(broker.sent[0].id, "b"); // não sobrescreve o id do domínio
-  assert.match(broker.sent[0].messageId, /^[0-9a-f-]{36}$/);
+  const [m] = broker.sent;
+  assert.match(m.id, /^[0-9a-f-]{36}$/);
+  assert.equal(m.source, "test");
+  assert.ok(Date.parse(m.time));
+  assert.deepEqual(m.data, { id: "b" }); // o id do domínio fica no data, sem colidir com o do envelope
   assert.equal(bus.pending(), 0);
 });
 
@@ -55,19 +58,21 @@ const fakeChannel = () => ({
   ack(m) { this.acks.push(m); }, nack(m) { this.nacks.push(m); },
   sendToQueue(queue, content, props, cb) { this.queued.push({ queue, props }); cb(); },
 });
-const delivery = (event, headers) => ({ content: Buffer.from(JSON.stringify(event)), properties: { messageId: event.messageId, headers } });
+const delivery = (event, headers) => ({ content: Buffer.from(JSON.stringify(event)), properties: { messageId: event.id, headers } });
 
 test("consumer: duplicate messageId is handled once", async () => {
   const channel = fakeChannel();
   const bus = new RabbitMqMessageBus(channel);
-  const { inbox } = new OutboxMessageBus(new DatabaseSync(":memory:"), bus);
+  const { inbox } = new OutboxMessageBus(new DatabaseSync(":memory:"), bus, { source: "test" });
   const handled = [];
-  bus.listen("X", (e) => handled.push(e));
+  bus.listen("X", (data, envelope) => handled.push({ data, envelope }));
   await bus.consume("q", { inbox });
-  const m = delivery({ type: "X", messageId: "m1" });
+  const m = delivery({ id: "m1", type: "X", source: "test", time: "2026-11-06T13:00:00.000Z", data: {} });
   await channel.deliver(m);
   await channel.deliver(m);
   assert.equal(handled.length, 1);
+  assert.deepEqual(handled[0].data, {}); // o handler recebe o data
+  assert.equal(handled[0].envelope.id, "m1");
   assert.equal(channel.acks.length, 2);
 });
 
@@ -76,8 +81,8 @@ test("consumer: failure goes to retry, then to the DLQ after the last attempt", 
   const bus = new RabbitMqMessageBus(channel);
   bus.listen("X", () => { throw new Error("fail"); });
   await bus.consume("q");
-  await channel.deliver(delivery({ type: "X", messageId: "m1" }));
-  await channel.deliver(delivery({ type: "X", messageId: "m1" }, { "x-attempt": 5 }));
+  await channel.deliver(delivery({ id: "m1", type: "X", source: "test", time: "2026-11-06T13:00:00.000Z", data: {} }));
+  await channel.deliver(delivery({ id: "m1", type: "X", source: "test", time: "2026-11-06T13:00:00.000Z", data: {} }, { "x-attempt": 5 }));
   assert.deepEqual(channel.queued.map((q) => q.queue), ["q.retry", "q.dlq"]);
   assert.equal(channel.queued[0].props.headers["x-attempt"], 2);
   assert.equal(channel.queued[1].props.headers["x-error"], "fail");
