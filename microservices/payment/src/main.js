@@ -1,4 +1,6 @@
 import express from 'express';
+import path from 'node:path';
+import { apiDocs } from '../../shared/application/api-docs.js';
 import { RabbitMqMessageBus } from '../../shared/messaging/rabbitmq-message-bus.js';
 import { openDatabase } from '../../shared/infrastructure/sqlite.js';
 import { PaymentSqliteRepository } from './infrastructure/payment.sqlite.repository.js';
@@ -8,7 +10,8 @@ import { FakePaymentGateway } from './infrastructure/fake-payment.gateway.js';
 const app = express()
 const port = process.env.PORT || 3000;
 
-app.use(express.json()); 
+app.use(express.json());
+app.use(apiDocs(path.join(import.meta.dirname, 'openapi.yaml')));
 
 const messageBus = await RabbitMqMessageBus.connect();
 const paymentRepository = new PaymentSqliteRepository(openDatabase('payment'));

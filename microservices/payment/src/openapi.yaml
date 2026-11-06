@@ -1,0 +1,72 @@
+openapi: 3.0.3
+info:
+  title: Payment (Caixa)
+  version: 1.0.0
+  description: |
+    Cobranças criadas por `PaymentRequested` (registration). Sem autenticação (o BFF autoriza pela inscrição).
+    Pagar publica `PaymentConfirmed` ou `PaymentDenied`; `RegistrationCanceled` cancela a cobrança pendente.
+servers:
+  - url: http://localhost:3004
+paths:
+  /payments:
+    get:
+      summary: Lista as cobranças
+      responses:
+        '200':
+          description: Cobranças
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Payment' } }
+  /payments/{id}:
+    parameters:
+      - { $ref: '#/components/parameters/Id' }
+    get:
+      summary: Consulta uma cobrança
+      responses:
+        '200':
+          description: Cobrança
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Payment' }
+        '404': { $ref: '#/components/responses/Error' }
+  /payments/{id}/pay:
+    parameters:
+      - { $ref: '#/components/parameters/Id' }
+    post:
+      summary: Paga com um comprovante
+      description: Gateway fake. O comprovante `deny` é recusado.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [receipt]
+              properties:
+                receipt: { type: string }
+      responses:
+        '200':
+          description: Cobrança após o pagamento (`paid` ou `denied`)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Payment' }
+        '400': { $ref: '#/components/responses/Error' }
+components:
+  parameters:
+    Id: { name: id, in: path, required: true, schema: { type: string }, description: 'paymentId (= registration.payment.id)' }
+  schemas:
+    Payment:
+      type: object
+      properties:
+        id: { type: string }
+        amount: { type: number }
+        description: { type: string }
+        registrationId: { type: string }
+        status: { type: string, enum: [pending, paid, denied, canceled] }
+        receipt: { type: string, nullable: true }
+  responses:
+    Error:
+      description: Erro (mensagem)
+      content:
+        text/plain:
+          schema: { type: string }
