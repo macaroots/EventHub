@@ -1,6 +1,8 @@
 import { SqliteRepository } from "../../../shared/infrastructure/sqlite.repository.js";
 import { ConcurrencyError } from "../../../shared/domain/errors.js";
-import { Activity, SEAT_STATUSES, ruleFromConfig } from "../domain/activity.js";
+import { Activity } from "../domain/activity.js";
+import { SEAT_STATUSES } from "../domain/registration.js";
+import { ruleFromConfig } from "../domain/rules/rule-from-config.js";
 
 const seat = `(${SEAT_STATUSES.map(s => `'${s}'`).join(',')})`;
 
