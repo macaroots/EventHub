@@ -139,20 +139,22 @@ export class RegistrationAppService {
     }
 
     // Carrega, muda e salva a Activity; se outra escrita chegou antes (ConcurrencyError), refaz do zero.
-    // Mensagens só são publicadas depois de gravar.
+    // Mensagens vão para o outbox na mesma transação do aggregate.
     async #change(activityId, fn) {
         for (let attempt = 1; ; attempt++) {
             const activity = this.activityRepository.getById(activityId);
             if (!activity) throw new NotFoundError('activity');
             const result = fn(activity);
             try {
-                this.activityRepository.update(activity);
+                this.messageBus.transaction(() => {
+                    this.activityRepository.update(activity);
+                    for (const r of activity.registrations) for (const m of r.pullMessages()) this.messageBus.publish(m);
+                });
             } catch (e) {
                 if (!(e instanceof ConcurrencyError) || attempt == RETRIES) throw e;
                 await new Promise(ok => setTimeout(ok, Math.random() * Math.min(200, 2 ** attempt))); // backoff exponencial com jitter
                 continue;
             }
-            for (const r of activity.registrations) for (const m of r.pullMessages()) await this.messageBus.publish(m);
             return result;
         }
     }

@@ -11,6 +11,7 @@ import { AttendanceSqliteRepository } from './infrastructure/attendance.sqlite.r
 import { RegistrationAppService } from './application/registration.app-service.js';
 import { CheckInAppService } from './application/check-in.app-service.js';
 import { RabbitMqMessageBus } from '../../shared/messaging/rabbitmq-message-bus.js';
+import { OutboxMessageBus } from '../../shared/messaging/outbox-message-bus.js';
 import { authenticate } from '../../shared/auth/jwt.js';
 import { ForbiddenError, NotFoundError } from '../../shared/domain/errors.js';
 
@@ -24,7 +25,8 @@ app.use(apiDocs(path.join(import.meta.dirname, 'openapi.yaml')));
 app.use(authenticate());
 
 
-const messageBus = await RabbitMqMessageBus.connect();
+// Outbox/inbox no banco do serviço; RabbitMQ como transporte.
+const messageBus = new OutboxMessageBus(database, await RabbitMqMessageBus.connect());
 const participantRepository = new ParticipantSqliteRepository(database);
 const eventRepository = new EventSqliteRepository(database);
 const registrationRepository = new RegistrationSqliteRepository(database);
