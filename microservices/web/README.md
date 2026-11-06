@@ -19,7 +19,7 @@ Fluxo do participante:
   - limitações: a posição pode atrasar até o cache mais o intervalo (cerca de 6 s); cada instância do BFF tem seu cache;
   - para migrar ao push (SSE), troca-se o `PollingWaitlistSource` e o `watchRegistration`; o payload continua o mesmo.
 - Com a inscrição `confirmed`, a página da inscrição pede o código de check-in mostrado na sala; depois, mostra quando a presença foi registrada ([ADR 012](../../docs/adrs/forma-do-checkin.md)). Datas no fuso `TIME_ZONE` (padrão `America/Sao_Paulo`).
-- Evento encerrado: a inscrição mostra "certificado solicitado" (com presença) ou "sem presença", e some o check-in e o cancelamento. `/registrations` tem a coluna Certificado. O PDF virá do serviço de certificados (outro time); ainda não há link.
+- Evento encerrado: o certificado é por evento (basta presença em uma atividade). A inscrição diz se a atividade entra no certificado, e some o check-in e o cancelamento. `/registrations` tem a coluna Certificado, por evento. O PDF virá do serviço de certificados (outro time); ainda não há link.
 - Em `awaiting_payment`, o link de pagamento leva a `/payments/:id`, onde se informa o comprovante (o gateway fake recusa `deny`). Pagamento recusado cancela a inscrição; reserva expirada cancela a cobrança.
 - Pagar é assíncrono: o registration só fica sabendo por `PaymentConfirmed/Denied`. Por isso o BFF consulta a inscrição até 10× a cada 200 ms antes de redirecionar. Alternativas: websocket/SSE, ou uma página de "processando" com refresh.
 - Autorização do pagamento: o payment ainda não tem auth. O BFF só mostra se o registration devolve a inscrição do pagamento para o usuário (inscrição de outra pessoa → 403; admin e organizador veem) e só paga se a inscrição for do usuário (ou admin).
