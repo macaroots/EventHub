@@ -7,18 +7,22 @@ export class Activity {
     #id;
     #eventId;
     #name;
+    #startsAt;
+    #endsAt;
     #capacity;
     #price;
     #registrations = [];
     #registrationRules = [];
 
     // registrations: só ao reconstituir do banco.
-    constructor({ id = crypto.randomUUID(), eventId, name, capacity, price = 0, rules = [], registrations = [] } = {}) {
+    constructor({ id = crypto.randomUUID(), eventId, name, startsAt = null, endsAt = null, capacity, price = 0, rules = [], registrations = [] } = {}) {
         if (!(capacity >= 0)) throw new TypeError('Capacity must not be lower than 0');
         if (!(price >= 0)) throw new TypeError('Price must not be lower than 0');
         this.#id = id;
         this.#eventId = eventId;
         this.#name = name;
+        this.#startsAt = startsAt;
+        this.#endsAt = endsAt;
         this.#capacity = capacity;
         this.#price = price;
         this.#registrationRules = rules;
@@ -36,6 +40,8 @@ export class Activity {
             id: this.#id,
             eventId: this.#eventId,
             name: this.#name,
+            startsAt: this.#startsAt,
+            endsAt: this.#endsAt,
             capacity: this.#capacity,
             price: this.#price,
             registrations: this.#registrations,

@@ -10,6 +10,7 @@ import { CheckInSqliteRepository } from './infrastructure/check-in.sqlite.reposi
 import { AttendanceSqliteRepository } from './infrastructure/attendance.sqlite.repository.js';
 import { RegistrationAppService } from './application/registration.app-service.js';
 import { CheckInAppService } from './application/check-in.app-service.js';
+import { CertificateAppService } from './application/certificate.app-service.js';
 import { RabbitMqMessageBus } from '../../shared/messaging/rabbitmq-message-bus.js';
 import { OutboxMessageBus } from '../../shared/messaging/outbox-message-bus.js';
 import { authenticate } from '../../shared/auth/jwt.js';
@@ -37,12 +38,14 @@ const registrationService = new RegistrationAppService(activityRepository, regis
     { paymentWindowMinutes: Number(process.env.PAYMENT_WINDOW_MINUTES ?? 30), attendanceRepository });
 const checkInService = new CheckInAppService({ activityRepository, registrationRepository, eventRepository, participantRepository,
     checkInRepository, attendanceRepository, messageBus });
+const certificateService = new CertificateAppService({ activityRepository, eventRepository, participantRepository, attendanceRepository, messageBus });
 // Reservas sem pagamento dentro da janela liberam a vaga para a fila de espera.
 setInterval(() => registrationService.expireOverduePayments().catch(e => console.error('expireOverduePayments falhou:', e.message)), 60_000);
 
 // Isso pode ser definido aqui (Coreografia) ou no gateway (Orquestração)
 messageBus.listen('EventPublished', e => registrationService.publishEvent(e));
 messageBus.listen('EventCanceled', e => registrationService.cancelEvent(e));
+messageBus.listen('EventEnded', e => certificateService.endEvent(e));
 messageBus.listen('EventOrganizersChanged', e => registrationService.changeOrganizers(e));
 messageBus.listen('PaymentConfirmed', e => registrationService.confirmPayment(e));
 messageBus.listen('PaymentDenied', e => registrationService.denyPayment(e));

@@ -27,9 +27,9 @@ export class RegistrationAppService {
     // que é o que libera as inscrições.
     publishEvent({ eventId, name, organizers = [], activities = [] }) {
         if (this.eventRepository.getById(eventId)) return;
-        for (const { activityId, name, capacity, price, rules = [] } of activities) {
+        for (const { activityId, name, startsAt, endsAt, capacity, price, rules = [] } of activities) {
             if (this.activityRepository.getById(activityId)) continue;
-            this.activityRepository.add(new Activity({ id: activityId, eventId, name, capacity, price, rules: rules.map(ruleFromConfig) }));
+            this.activityRepository.add(new Activity({ id: activityId, eventId, name, startsAt, endsAt, capacity, price, rules: rules.map(ruleFromConfig) }));
         }
         this.eventRepository.add({ id: eventId, name, status: 'published', organizers });
     }
@@ -169,7 +169,7 @@ export class RegistrationAppService {
             participant: this.participantRepository.getById(r.userId),
             attendance: this.attendanceRepository?.getByRegistration(r.id) ?? null,
             activity: activity && { id: activity.id, name: activity.name },
-            event: event && { id: event.id, name: event.name },
+            event: event && { id: event.id, name: event.name, status: event.status },
         };
     }
     #canManage(activityId, user) {
