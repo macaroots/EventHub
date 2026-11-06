@@ -2,8 +2,8 @@
 // - publish grava a mensagem na tabela outbox, na mesma transação do estado (use transaction()).
 //   Um relay envia ao broker depois do COMMIT e apaga a linha só quando o broker confirma.
 //   Broker fora do ar: as mensagens esperam no banco. Entrega pelo menos uma vez (pode repetir).
-// - Cada mensagem ganha messageId (UUID) e occurredAt. O consumidor guarda o messageId na inbox
-//   e ignora repetidas.
+// - Envelope (contracts/README.md): {id, type, source, time, data}. data = a mensagem do domínio sem o type.
+//   O consumidor guarda o id na inbox e ignora repetidas.
 import { randomUUID } from 'node:crypto';
 import { transaction } from '../infrastructure/transaction.js';
 
@@ -13,8 +13,9 @@ export class OutboxMessageBus {
     #flushing = null;
     #timer;
 
-    constructor(db, broker, { intervalMs = 1000 } = {}) {
-        Object.assign(this, { db, broker, intervalMs });
+    constructor(db, broker, { source, intervalMs = 1000 } = {}) {
+        if (!source) throw new TypeError('source (nome do serviço) é obrigatório');
+        Object.assign(this, { db, broker, source, intervalMs });
         db.exec(`
             CREATE TABLE IF NOT EXISTS outbox(
                 seq INTEGER PRIMARY KEY AUTOINCREMENT, -- ordem de envio
@@ -38,9 +39,9 @@ export class OutboxMessageBus {
     }
 
     // Síncrono: só grava. O envio acontece depois do COMMIT.
-    publish(message) {
-        const m = { ...message, messageId: randomUUID(), occurredAt: new Date().toISOString() };
-        this.db.prepare('INSERT INTO outbox (messageId, message) VALUES (?, ?)').run(m.messageId, JSON.stringify(m));
+    publish({ type, ...data }) {
+        const m = { id: randomUUID(), type, source: this.source, time: new Date().toISOString(), data };
+        this.db.prepare('INSERT INTO outbox (messageId, message) VALUES (?, ?)').run(m.id, JSON.stringify(m));
         setImmediate(() => this.flush());
         return m;
     }
