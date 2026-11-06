@@ -8,14 +8,23 @@ servers:
 paths:
   /users:
     get:
-      summary: Lista os usuários
-      description: Público. Usado pelo BFF para traduzir ids em usernames.
+      summary: Lista os usuários, ou busca um pelo username
+      description: Exige login. Usado pelo BFF para traduzir ids em usernames e username em id.
+      security:
+        - bearer: []
+      parameters:
+        - { name: username, in: query, required: false, schema: { type: string }, description: Devolve só esse usuário (objeto, não lista). }
       responses:
         '200':
-          description: Usuários
+          description: Usuários, ou o usuário quando `username` é informado
           content:
             application/json:
-              schema: { type: array, items: { $ref: '#/components/schemas/User' } }
+              schema:
+                oneOf:
+                  - { type: array, items: { $ref: '#/components/schemas/User' } }
+                  - { $ref: '#/components/schemas/User' }
+        '401': { description: Sem token válido }
+        '404': { $ref: '#/components/responses/Error' }
     post:
       summary: Cadastra um usuário (role `user`)
       requestBody:
@@ -50,6 +59,8 @@ paths:
                   token: { type: string }
         '400': { $ref: '#/components/responses/Error' }
 components:
+  securitySchemes:
+    bearer: { type: http, scheme: bearer, bearerFormat: JWT, description: 'Token do `POST /auth`' }
   schemas:
     Credentials:
       type: object
