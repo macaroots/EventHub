@@ -94,14 +94,7 @@ web/src/
 
 ## Mensagens
 
-| Tipo | Publicado por | Quem ouve |
-|------|---------------|-----------|
-| `EventPublished {eventId, name, startDate, endDate, organizers, activities: [{activityId, name, startsAt, endsAt, capacity, price, rules}]}` | secretariat | registration: cria a cópia imutável do evento e das atividades (uma vez) e abre as inscrições |
-| `EventCanceled {eventId, reason}` | secretariat | registration: cancela as inscrições |
-| `EventOrganizersChanged {eventId, organizers}` | secretariat (só evento publicado) | registration: autorização da gestão das inscrições |
-| `RegistrationCreated/Promoted/Confirmed/Canceled` | registration | payment: `Canceled` cancela a cobrança pendente; (notificações, futuro) |
-| `PaymentRequested {paymentId, registrationId, userId, amount, description}` | registration | payment: cria a cobrança (idempotente) |
-| `PaymentConfirmed/Denied {paymentId, registrationId}` | payment | registration: confirma a reserva / cancela |
+Contrato completo (transporte, envelope, cada mensagem com JSON Schema, quem produz e quem consome, fluxos): [contracts/README.md](contracts/README.md).
 
 Pagar: `POST localhost:3004/payments/:id/pay {"receipt": "..."}`; consultar: `GET /payments/:id`. O gateway é uma porta (`verify(payment, receipt)`); o adaptador atual é fake e recusa o comprovante `deny`.
 

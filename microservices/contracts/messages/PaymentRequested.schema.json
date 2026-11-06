@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://event-hub.local/contracts/messages/PaymentRequested.schema.json",
+  "title": "PaymentRequested",
+  "description": "registration → payment. Comando: criar a cobrança. paymentId é gerado pelo registration; o payment deve ser idempotente por paymentId.",
+  "allOf": [{ "$ref": "envelope.schema.json" }],
+  "type": "object",
+  "required": ["type", "paymentId", "registrationId", "userId", "amount", "description"],
+  "properties": {
+    "type": { "const": "PaymentRequested" },
+    "paymentId": { "$ref": "envelope.schema.json#/$defs/uuid" },
+    "registrationId": { "$ref": "envelope.schema.json#/$defs/uuid" },
+    "userId": { "$ref": "envelope.schema.json#/$defs/uuid" },
+    "amount": { "type": "number", "exclusiveMinimum": 0, "description": "Valor em reais (BRL), sem conversão para centavos." },
+    "description": { "type": "string" }
+  },
+  "examples": [{ "type": "PaymentRequested", "messageId": "0b9c6c1e-3f0a-4d38-9d2e-6f1c2a7b8e01", "occurredAt": "2026-11-06T13:00:00.000Z", "paymentId": "7f6e5d00-0000-4000-8000-000000000b01", "registrationId": "5e4d3c00-0000-4000-8000-000000000f01", "userId": "6a1f0c2e-1b2c-4d3e-8f40-5a6b7c8d9e01", "amount": 50, "description": "Ticket" }]
+}

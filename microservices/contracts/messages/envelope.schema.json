@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://event-hub.local/contracts/messages/envelope.schema.json",
+  "title": "Envelope",
+  "description": "Campos presentes em toda mensagem. Campos extras devem ser ignorados pelo consumidor (tolerant reader).",
+  "type": "object",
+  "required": ["type", "messageId", "occurredAt"],
+  "properties": {
+    "type": { "type": "string", "description": "Nome da mensagem. Igual à routing key e à propriedade AMQP 'type'." },
+    "messageId": { "$ref": "#/$defs/uuid", "description": "Único por mensagem; chave de idempotência do consumidor (inbox). Igual à propriedade AMQP 'messageId'." },
+    "occurredAt": { "$ref": "#/$defs/dateTime", "description": "Momento em que a mensagem foi gravada no outbox do produtor." },
+    "correlationId": { "type": "string", "description": "Reservado (RQ06): ainda não é propagado." }
+  },
+  "$defs": {
+    "uuid": { "type": "string", "format": "uuid" },
+    "dateTime": { "type": "string", "format": "date-time", "description": "ISO 8601 em UTC, ex.: 2026-11-06T13:00:00.000Z" },
+    "isoDate": { "type": "string", "minLength": 1, "description": "ISO 8601, data (2026-11-10) ou data-hora (2026-11-10T09:00:00.000Z)." },
+    "nonEmpty": { "type": "string", "minLength": 1 },
+    "organizers": { "type": "array", "items": { "$ref": "#/$defs/uuid" }, "uniqueItems": true, "description": "userIds (identity) que gerenciam o evento." }
+  }
+}
