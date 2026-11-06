@@ -3,13 +3,45 @@
   "$id": "https://event-hub.local/contracts/messages/EventCanceled.schema.json",
   "title": "EventCanceled",
   "description": "secretariat → registration. Cancela todas as inscrições do evento (cada uma gera RegistrationCanceled). Evento em rascunho também publica; o registration ignora evento desconhecido.",
-  "allOf": [{ "$ref": "envelope.schema.json" }],
+  "allOf": [
+    {
+      "$ref": "envelope.schema.json"
+    }
+  ],
   "type": "object",
-  "required": ["type", "eventId", "reason"],
   "properties": {
-    "type": { "const": "EventCanceled" },
-    "eventId": { "$ref": "envelope.schema.json#/$defs/uuid" },
-    "reason": { "$ref": "envelope.schema.json#/$defs/nonEmpty" }
+    "type": {
+      "const": "EventCanceled"
+    },
+    "source": {
+      "const": "secretariat"
+    },
+    "data": {
+      "type": "object",
+      "required": [
+        "eventId",
+        "reason"
+      ],
+      "properties": {
+        "eventId": {
+          "$ref": "envelope.schema.json#/$defs/uuid"
+        },
+        "reason": {
+          "$ref": "envelope.schema.json#/$defs/nonEmpty"
+        }
+      }
+    }
   },
-  "examples": [{ "type": "EventCanceled", "messageId": "0b9c6c1e-3f0a-4d38-9d2e-6f1c2a7b8e01", "occurredAt": "2026-11-06T13:00:00.000Z", "eventId": "3c2b1a00-0000-4000-8000-00000000e001", "reason": "Falta de quórum" }]
+  "examples": [
+    {
+      "id": "0b9c6c1e-3f0a-4d38-9d2e-6f1c2a7b8e01",
+      "type": "EventCanceled",
+      "source": "secretariat",
+      "time": "2026-11-06T13:00:00.000Z",
+      "data": {
+        "eventId": "3c2b1a00-0000-4000-8000-00000000e001",
+        "reason": "Falta de quórum"
+      }
+    }
+  ]
 }
