@@ -8,7 +8,7 @@
     </p>
 <% const ended = registration.event?.status == 'ended'; %>
 <% if (ended) { %>
-    <p><%= registration.attendance ? 'Evento encerrado. Certificado solicitado: você o receberá pelo serviço de certificados.' : 'Evento encerrado. Sem presença registrada, não há certificado.' %></p>
+    <p><%= registration.attendance ? 'Evento encerrado. Certificado do evento solicitado, com esta atividade.' : 'Evento encerrado. Sem presença nesta atividade: ela não entra no certificado.' %></p>
 <% } %>
 <% if (registration.status == 'confirmed') { %>
     <p>Inscrição confirmada!</p>
