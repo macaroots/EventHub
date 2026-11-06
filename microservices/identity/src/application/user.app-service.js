@@ -30,9 +30,3 @@ export class UserAppService {
         return { user, token: sign(user) };
     }
 }
-
-class UserUpdated {
-    constructor(bean) {
-
-    }
-}
