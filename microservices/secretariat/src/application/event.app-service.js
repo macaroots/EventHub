@@ -70,6 +70,17 @@ export class EventAppService {
         });
     }
 
+    // EventEnded: o registration avalia a elegibilidade e pede os certificados (ADR 003).
+    async end(id, user, now = new Date()) {
+        const event = this.#get(id);
+        event.assertCanManage(user);
+        event.end(now);
+        this.messageBus.transaction(() => {
+            this.eventRepository.update(event.toJSON());
+            this.messageBus.publish({ type: 'EventEnded', eventId: id });
+        });
+    }
+
     async cancel(id, { reason } = {}, user) {
         const event = this.#get(id);
         event.assertCanManage(user);

@@ -5,7 +5,7 @@ info:
   description: |
     Eventos e atividades. Dona de toda a informação do evento, inclusive capacidade, preço e regras.
     Conteúdo só muda em `draft`; publicado só é cancelado (ADR 011). Admin pode tudo.
-    Mensagens: `EventPublished` (com as atividades), `EventCanceled`, `EventOrganizersChanged`.
+    Mensagens: `EventPublished` (com as atividades), `EventCanceled`, `EventOrganizersChanged`, `EventEnded`.
 servers:
   - url: http://localhost:3002
 security:
@@ -124,6 +124,17 @@ paths:
         '204': { description: Publicado }
         '400': { $ref: '#/components/responses/Error' }
         '403': { $ref: '#/components/responses/Error' }
+  /events/{id}/end:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [Eventos]
+      summary: Encerra (`published` → `ended`)
+      description: Só depois do `endDate`. Publica `EventEnded`; o registration pede os certificados de quem teve presença.
+      responses:
+        '204': { description: Encerrado }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
   /events/{id}/cancel:
     parameters: [{ $ref: '#/components/parameters/Id' }]
     post:
@@ -262,7 +273,7 @@ components:
   parameters:
     Id: { name: id, in: path, required: true, schema: { type: string } }
   schemas:
-    EventStatus: { type: string, enum: [draft, published, canceled] }
+    EventStatus: { type: string, enum: [draft, published, ended, canceled] }
     EventInput:
       type: object
       properties:

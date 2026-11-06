@@ -10,7 +10,7 @@ Todos os endpoints exigem login (ver [README](../README.md#autenticação)). Adm
 | `PATCH /events/:id` | organizer | Só em `draft`. Altera só os campos enviados (`null` limpa). |
 | `POST /events/:id/publish` | organizer | `draft` → `published`. Exige datas e ao menos 1 atividade. Publica `EventPublished` com as atividades. |
 | `POST /events/:id/cancel` | organizer | `{reason}` obrigatório. |
-| `POST /events/:id/end` | organizer | **Planejado.** `published` → `ended`, depois do `endDate`. Publica `EventEnded`. |
+| `POST /events/:id/end` | organizer | `published` → `ended`, a partir do `endDate`. Publica `EventEnded`. |
 | `POST /events/:id/organizers` `{userId}` / `DELETE /events/:id/organizers/:userId` | organizer | Até o cancelamento (também depois de publicado). O criador não pode ser removido. |
 | `DELETE /events/:id` | criador | Só se não estiver publicado (cancele antes); apaga as atividades junto. |
 | `POST/GET/PATCH/DELETE /activities[/:id]`, `GET /activities?eventId=`, `GET /events/:id/activities` | organizer do evento | Campos: `eventId, name, description, location, startsAt, endsAt, capacity, price, rules` (`price` padrão 0). Criar, alterar e apagar só em evento `draft`. `GET` traz `eventStatus`. |
@@ -18,11 +18,11 @@ Todos os endpoints exigem login (ver [README](../README.md#autenticação)). Adm
 Ciclo do evento:
 
 ```
-draft → published → ended      (planejado: organizador encerra)
+draft → published → ended      (organizador encerra)
             ↘ canceled
 ```
 
-- `ended` é manual para dar uma janela de correção de presenças antes dos certificados.
+- `ended` é manual para dar uma janela de correção de presenças antes dos certificados. Encerrado não é cancelado nem apagado.
 - `EventEnded` dispara a elegibilidade no registration, que pede os certificados ([ADR 003](../../docs/adrs/certificados.md)).
 
 Erros: 401 sem token, 403 sem permissão, 404 não encontrado, 400 regra de domínio.

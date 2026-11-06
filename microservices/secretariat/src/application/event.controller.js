@@ -8,6 +8,7 @@ export class EventController extends CrudController {
     }
     addRoutes(router) {
         router.post('/events/:id/publish', this.handle(this.publish));
+        router.post('/events/:id/end', this.handle(this.end));
         router.post('/events/:id/cancel', this.handle(this.cancel));
         router.post('/events/:id/organizers', this.handle(this.addOrganizer));
         router.delete('/events/:id/organizers/:userId', this.handle(this.removeOrganizer));
@@ -21,6 +22,10 @@ export class EventController extends CrudController {
     }
     async publish(req, res) {
         await this.service.publish(req.params.id, req.user);
+        res.status(204).end();
+    }
+    async end(req, res) {
+        await this.service.end(req.params.id, req.user);
         res.status(204).end();
     }
     async cancel(req, res) {
