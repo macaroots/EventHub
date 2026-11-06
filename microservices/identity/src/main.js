@@ -16,7 +16,7 @@ app.use(apiDocs(path.join(import.meta.dirname, 'openapi.yaml')));
 
 const database = openDatabase('identity');
 // Outbox/inbox no banco do serviço; RabbitMQ como transporte.
-const messageBus = new OutboxMessageBus(database, await RabbitMqMessageBus.connect());
+const messageBus = new OutboxMessageBus(database, await RabbitMqMessageBus.connect(), { source: 'identity' });
 const userRepository = new UserSqliteRepository(database);
 const userService = new UserAppService(userRepository, messageBus);
 
