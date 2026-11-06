@@ -4,6 +4,7 @@ import { apiDocs } from '../../shared/application/api-docs.js';
 import { EventAppService } from './application/event.app-service.js';
 import { ActivityAppService } from './application/activity.app-service.js';
 import { RabbitMqMessageBus } from '../../shared/messaging/rabbitmq-message-bus.js';
+import { OutboxMessageBus } from '../../shared/messaging/outbox-message-bus.js';
 import { EventSqliteRepository } from './infrastructure/event.sqlite.repository.js';
 import { ActivitySqliteRepository } from './infrastructure/activity.sqlite.repository.js';
 import { openDatabase } from '../../shared/infrastructure/sqlite.js';
@@ -18,7 +19,8 @@ const port = process.env.PORT || 3000;
 
 app.use(express.json());
 
-const messageBus = await RabbitMqMessageBus.connect();
+// Outbox/inbox no banco do serviço; RabbitMQ como transporte.
+const messageBus = new OutboxMessageBus(database, await RabbitMqMessageBus.connect());
 const eventRepository = new EventSqliteRepository(database);
 const activityRepository = new ActivitySqliteRepository(database);
 const eventService = new EventAppService(eventRepository, activityRepository, messageBus);
