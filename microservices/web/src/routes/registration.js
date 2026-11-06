@@ -48,3 +48,7 @@ router.get('/registrations/:id/status.json', authenticate, async (req, res) => {
 router.post('/registrations/:id/cancel', authenticate, action(
     (req) => registration.cancelRegistration(req, req.params.id, req.body.reason),
     (req) => registrationPage(req.params.id)));
+// Check-in com o código mostrado na sala; volta para a inscrição (registrationId num campo hidden).
+router.post('/activities/:id/checkin', authenticate, action(
+    (req) => registration.checkIn(req, req.params.id, req.body.code),
+    (req) => registrationPage(req.body.registrationId)));
