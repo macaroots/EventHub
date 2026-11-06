@@ -7,8 +7,8 @@ Visão geral do que existe e do que falta. Detalhes em [ddd.md](ddd.md), [endpoi
 | Contexto | Serviço | RF | Estado |
 |---|---|---|---|
 | Identidade | `identity` | RF01 | Parcial |
-| Secretaria | `secretariat` | RF02, RF03, RF04 (programação pública) | Pronto (SQLite); falta `/public` |
-| Credenciamento | `registration` | RF04 (oferta pública), RF05, RF06, RF09 | Parcial |
+| Secretaria | `secretariat` | RF02, RF03, RF04 | Pronto (SQLite) |
+| Credenciamento | `registration` | RF05, RF06, RF09 | Parcial |
 | Caixa | `payment` | RF07 | Parcial |
 | Notificações | — | RF08 | ADR 004 |
 | Certificados | — | RF10 | ADR 003 |
@@ -16,7 +16,49 @@ Visão geral do que existe e do que falta. Detalhes em [ddd.md](ddd.md), [endpoi
 | Monitoramento | — (infra) | — | ADR 006 |
 | Front | `web` | — | Protótipo do fluxo, sem integração |
 
-Não há serviço de catálogo: a programação pública fica na Secretaria e a oferta (preço, vagas, regras) no Credenciamento ([ADR 007](adrs/fronteiras-secretaria-credenciamento.md)).
+Não há serviço de catálogo: a programação pública, com preço, vagas e regras, fica na Secretaria (`/public`). O Credenciamento recebe uma cópia imutável na publicação ([ADR 011](adrs/evento-imutavel-apos-publicacao.md)).
+
+## Capacidades de negócio, dados e projeções
+
+Cada serviço é dono dos seus dados (um SQLite por serviço) e não lê o banco de outro. O que vem de fora chega por mensagem e vira projeção local, só com os campos de que ele precisa.
+
+### Identidade (`identity`)
+- **Capacidade:** saber quem é o usuário. Cadastro, login e emissão do JWT que os outros serviços validam.
+- **Dados próprios:** `users` `{id, username, password, role}`. O papel é `user` ou `admin`, e o admin é criado na subida.
+- **Projeções:** nenhuma.
+- **Publica:** `UserCreated {userId, username}`.
+
+### Secretaria (`secretariat`)
+- **Capacidade:** planejar e publicar eventos. O organizador monta o evento e a programação, define a oferta de cada atividade (vagas, preço, regras de elegibilidade), publica, cancela e escolhe quem organiza. É a dona de toda a informação do evento ([ADR 011](adrs/evento-imutavel-apos-publicacao.md)).
+- **Dados próprios:**
+  - `events` `{id, name, information, startDate, endDate, status: draft | published | canceled, cancelReason, createdBy, organizers[]}`;
+  - `activities` `{id, eventId, name, description, location, startsAt, endsAt, capacity, price, rules[]}`.
+
+  O conteúdo só muda em `draft`.
+- **Projeções:** nenhuma. Organizers são ids de usuário, sem validação.
+- **Publica:** `EventPublished` (com as atividades), `EventCanceled`, `EventOrganizersChanged`.
+
+### Credenciamento (`registration`)
+- **Capacidade:** garantir a vaga do participante. Inscrição, elegibilidade, capacidade sob concorrência, fila de espera com promoção, reserva com prazo de pagamento e gestão das inscrições pelo organizador. Mais tarde, o check-in ([ADR 002](adrs/checkin-no-registration.md)).
+- **Dados próprios:** `registrations` `{id, userId, activityId, status: pending | waitlisted | awaiting_payment | confirmed | canceled, requirements[], reasons[], payment {id, amount, description, requestedAt, paid}, createdAt}`, mais a `version` da atividade, usada no lock otimista ([ADR 008](adrs/vaga-e-pagamento-como-status.md)).
+- **Projeções:**
+  - `activities` `{id, eventId, name, capacity, price, rules}`: cópia imutável, criada uma vez pelo `EventPublished`;
+  - `events` `{id, name, status: published | canceled, organizers[]}`: vem do `EventPublished`, `EventCanceled` e `EventOrganizersChanged`; os organizers autorizam a gestão das inscrições;
+  - `participants` `{id, username}`: vem do `UserCreated` (o `UserUpdated` também é ouvido, mas o identity ainda não o publica); só para exibição.
+- **Ouve também:** `PaymentConfirmed` e `PaymentDenied`.
+- **Publica:** `RegistrationCreated`, `RegistrationPromoted`, `RegistrationConfirmed`, `RegistrationCanceled` e `PaymentRequested`.
+
+### Caixa (`payment`)
+- **Capacidade:** cobrar. Cria a cobrança pedida, valida o pagamento no gateway (hoje fake) e informa o resultado.
+- **Dados próprios:** `payments` `{id, amount, description, registrationId, status: pending | paid | denied | canceled, receipt}`. O `id` é o `payment.id` da inscrição.
+- **Projeções:** nenhuma. Guarda só a referência `registrationId`.
+- **Ouve:** `PaymentRequested` (cria a cobrança) e `RegistrationCanceled` (cancela a cobrança pendente).
+- **Publica:** `PaymentConfirmed`, `PaymentDenied`.
+
+### Front (`web`, BFF)
+- **Capacidade:** telas do participante e do organizador. Compõe as chamadas aos serviços.
+- **Dados próprios:** nenhum persistido. Guarda em memória dois caches descartáveis: a ordem da fila de espera por atividade (2 s) e o acesso já autorizado por inscrição ([ADR 009](adrs/posicao-na-fila-de-espera.md)).
+- **Projeções:** nenhuma. Lê por HTTP, com o token do usuário.
 
 ## O que já temos
 

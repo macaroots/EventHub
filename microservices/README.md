@@ -39,7 +39,7 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 
 Cada serviço tem seu SQLite (`node:sqlite`) em `<serviço>/data/<serviço>.db`, num volume `<serviço>-data` do compose. O banco é aberto por [shared/infrastructure/sqlite.js](shared/infrastructure/sqlite.js), e os repositórios estendem [SqliteRepository](shared/infrastructure/sqlite.repository.js), que tem `upsert` para as projeções. `MapRepository` (em memória) fica para os testes.
 
-- Um banco por serviço: nenhum serviço lê a tabela de outro. O que vem de fora chega por mensagem e vira projeção local.
+- Um banco por serviço: nenhum serviço lê a tabela de outro. O que vem de fora chega por mensagem e vira projeção local. Capacidade de negócio, dados e projeções de cada serviço: [docs/arquitetura.md](../docs/arquitetura.md#capacidades-de-negócio-dados-e-projeções).
 - Limitação: o banco é salvo antes de publicar as mensagens, sem outbox. Se o serviço cair entre as duas coisas, a mensagem se perde. Alternativa: tabela outbox na mesma transação.
 
 ## Documentação da API (Swagger)
