@@ -1,5 +1,5 @@
 import { SqliteRepository } from "../../../shared/infrastructure/sqlite.repository.js";
-import { Registration } from "../domain/activity.js";
+import { Registration } from "../domain/registration.js";
 
 // Só leitura para a aplicação: as inscrições são gravadas pela Activity (ActivitySqliteRepository).
 export class RegistrationSqliteRepository extends SqliteRepository {
