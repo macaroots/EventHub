@@ -2,8 +2,8 @@ import { ConcurrencyError, ForbiddenError, NotFoundError } from "../../../shared
 import { Activity } from "../domain/activity.js";
 import { Participant } from "../domain/participant.js";
 import { ruleFromConfig } from "../domain/rules/rule-from-config.js";
+import { canManage, isAdmin } from "./permissions.js";
 
-const isAdmin = (user) => user.role == 'admin';
 const isOwner = (user, registration) => registration.userId == user.id;
 // Pendências que o organizador resolve na mão.
 const MANUAL_REQUIREMENTS = ['age verification'];
@@ -11,7 +11,9 @@ const RETRIES = 20;
 
 export class RegistrationAppService {
     // paymentWindowMinutes: quanto tempo a vaga fica reservada esperando o pagamento.
-    constructor(activityRepository, registrationRepository, participantRepository, eventRepository, messageBus, { paymentWindowMinutes = 30 } = {}) {
+    // attendanceRepository: presença (check-in, ADR 012) mostrada junto com a inscrição.
+    constructor(activityRepository, registrationRepository, participantRepository, eventRepository, messageBus, { paymentWindowMinutes = 30, attendanceRepository } = {}) {
+        this.attendanceRepository = attendanceRepository;
         this.activityRepository = activityRepository;
         this.registrationRepository = registrationRepository;
         this.participantRepository = participantRepository;
@@ -83,6 +85,7 @@ export class RegistrationAppService {
             activity: {
                 id: activity.id, name: activity.name, capacity: activity.capacity, price: activity.price,
                 occupation: activity.getOccupation(), confirmedOccupation: activity.getConfirmedOccupation(),
+                present: this.attendanceRepository?.listByActivity(activity.id).length ?? 0,
             },
             event: event && { id: event.id, name: event.name, status: event.status },
             registrations: activity.registrations.map(r => this.#view(r)),
@@ -162,15 +165,13 @@ export class RegistrationAppService {
             ...r.toJSON(),
             waitlistPosition: activity?.getWaitlistPosition(r.id) ?? null,
             participant: this.participantRepository.getById(r.userId),
+            attendance: this.attendanceRepository?.getByRegistration(r.id) ?? null,
             activity: activity && { id: activity.id, name: activity.name },
             event: event && { id: event.id, name: event.name },
         };
     }
     #canManage(activityId, user) {
-        if (isAdmin(user)) return true;
-        const activity = this.activityRepository.getById(activityId);
-        const event = activity && this.eventRepository.getById(activity.eventId);
-        return !!event?.organizers.includes(user.id);
+        return canManage(this.activityRepository, this.eventRepository, activityId, user);
     }
     #assertCanManage(activityId, user) {
         if (!this.#canManage(activityId, user)) throw new ForbiddenError('manage registrations');
