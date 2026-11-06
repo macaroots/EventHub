@@ -3,7 +3,8 @@ import { authenticate } from '../middleware/authenticate.js';
 import * as secretariat from '../clients/secretariat.js';
 import * as registration from '../clients/registration.js';
 import { action, json } from './helpers.js';
-import { PollingWaitlistSource, RegistrationStatus } from '../waitlist.js';
+import { PollingWaitlistSource } from '../waitlist/polling-waitlist-source.js';
+import { RegistrationStatus } from '../waitlist/registration-status.js';
 
 // Fluxo do participante: evento público → inscrição → pendências (pagamento).
 // Montado na raiz: authenticate por rota, não router.use (pegaria todas as rotas do app).

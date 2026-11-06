@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { PollingWaitlistSource, RegistrationStatus } from "../src/waitlist.js";
+import { PollingWaitlistSource } from "../src/waitlist/polling-waitlist-source.js";
+import { RegistrationStatus } from "../src/waitlist/registration-status.js";
 
 test("waitlist source caches per activity and shares concurrent fetches", async () => {
   let clock = 0, calls = 0;
