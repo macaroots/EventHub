@@ -20,7 +20,7 @@ const port = process.env.PORT || 3000;
 app.use(express.json());
 
 // Outbox/inbox no banco do serviço; RabbitMQ como transporte.
-const messageBus = new OutboxMessageBus(database, await RabbitMqMessageBus.connect());
+const messageBus = new OutboxMessageBus(database, await RabbitMqMessageBus.connect(), { source: 'secretariat' });
 const eventRepository = new EventSqliteRepository(database);
 const activityRepository = new ActivitySqliteRepository(database);
 const eventService = new EventAppService(eventRepository, activityRepository, messageBus);
