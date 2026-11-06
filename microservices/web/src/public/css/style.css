@@ -4,3 +4,13 @@ label {
 label > * {
     display: table-cell;
 }
+.checkin-code {
+    font: bold 2.5em monospace;
+    letter-spacing: 0.2em;
+}
+.checkin-display {
+    text-align: center;
+}
+.checkin-code-big {
+    font-size: 8em;
+}

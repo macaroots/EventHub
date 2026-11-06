@@ -20,7 +20,7 @@
         </fieldset>
     </form>
     <% if (!editable) { %>
-    <p><a href="/organizers/activities/<%= activity.id %>/registrations">Gerenciar inscrições</a></p>
+    <p><a href="/organizers/activities/<%= activity.id %>/registrations">Gerenciar inscrições</a> · <a href="/organizers/activities/<%= activity.id %>/checkin">Check-in</a></p>
     <% } %>
     <% if (!isNew && editable) { %>
     <form method="post" action="/organizers/activities/<%= activity.id %>/delete" onsubmit="return confirm('Apagar a atividade?')">
