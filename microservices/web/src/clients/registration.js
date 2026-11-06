@@ -13,3 +13,9 @@ export const getWaitlist = (req, activityId) => call(`/activities/${id(activityI
 export const listActivityRegistrations = (req, activityId) => call(`/activities/${id(activityId)}/registrations`, req);
 export const fulfillRequirement = (req, registrationId, requirementId) =>
     call(`/registrations/${id(registrationId)}/requirements/${id(requirementId)}/fulfill`, req, { method: 'POST' });
+// Check-in (ADR 012). Gestão: painel, abrir (código novo), fechar e marcar na mão. Participante: informa o código.
+export const getCheckIn = (req, activityId) => call(`/activities/${id(activityId)}/checkin`, req);
+export const openCheckIn = (req, activityId) => call(`/activities/${id(activityId)}/checkin/open`, req, { method: 'POST' });
+export const closeCheckIn = (req, activityId) => call(`/activities/${id(activityId)}/checkin/close`, req, { method: 'POST' });
+export const checkIn = (req, activityId, code) => call(`/activities/${id(activityId)}/checkin`, req, { method: 'POST', body: { code } });
+export const checkInManually = (req, registrationId) => call(`/registrations/${id(registrationId)}/checkin`, req, { method: 'POST' });

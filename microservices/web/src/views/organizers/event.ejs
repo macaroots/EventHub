@@ -35,7 +35,7 @@
             <td><%= activity.startsAt ?? '' %></td>
             <td><%= activity.capacity %></td>
             <td><%= activity.price %></td>
-            <td><% if (!draft) { %><a href="/organizers/activities/<%= activity.id %>/registrations">inscrições</a><% } %></td>
+            <td><% if (!draft) { %><a href="/organizers/activities/<%= activity.id %>/registrations">inscrições</a> · <a href="/organizers/activities/<%= activity.id %>/checkin">check-in</a><% } %></td>
         </tr>
 <% } %>
     </table>

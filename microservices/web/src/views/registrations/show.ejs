@@ -8,6 +8,15 @@
     </p>
 <% if (registration.status == 'confirmed') { %>
     <p>Inscrição confirmada!</p>
+<% if (registration.attendance) { %>
+    <p>Presença registrada em <%= dateTime(registration.attendance.checkedInAt) %>.</p>
+<% } else { %>
+    <form method="post" action="/activities/<%= registration.activityId %>/checkin">
+        <input type="hidden" name="registrationId" value="<%= registration.id %>">
+        <label><span>Check-in: código mostrado na sala</span><input name="code" required autocomplete="off" autocapitalize="characters" size="8"></label>
+        <button>Registrar presença</button>
+    </form>
+<% } %>
 <% } else if (registration.status == 'canceled') { %>
     <p>Motivo: <%= registration.reasons.join('; ') %></p>
 <% } else { %>

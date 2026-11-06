@@ -10,6 +10,7 @@
         <%= counts.waitlisted %> na fila de espera, <%= counts.canceled %> canceladas).
         Preço: R$ <%= activity.price.toFixed(2) %>.
     </p>
+    <p>Comparecimento: <%= activity.present %> de <%= activity.confirmedOccupation %> confirmadas. <a href="/organizers/activities/<%= activity.id %>/checkin">Check-in</a></p>
     <p>
 <% for (const [value, label] of filters) { %>
         <% if (value == status) { %><strong><%= label %></strong><% } else { %><a href="<%= base %><%= value ? `?status=${value}` : '' %>"><%= label %></a><% } %>
@@ -23,7 +24,7 @@
 <% for (const r of registrations) { const pending = r.requirements.filter(q => !q.fulfilled); %>
         <tr>
             <td><%= r.participant?.username ?? r.userId %></td>
-            <td><%- include('../registrations/status', { status: r.status }) %></td>
+            <td><%- include('../registrations/status', { status: r.status }) %><% if (r.attendance) { %>, presente<% } %></td>
             <td>
 <% if (r.status == 'canceled') { %>
                 <%= r.reasons.join('; ') %>
