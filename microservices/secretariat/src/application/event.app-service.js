@@ -64,16 +64,20 @@ export class EventAppService {
         const activities = this.activityRepository.listByEvent(id);
         if (!activities.length) throw new Error('Event has no activities');
         event.publish();
-        this.eventRepository.update(event.toJSON());
-        this.messageBus.publish(publishedMessage(event, activities));
+        this.messageBus.transaction(() => {
+            this.eventRepository.update(event.toJSON());
+            this.messageBus.publish(publishedMessage(event, activities));
+        });
     }
 
     async cancel(id, { reason } = {}, user) {
         const event = this.#get(id);
         event.assertCanManage(user);
         event.cancel(reason);
-        this.eventRepository.update(event.toJSON());
-        this.messageBus.publish({ type: 'EventCanceled', eventId: id, reason });
+        this.messageBus.transaction(() => {
+            this.eventRepository.update(event.toJSON());
+            this.messageBus.publish({ type: 'EventCanceled', eventId: id, reason });
+        });
     }
 
     async addOrganizer(id, { userId } = {}, user) {
@@ -102,10 +106,12 @@ export class EventAppService {
 
     // O registration usa os organizers para autorizar a gestão das inscrições; em rascunho, ele ainda não conhece o evento.
     #saveOrganizers(event) {
-        this.eventRepository.update(event.toJSON());
-        if (event.status == 'published') {
-            this.messageBus.publish({ type: 'EventOrganizersChanged', eventId: event.id, organizers: event.toJSON().organizers });
-        }
+        this.messageBus.transaction(() => {
+            this.eventRepository.update(event.toJSON());
+            if (event.status == 'published') {
+                this.messageBus.publish({ type: 'EventOrganizersChanged', eventId: event.id, organizers: event.toJSON().organizers });
+            }
+        });
     }
     #assertUniqueName(name, id) {
         const same = name && this.eventRepository.getByName(name);
