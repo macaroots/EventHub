@@ -25,6 +25,8 @@ export class ActivitySqliteRepository extends SqliteRepository {
                 id TEXT PRIMARY KEY,
                 eventId TEXT NOT NULL,
                 name TEXT,
+                startsAt TEXT,
+                endsAt TEXT,
                 capacity INTEGER NOT NULL,
                 price REAL NOT NULL DEFAULT 0,
                 rules TEXT NOT NULL, -- JSON: [{type: 'minimumAge', age}]
@@ -35,10 +37,15 @@ export class ActivitySqliteRepository extends SqliteRepository {
             CREATE TRIGGER IF NOT EXISTS registrations_seat_update BEFORE UPDATE OF status ON ${registrations}
                 WHEN NEW.status IN ${seat} AND OLD.status NOT IN ${seat} ${guard};
         `);
+        // Bancos criados antes do horário na projeção (certificados): adiciona as colunas.
+        const columns = db.prepare(`PRAGMA table_info(${this.tableName})`).all().map(c => c.name);
+        for (const column of ['startsAt', 'endsAt']) {
+            if (!columns.includes(column)) db.exec(`ALTER TABLE ${this.tableName} ADD COLUMN ${column} TEXT`);
+        }
     }
     toRow(activity) {
-        const { id, eventId, name, capacity, price } = activity.toJSON();
-        return { id, eventId, name, capacity, price, rules: JSON.stringify(activity.getRules()) };
+        const { id, eventId, name, startsAt, endsAt, capacity, price } = activity.toJSON();
+        return { id, eventId, name, startsAt, endsAt, capacity, price, rules: JSON.stringify(activity.getRules()) };
     }
     fromRow({ version, ...row }) {
         const activity = new Activity({
@@ -63,7 +70,10 @@ export class ActivitySqliteRepository extends SqliteRepository {
     }
     // Só os dados da atividade, sem carregar as inscrições (leitura, sem lock).
     getHeader(id) {
-        return this.db.prepare(`SELECT id, eventId, name, capacity, price FROM ${this.tableName} WHERE id = ?`).get(id);
+        return this.db.prepare(`SELECT id, eventId, name, startsAt, endsAt, capacity, price FROM ${this.tableName} WHERE id = ?`).get(id);
+    }
+    listHeadersByEvent(eventId) {
+        return this.db.prepare(`SELECT id, eventId, name, startsAt, endsAt, capacity, price FROM ${this.tableName} WHERE eventId = ?`).all(eventId);
     }
     listIdsByEvent(eventId) {
         return this.db.prepare(`SELECT id FROM ${this.tableName} WHERE eventId = ?`).all(eventId).map(r => r.id);

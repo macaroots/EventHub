@@ -5,7 +5,7 @@ info:
   description: |
     Inscrições nas atividades publicadas (cópia imutável recebida no `EventPublished`).
     Status: `pending` (elegibilidade) → `awaiting_payment` (vaga reservada) → `confirmed`; sem vaga → `waitlisted`; `canceled`.
-    Mensagens: `RegistrationCreated/Promoted/Confirmed/Canceled`, `PaymentRequested`, `AttendanceRegistered`. Ver ADRs 008, 009, 011 e 012.
+    Mensagens: `RegistrationCreated/Promoted/Confirmed/Canceled`, `PaymentRequested`, `AttendanceRegistered`, `CertificateRequested` (ao receber `EventEnded`). Ver ADRs 003, 008, 009, 011 e 012.
     Check-in (ADR 012): o organizador abre o check-in da atividade e mostra o código; o participante confirmado o informa, ou o organizador marca na mão.
 servers:
   - url: http://localhost:3001
@@ -280,7 +280,8 @@ components:
             event:
               type: object
               nullable: true
-              properties: { id: { type: string }, name: { type: string } }
+              description: "`status: ended` com `attendance` = certificado solicitado."
+              properties: { id: { type: string }, name: { type: string }, status: { type: string, enum: [published, ended, canceled] } }
     Attendance:
       type: object
       nullable: true
@@ -336,6 +337,8 @@ components:
         id: { type: string }
         eventId: { type: string }
         name: { type: string }
+        startsAt: { type: string, nullable: true }
+        endsAt: { type: string, nullable: true }
         capacity: { type: integer }
         price: { type: number }
         registrations: { type: array, items: { $ref: '#/components/schemas/Registration' } }
