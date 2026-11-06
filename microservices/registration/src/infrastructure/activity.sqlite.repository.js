@@ -60,6 +60,10 @@ export class ActivitySqliteRepository extends SqliteRepository {
             if (!changes) throw new ConcurrencyError('activity');
         });
     }
+    // Só os dados da atividade, sem carregar as inscrições (leitura, sem lock).
+    getHeader(id) {
+        return this.db.prepare(`SELECT id, eventId, name, capacity, price FROM ${this.tableName} WHERE id = ?`).get(id);
+    }
     listIdsByEvent(eventId) {
         return this.db.prepare(`SELECT id FROM ${this.tableName} WHERE eventId = ?`).all(eventId).map(r => r.id);
     }

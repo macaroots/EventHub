@@ -6,7 +6,10 @@ import { ActivitySqliteRepository } from './infrastructure/activity.sqlite.repos
 import { RegistrationSqliteRepository } from './infrastructure/registration.sqlite.repository.js';
 import { EventSqliteRepository } from './infrastructure/event.sqlite.repository.js';
 import { ParticipantSqliteRepository } from './infrastructure/participant.sqlite.repository.js';
+import { CheckInSqliteRepository } from './infrastructure/check-in.sqlite.repository.js';
+import { AttendanceSqliteRepository } from './infrastructure/attendance.sqlite.repository.js';
 import { RegistrationAppService } from './application/registration.app-service.js';
+import { CheckInAppService } from './application/check-in.app-service.js';
 import { RabbitMqMessageBus } from '../../shared/messaging/rabbitmq-message-bus.js';
 import { authenticate } from '../../shared/auth/jwt.js';
 import { ForbiddenError, NotFoundError } from '../../shared/domain/errors.js';
@@ -26,8 +29,12 @@ const participantRepository = new ParticipantSqliteRepository(database);
 const eventRepository = new EventSqliteRepository(database);
 const registrationRepository = new RegistrationSqliteRepository(database);
 const activityRepository = new ActivitySqliteRepository(database, registrationRepository);
+const checkInRepository = new CheckInSqliteRepository(database);
+const attendanceRepository = new AttendanceSqliteRepository(database);
 const registrationService = new RegistrationAppService(activityRepository, registrationRepository, participantRepository, eventRepository, messageBus,
-    { paymentWindowMinutes: Number(process.env.PAYMENT_WINDOW_MINUTES ?? 30) });
+    { paymentWindowMinutes: Number(process.env.PAYMENT_WINDOW_MINUTES ?? 30), attendanceRepository });
+const checkInService = new CheckInAppService({ activityRepository, registrationRepository, eventRepository, participantRepository,
+    checkInRepository, attendanceRepository, messageBus });
 // Reservas sem pagamento dentro da janela liberam a vaga para a fila de espera.
 setInterval(() => registrationService.expireOverduePayments().catch(e => console.error('expireOverduePayments falhou:', e.message)), 60_000);
 
@@ -62,6 +69,12 @@ app.get('/activities/:id/registrations', handle(req => registrationService.listA
 app.post('/registrations/:id/cancel', handle(req => registrationService.cancelRegistration(req.params.id, req.body, req.user)));
 app.post('/registrations/:id/requirements/:requirementId/fulfill',
     handle(req => registrationService.fulfillRequirement(req.params.id, req.params.requirementId, req.user)));
+// Check-in (ADR 012): gestão abre/fecha e marca na mão; o participante informa o código.
+app.get('/activities/:id/checkin', handle(req => checkInService.get(req.params.id, req.user)));
+app.post('/activities/:id/checkin/open', handle(req => checkInService.open(req.params.id, req.user)));
+app.post('/activities/:id/checkin/close', handle(req => checkInService.close(req.params.id, req.user)));
+app.post('/activities/:id/checkin', handle(req => checkInService.checkIn({ activityId: req.params.id, code: req.body.code }, req.user)));
+app.post('/registrations/:id/checkin', handle(req => checkInService.checkInManually(req.params.id, req.user)));
 app.post('/registrations', async (req, res) => {
     try {
         const registration = await registrationService.register(req.body, req.user.id);

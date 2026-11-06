@@ -82,8 +82,12 @@ Registration
 Attendance (check-in)
     Dono: Credenciamento
     {
-        registrationId
+        id
+        registrationId   // único
         activityId
+        userId
+        method: code | manual
+        checkedInBy
         checkedInAt
     }
     Projeções: nenhuma.
@@ -407,6 +411,24 @@ RegistrationCanceled { registrationId, userId, reason }
 PaymentRequested { paymentId, registrationId, userId, amount, description }
 ActivityOfferUpdated { activityId, eventId, capacity, price, rules }
 
+## CheckIn como parte do Credenciamento ([ADR 012](adrs/forma-do-checkin.md))
+### Organizador
+GET /activities/:id/checkin
+    { activity, event, checkIn: { status: open | closed, code, openedAt }, confirmed, present, attendees: [{ registrationId, participant, status, attendance }] }
+POST /activities/:id/checkin/open     // abre ou gera código novo
+POST /activities/:id/checkin/close
+POST /registrations/:id/checkin       // marcação manual, só confirmed
+
+### Participante
+POST /activities/:id/checkin
+    { code }        // mostrado na sala
+    200 { ...Attendance, alreadyCheckedIn }
+    400 código errado, check-in fechado ou inscrição não confirmed
+
+Emite AttendanceRegistered { attendanceId, registrationId, activityId, userId, method, checkedInAt }
+
+GET /activities/:id/waitlist
+    [userId]
 
 ## Certificado
 
@@ -446,6 +468,7 @@ GET /certificates/validate/:tokenVerificacao *Validação pública, sem JWT*
 
 
 ## Portaria dentro do Credenciamento
+(Rascunho substituído pelo [ADR 012](adrs/forma-do-checkin.md).)
 Attendance {
     activityId
     userId

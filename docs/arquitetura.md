@@ -39,14 +39,14 @@ Cada serviço é dono dos seus dados (um SQLite por serviço) e não lê o banco
 - **Publica:** `EventPublished` (com as atividades), `EventCanceled`, `EventOrganizersChanged`.
 
 ### Credenciamento (`registration`)
-- **Capacidade:** garantir a vaga do participante. Inscrição, elegibilidade, capacidade sob concorrência, fila de espera com promoção, reserva com prazo de pagamento e gestão das inscrições pelo organizador. Mais tarde, o check-in ([ADR 002](adrs/checkin-no-registration.md)).
-- **Dados próprios:** `registrations` `{id, userId, activityId, status: pending | waitlisted | awaiting_payment | confirmed | canceled, requirements[], reasons[], payment {id, amount, description, requestedAt, paid}, createdAt}`, mais a `version` da atividade, usada no lock otimista ([ADR 008](adrs/vaga-e-pagamento-como-status.md)).
+- **Capacidade:** garantir a vaga do participante. Inscrição, elegibilidade, capacidade sob concorrência, fila de espera com promoção, reserva com prazo de pagamento e gestão das inscrições pelo organizador e check-in por código da atividade ([ADR 002](adrs/checkin-no-registration.md), [ADR 012](adrs/forma-do-checkin.md)).
+- **Dados próprios:** `registrations` `{id, userId, activityId, status: pending | waitlisted | awaiting_payment | confirmed | canceled, requirements[], reasons[], payment {id, amount, description, requestedAt, paid}, createdAt}`, mais a `version` da atividade, usada no lock otimista ([ADR 008](adrs/vaga-e-pagamento-como-status.md)); `checkins` `{activityId, status: open | closed, code, openedAt}`; `attendances` `{id, registrationId (único), activityId, userId, method: code | manual, checkedInBy, checkedInAt}`.
 - **Projeções:**
   - `activities` `{id, eventId, name, capacity, price, rules}`: cópia imutável, criada uma vez pelo `EventPublished`;
   - `events` `{id, name, status: published | canceled, organizers[]}`: vem do `EventPublished`, `EventCanceled` e `EventOrganizersChanged`; os organizers autorizam a gestão das inscrições;
   - `participants` `{id, username}`: vem do `UserCreated` (o `UserUpdated` também é ouvido, mas o identity ainda não o publica); só para exibição.
 - **Ouve também:** `PaymentConfirmed` e `PaymentDenied`.
-- **Publica:** `RegistrationCreated`, `RegistrationPromoted`, `RegistrationConfirmed`, `RegistrationCanceled` e `PaymentRequested`.
+- **Publica:** `RegistrationCreated`, `RegistrationPromoted`, `RegistrationConfirmed`, `RegistrationCanceled`, `PaymentRequested` e `AttendanceRegistered`.
 
 ### Caixa (`payment`)
 - **Capacidade:** cobrar. Cria a cobrança pedida, valida o pagamento no gateway (hoje fake) e informa o resultado.
@@ -67,7 +67,7 @@ Cada serviço é dono dos seus dados (um SQLite por serviço) e não lê o banco
 - **Auth:** JWT HS256 emitido pelo identity e validado em `shared/auth`; admin criado na subida.
 - **Identity:** cadastro, login e o evento `UserCreated`.
 - **Secretaria:** CRUD de eventos e atividades, publicar/cancelar, organizers, permissões; edição só em rascunho e `EventPublished` com o retrato imutável ([ADR 011](adrs/evento-imutavel-apos-publicacao.md)).
-- **Credenciamento:** inscrição com regras (`minimumAge`), vaga com fila de espera, reserva com pagamento e expiração e projeções de atividade, evento e participante.
+- **Credenciamento:** inscrição com regras (`minimumAge`), vaga com fila de espera, reserva com pagamento e expiração, projeções de atividade, evento e participante e check-in com comparecimento (RF09, RF11).
 - **Caixa:** recebe `PaymentRequested`, paga por `POST /payments/:id/pay` com gateway fake e publica `PaymentConfirmed` ou `PaymentDenied`.
 - **Testes:** secretariat, registration, payment e shared.
 - **ADRs:** 001 a 007.
@@ -77,7 +77,7 @@ Cada serviço é dono dos seus dados (um SQLite por serviço) e não lê o banco
 ### Por contexto
 - **Identity:** persistência (hoje em memória), hash de senha, `name` e `email` (pré-requisito de certificados e notificações) e `UserUpdated`.
 - **Credenciamento:**
-  - check-in (`Attendance`, ticket, [ADR 002](adrs/checkin-no-registration.md));
+  - check-in: janela de horário (projetar `startsAt`/`endsAt`) e desfazer presença ([ADR 012](adrs/forma-do-checkin.md));
   - emitir `CertificateRequested`.
 - **Caixa:** auth, estorno quando a inscrição é cancelada depois de paga e gateway real (adaptador).
 - **Notificações, Certificados e Relatórios:** criar, conforme os ADRs.
