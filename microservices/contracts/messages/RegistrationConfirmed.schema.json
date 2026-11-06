@@ -3,13 +3,45 @@
   "$id": "https://event-hub.local/contracts/messages/RegistrationConfirmed.schema.json",
   "title": "RegistrationConfirmed",
   "description": "registration → (notificações, futuro). Vaga garantida (gratuita, ou pagamento confirmado).",
-  "allOf": [{ "$ref": "envelope.schema.json" }],
+  "allOf": [
+    {
+      "$ref": "envelope.schema.json"
+    }
+  ],
   "type": "object",
-  "required": ["type", "registrationId", "userId"],
   "properties": {
-    "type": { "const": "RegistrationConfirmed" },
-    "registrationId": { "$ref": "envelope.schema.json#/$defs/uuid" },
-    "userId": { "$ref": "envelope.schema.json#/$defs/uuid" }
+    "type": {
+      "const": "RegistrationConfirmed"
+    },
+    "source": {
+      "const": "registration"
+    },
+    "data": {
+      "type": "object",
+      "required": [
+        "registrationId",
+        "userId"
+      ],
+      "properties": {
+        "registrationId": {
+          "$ref": "envelope.schema.json#/$defs/uuid"
+        },
+        "userId": {
+          "$ref": "envelope.schema.json#/$defs/uuid"
+        }
+      }
+    }
   },
-  "examples": [{ "type": "RegistrationConfirmed", "messageId": "0b9c6c1e-3f0a-4d38-9d2e-6f1c2a7b8e01", "occurredAt": "2026-11-06T13:00:00.000Z", "registrationId": "5e4d3c00-0000-4000-8000-000000000f01", "userId": "6a1f0c2e-1b2c-4d3e-8f40-5a6b7c8d9e01" }]
+  "examples": [
+    {
+      "id": "0b9c6c1e-3f0a-4d38-9d2e-6f1c2a7b8e01",
+      "type": "RegistrationConfirmed",
+      "source": "registration",
+      "time": "2026-11-06T13:00:00.000Z",
+      "data": {
+        "registrationId": "5e4d3c00-0000-4000-8000-000000000f01",
+        "userId": "6a1f0c2e-1b2c-4d3e-8f40-5a6b7c8d9e01"
+      }
+    }
+  ]
 }

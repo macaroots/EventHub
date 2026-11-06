@@ -3,13 +3,45 @@
   "$id": "https://event-hub.local/contracts/messages/UserUpdated.schema.json",
   "title": "UserUpdated",
   "description": "identity → registration. Reservado: o registration já ouve (upsert do Participant), mas o identity ainda não publica.",
-  "allOf": [{ "$ref": "envelope.schema.json" }],
+  "allOf": [
+    {
+      "$ref": "envelope.schema.json"
+    }
+  ],
   "type": "object",
-  "required": ["type", "userId", "username"],
   "properties": {
-    "type": { "const": "UserUpdated" },
-    "userId": { "$ref": "envelope.schema.json#/$defs/uuid" },
-    "username": { "$ref": "envelope.schema.json#/$defs/nonEmpty" }
+    "type": {
+      "const": "UserUpdated"
+    },
+    "source": {
+      "const": "identity"
+    },
+    "data": {
+      "type": "object",
+      "required": [
+        "userId",
+        "username"
+      ],
+      "properties": {
+        "userId": {
+          "$ref": "envelope.schema.json#/$defs/uuid"
+        },
+        "username": {
+          "$ref": "envelope.schema.json#/$defs/nonEmpty"
+        }
+      }
+    }
   },
-  "examples": [{ "type": "UserUpdated", "messageId": "0b9c6c1e-3f0a-4d38-9d2e-6f1c2a7b8e01", "occurredAt": "2026-11-06T13:00:00.000Z", "userId": "6a1f0c2e-1b2c-4d3e-8f40-5a6b7c8d9e01", "username": "ana.souza" }]
+  "examples": [
+    {
+      "id": "0b9c6c1e-3f0a-4d38-9d2e-6f1c2a7b8e01",
+      "type": "UserUpdated",
+      "source": "identity",
+      "time": "2026-11-06T13:00:00.000Z",
+      "data": {
+        "userId": "6a1f0c2e-1b2c-4d3e-8f40-5a6b7c8d9e01",
+        "username": "ana.souza"
+      }
+    }
+  ]
 }

@@ -3,14 +3,55 @@
   "$id": "https://event-hub.local/contracts/messages/RegistrationCanceled.schema.json",
   "title": "RegistrationCanceled",
   "description": "registration → payment. Inscrição perdeu a vaga (pelo participante, evento cancelado, pagamento negado/expirado, lotação). O payment cancela a cobrança pendente.",
-  "allOf": [{ "$ref": "envelope.schema.json" }],
+  "allOf": [
+    {
+      "$ref": "envelope.schema.json"
+    }
+  ],
   "type": "object",
-  "required": ["type", "registrationId", "userId", "reason"],
   "properties": {
-    "type": { "const": "RegistrationCanceled" },
-    "registrationId": { "$ref": "envelope.schema.json#/$defs/uuid" },
-    "userId": { "$ref": "envelope.schema.json#/$defs/uuid" },
-    "reason": { "type": "string", "examples": ["Payment expired", "Full occupation", "Event canceled: Falta de quórum"] }
+    "type": {
+      "const": "RegistrationCanceled"
+    },
+    "source": {
+      "const": "registration"
+    },
+    "data": {
+      "type": "object",
+      "required": [
+        "registrationId",
+        "userId",
+        "reason"
+      ],
+      "properties": {
+        "registrationId": {
+          "$ref": "envelope.schema.json#/$defs/uuid"
+        },
+        "userId": {
+          "$ref": "envelope.schema.json#/$defs/uuid"
+        },
+        "reason": {
+          "type": "string",
+          "examples": [
+            "Payment expired",
+            "Full occupation",
+            "Event canceled: Falta de quórum"
+          ]
+        }
+      }
+    }
   },
-  "examples": [{ "type": "RegistrationCanceled", "messageId": "0b9c6c1e-3f0a-4d38-9d2e-6f1c2a7b8e01", "occurredAt": "2026-11-06T13:00:00.000Z", "registrationId": "5e4d3c00-0000-4000-8000-000000000f01", "userId": "6a1f0c2e-1b2c-4d3e-8f40-5a6b7c8d9e01", "reason": "Payment expired" }]
+  "examples": [
+    {
+      "id": "0b9c6c1e-3f0a-4d38-9d2e-6f1c2a7b8e01",
+      "type": "RegistrationCanceled",
+      "source": "registration",
+      "time": "2026-11-06T13:00:00.000Z",
+      "data": {
+        "registrationId": "5e4d3c00-0000-4000-8000-000000000f01",
+        "userId": "6a1f0c2e-1b2c-4d3e-8f40-5a6b7c8d9e01",
+        "reason": "Payment expired"
+      }
+    }
+  ]
 }

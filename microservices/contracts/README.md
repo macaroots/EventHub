@@ -10,26 +10,46 @@
 |------|-------|
 | Exchange | `event-hub`, tipo `topic`, durável |
 | Routing key | o nome da mensagem (`type`), ex.: `PaymentRequested` |
-| Propriedades AMQP | `persistent: true`, `contentType: application/json`, `messageId` e `type` iguais aos do corpo |
-| Corpo | JSON em UTF-8: envelope + campos da mensagem, no mesmo nível (sem `payload` aninhado) |
+| Propriedades AMQP | `persistent: true`, `contentType: application/json`; `messageId`, `type` e `appId` iguais a `id`, `type` e `source` do envelope |
+| Corpo | JSON em UTF-8: o envelope, com o conteúdo da mensagem em `data` |
 | Fila do consumidor | uma fila durável por serviço, com o nome do serviço (`identity`, `payment`, `registration`, `secretariat`), ligada (bind) à exchange com uma routing key por tipo que ele ouve |
 | Retry | se o handler falha, a mensagem vai para `<fila>.retry` (TTL `MESSAGE_RETRY_DELAY_MS`, padrão 5000 ms), que a devolve para `<fila>`. Header `x-attempt` (começa em 1) e `x-error` |
 | DLQ | depois de `MESSAGE_MAX_ATTEMPTS` (padrão 5) tentativas, vai para `<fila>.dlq` |
 | Consumo | `prefetch 1`, `ack` só depois de tratar |
 
-Envelope (toda mensagem):
+### Envelope
+
+Toda mensagem tem metadados no envelope e o conteúdo em `data` ([envelope.schema.json](messages/envelope.schema.json)):
 
 ```json
-{ "type": "PaymentRequested", "messageId": "uuid", "occurredAt": "2026-11-06T13:00:00.000Z", "...": "campos da mensagem" }
+{
+  "id": "0b9c6c1e-3f0a-4d38-9d2e-6f1c2a7b8e01",
+  "type": "PaymentRequested",
+  "source": "registration",
+  "time": "2026-11-06T13:00:00.000Z",
+  "data": { "paymentId": "…", "registrationId": "…", "userId": "…", "amount": 50, "description": "Ticket" }
+}
 ```
+
+| Campo | Para quê |
+|-------|----------|
+| `id` | UUID novo por mensagem: idempotência (inbox) |
+| `type` | nome da mensagem: roteamento e escolha do schema |
+| `source` | serviço que publicou: rastreio e logs. Cada tipo tem um único `source` |
+| `time` | quando o fato aconteceu (gravação no outbox) |
+| `data` | conteúdo; o schema de cada tipo o define |
+
+- Os nomes são um subconjunto do [CloudEvents](https://cloudevents.io) 1.0 (modo estruturado). Para ficar conforme, basta acrescentar `specversion: "1.0"`. Ficaram de fora, por enquanto, `specversion`, `datacontenttype`, `dataschema` e `subject`.
+- Separar `data` evita colisão de nomes entre o envelope e o domínio (ex.: o `id` da inscrição em `RegistrationCreated`) e deixa o envelope igual para todas as mensagens.
+- Os handlers recebem `(data, envelope)` ([rabbitmq-message-bus.js](../shared/messaging/rabbitmq-message-bus.js)). Mensagem sem `data` falha e vai para a DLQ.
 
 Obrigações de quem implementa um serviço:
 
-- **Produtor:** grava a mensagem na mesma transação do estado (outbox) e só a apaga quando o broker confirmar (publisher confirms). Gera um `messageId` novo (UUID) por mensagem.
-- **Consumidor:** a entrega é *pelo menos uma vez*. Guarde os `messageId` já tratados e ignore os repetidos (inbox), e mantenha os handlers idempotentes (ver a coluna "Idempotência" abaixo).
+- **Produtor:** grava a mensagem na mesma transação do estado (outbox) e só a apaga quando o broker confirmar (publisher confirms). Gera um `id` novo (UUID) por mensagem.
+- **Consumidor:** a entrega é *pelo menos uma vez*. Guarde os `id` já tratados e ignore os repetidos (inbox), e mantenha os handlers idempotentes (ver a coluna "Idempotência" abaixo).
 - **Tolerant reader:** ignore campos desconhecidos. Os schemas não usam `additionalProperties: false`. Campo novo e opcional não quebra o contrato. Remover ou renomear um campo, ou torná-lo obrigatório, quebra: nesse caso, crie um tipo novo (ex.: `EventPublishedV2`).
 - Mensagem inválida: lance erro no handler para que ela vá para a DLQ. Não faça `ack` em silêncio.
-- `correlationId` está reservado e ainda não é propagado (RQ06).
+- Correlação (RQ06): ainda não há. Quando houver, entra como campo do envelope (ex.: `correlationid`, extensão do CloudEvents), não em `data`.
 
 ## Mensagens
 
@@ -56,7 +76,7 @@ Consequências para quem implementa:
 - O **secretariat** não ouve nada e o **identity** também não. As filas deles existem, mas ficam sem bind.
 - Comandos e eventos usam o mesmo transporte. `PaymentRequested` é um comando com um único destinatário, o payment. As demais mensagens são eventos.
 - O `paymentId` é gerado pelo registration, e não pelo payment. Assim o registration sabe qual pagamento espera, e uma resposta atrasada de uma cobrança antiga é ignorada.
-- Em `RegistrationCreated`, o id da inscrição vem em `id`, e não em `registrationId` (é o `toJSON()` da entidade). Corrigir isso quebra o contrato.
+- Em `RegistrationCreated`, o id da inscrição vem em `data.id`, e não em `data.registrationId` (é o `toJSON()` da entidade). Corrigir isso quebra o contrato.
 - O prazo para pagar (`awaiting_payment` → `canceled`, motivo `Payment expired`) é um job interno do registration. Não há mensagem do payment para isso: o payment só fica sabendo por `RegistrationCanceled`.
 
 ## Fluxos

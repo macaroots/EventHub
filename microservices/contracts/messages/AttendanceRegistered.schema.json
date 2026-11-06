@@ -3,17 +3,69 @@
   "$id": "https://event-hub.local/contracts/messages/AttendanceRegistered.schema.json",
   "title": "AttendanceRegistered",
   "description": "registration → (relatórios, futuro). Presença registrada; no máximo uma por inscrição.",
-  "allOf": [{ "$ref": "envelope.schema.json" }],
+  "allOf": [
+    {
+      "$ref": "envelope.schema.json"
+    }
+  ],
   "type": "object",
-  "required": ["type", "attendanceId", "registrationId", "activityId", "userId", "method", "checkedInAt"],
   "properties": {
-    "type": { "const": "AttendanceRegistered" },
-    "attendanceId": { "$ref": "envelope.schema.json#/$defs/uuid" },
-    "registrationId": { "$ref": "envelope.schema.json#/$defs/uuid" },
-    "activityId": { "$ref": "envelope.schema.json#/$defs/uuid" },
-    "userId": { "$ref": "envelope.schema.json#/$defs/uuid" },
-    "method": { "enum": ["code", "manual"], "description": "code: participante informou o código; manual: marcado pelo organizador." },
-    "checkedInAt": { "$ref": "envelope.schema.json#/$defs/dateTime" }
+    "type": {
+      "const": "AttendanceRegistered"
+    },
+    "source": {
+      "const": "registration"
+    },
+    "data": {
+      "type": "object",
+      "required": [
+        "attendanceId",
+        "registrationId",
+        "activityId",
+        "userId",
+        "method",
+        "checkedInAt"
+      ],
+      "properties": {
+        "attendanceId": {
+          "$ref": "envelope.schema.json#/$defs/uuid"
+        },
+        "registrationId": {
+          "$ref": "envelope.schema.json#/$defs/uuid"
+        },
+        "activityId": {
+          "$ref": "envelope.schema.json#/$defs/uuid"
+        },
+        "userId": {
+          "$ref": "envelope.schema.json#/$defs/uuid"
+        },
+        "method": {
+          "enum": [
+            "code",
+            "manual"
+          ],
+          "description": "code: participante informou o código; manual: marcado pelo organizador."
+        },
+        "checkedInAt": {
+          "$ref": "envelope.schema.json#/$defs/dateTime"
+        }
+      }
+    }
   },
-  "examples": [{ "type": "AttendanceRegistered", "messageId": "0b9c6c1e-3f0a-4d38-9d2e-6f1c2a7b8e01", "occurredAt": "2026-11-06T13:00:00.000Z", "attendanceId": "8a7f6e00-0000-4000-8000-000000000c01", "registrationId": "5e4d3c00-0000-4000-8000-000000000f01", "activityId": "4d3c2b00-0000-4000-8000-00000000a001", "userId": "6a1f0c2e-1b2c-4d3e-8f40-5a6b7c8d9e01", "method": "code", "checkedInAt": "2026-11-10T09:05:00.000Z" }]
+  "examples": [
+    {
+      "id": "0b9c6c1e-3f0a-4d38-9d2e-6f1c2a7b8e01",
+      "type": "AttendanceRegistered",
+      "source": "registration",
+      "time": "2026-11-06T13:00:00.000Z",
+      "data": {
+        "attendanceId": "8a7f6e00-0000-4000-8000-000000000c01",
+        "registrationId": "5e4d3c00-0000-4000-8000-000000000f01",
+        "activityId": "4d3c2b00-0000-4000-8000-00000000a001",
+        "userId": "6a1f0c2e-1b2c-4d3e-8f40-5a6b7c8d9e01",
+        "method": "code",
+        "checkedInAt": "2026-11-10T09:05:00.000Z"
+      }
+    }
+  ]
 }

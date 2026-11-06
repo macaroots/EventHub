@@ -3,40 +3,159 @@
   "$id": "https://event-hub.local/contracts/messages/EventPublished.schema.json",
   "title": "EventPublished",
   "description": "secretariat → registration. Retrato imutável do evento e das atividades no momento da publicação; abre as inscrições. Publicado uma vez por evento.",
-  "allOf": [{ "$ref": "envelope.schema.json" }],
+  "allOf": [
+    {
+      "$ref": "envelope.schema.json"
+    }
+  ],
   "type": "object",
-  "required": ["type", "eventId", "name", "startDate", "organizers", "activities"],
   "properties": {
-    "type": { "const": "EventPublished" },
-    "eventId": { "$ref": "envelope.schema.json#/$defs/uuid" },
-    "name": { "$ref": "envelope.schema.json#/$defs/nonEmpty" },
-    "startDate": { "$ref": "envelope.schema.json#/$defs/isoDate" },
-    "endDate": { "anyOf": [{ "$ref": "envelope.schema.json#/$defs/isoDate" }, { "type": "null" }] },
-    "organizers": { "$ref": "envelope.schema.json#/$defs/organizers" },
-    "activities": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "required": ["activityId", "name", "capacity", "price", "rules"],
-        "properties": {
-          "activityId": { "$ref": "envelope.schema.json#/$defs/uuid" },
-          "name": { "$ref": "envelope.schema.json#/$defs/nonEmpty" },
-          "startsAt": { "anyOf": [{ "$ref": "envelope.schema.json#/$defs/isoDate" }, { "type": "null" }] },
-          "endsAt": { "anyOf": [{ "$ref": "envelope.schema.json#/$defs/isoDate" }, { "type": "null" }] },
-          "capacity": { "type": "integer", "minimum": 0 },
-          "price": { "type": "number", "minimum": 0, "description": "0 = gratuita (sem PaymentRequested)." },
-          "rules": {
-            "type": "array",
-            "description": "Regras de elegibilidade. Tipo desconhecido deve ser rejeitado (a mensagem vai para a DLQ).",
-            "items": {
-              "oneOf": [
-                { "type": "object", "required": ["type", "age"], "properties": { "type": { "const": "minimumAge" }, "age": { "type": "integer", "minimum": 1 } } }
-              ]
+    "type": {
+      "const": "EventPublished"
+    },
+    "source": {
+      "const": "secretariat"
+    },
+    "data": {
+      "type": "object",
+      "required": [
+        "eventId",
+        "name",
+        "startDate",
+        "organizers",
+        "activities"
+      ],
+      "properties": {
+        "eventId": {
+          "$ref": "envelope.schema.json#/$defs/uuid"
+        },
+        "name": {
+          "$ref": "envelope.schema.json#/$defs/nonEmpty"
+        },
+        "startDate": {
+          "$ref": "envelope.schema.json#/$defs/isoDate"
+        },
+        "endDate": {
+          "anyOf": [
+            {
+              "$ref": "envelope.schema.json#/$defs/isoDate"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "organizers": {
+          "$ref": "envelope.schema.json#/$defs/organizers"
+        },
+        "activities": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "activityId",
+              "name",
+              "capacity",
+              "price",
+              "rules"
+            ],
+            "properties": {
+              "activityId": {
+                "$ref": "envelope.schema.json#/$defs/uuid"
+              },
+              "name": {
+                "$ref": "envelope.schema.json#/$defs/nonEmpty"
+              },
+              "startsAt": {
+                "anyOf": [
+                  {
+                    "$ref": "envelope.schema.json#/$defs/isoDate"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "endsAt": {
+                "anyOf": [
+                  {
+                    "$ref": "envelope.schema.json#/$defs/isoDate"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "capacity": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "price": {
+                "type": "number",
+                "minimum": 0,
+                "description": "0 = gratuita (sem PaymentRequested)."
+              },
+              "rules": {
+                "type": "array",
+                "description": "Regras de elegibilidade. Tipo desconhecido deve ser rejeitado (a mensagem vai para a DLQ).",
+                "items": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "required": [
+                        "type",
+                        "age"
+                      ],
+                      "properties": {
+                        "type": {
+                          "const": "minimumAge"
+                        },
+                        "age": {
+                          "type": "integer",
+                          "minimum": 1
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
             }
           }
         }
       }
     }
   },
-  "examples": [{ "type": "EventPublished", "messageId": "0b9c6c1e-3f0a-4d38-9d2e-6f1c2a7b8e01", "occurredAt": "2026-11-06T13:00:00.000Z", "eventId": "3c2b1a00-0000-4000-8000-00000000e001", "name": "Semana de TI", "startDate": "2026-11-10", "endDate": "2026-11-12", "organizers": ["6a1f0c2e-1b2c-4d3e-8f40-5a6b7c8d9e01"], "activities": [{ "activityId": "4d3c2b00-0000-4000-8000-00000000a001", "name": "Oficina de Node", "startsAt": "2026-11-10T09:00:00.000Z", "endsAt": "2026-11-10T12:00:00.000Z", "capacity": 30, "price": 50, "rules": [{ "type": "minimumAge", "age": 18 }] }] }]
+  "examples": [
+    {
+      "id": "0b9c6c1e-3f0a-4d38-9d2e-6f1c2a7b8e01",
+      "type": "EventPublished",
+      "source": "secretariat",
+      "time": "2026-11-06T13:00:00.000Z",
+      "data": {
+        "eventId": "3c2b1a00-0000-4000-8000-00000000e001",
+        "name": "Semana de TI",
+        "startDate": "2026-11-10",
+        "endDate": "2026-11-12",
+        "organizers": [
+          "6a1f0c2e-1b2c-4d3e-8f40-5a6b7c8d9e01"
+        ],
+        "activities": [
+          {
+            "activityId": "4d3c2b00-0000-4000-8000-00000000a001",
+            "name": "Oficina de Node",
+            "startsAt": "2026-11-10T09:00:00.000Z",
+            "endsAt": "2026-11-10T12:00:00.000Z",
+            "capacity": 30,
+            "price": 50,
+            "rules": [
+              {
+                "type": "minimumAge",
+                "age": 18
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
 }
