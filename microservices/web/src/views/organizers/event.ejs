@@ -1,8 +1,9 @@
-<% const base = `/organizers/events/${event.id}`; const canceled = event.status == 'canceled'; const draft = event.status == 'draft'; %>
+<% const base = `/organizers/events/${event.id}`; const canceled = event.status == 'canceled'; const draft = event.status == 'draft'; const published = event.status == 'published'; const ended = event.status == 'ended'; %>
 <p><a href="/organizers/events">← Meus eventos</a></p>
 <section>
     <h2><%= event.name %> <small>(<%= event.status %>)</small></h2>
     <% if (canceled) { %><p>Cancelado: <%= event.cancelReason %></p><% } %>
+    <% if (ended) { %><p>Encerrado: os certificados de quem teve presença foram solicitados.</p><% } %>
     <% if (!draft) { %><p><small>Evento e atividades não mudam depois de publicados.</small></p><% } %>
     <form method="post" action="<%= base %>">
         <fieldset <%= draft ? '' : 'disabled' %>>
@@ -13,13 +14,18 @@
     <% if (draft) { %>
     <form method="post" action="<%= base %>/publish"><button>Publicar</button></form>
     <% } %>
-    <% if (!canceled) { %>
+    <% if (published) { %>
+    <form method="post" action="<%= base %>/end" onsubmit="return confirm('Encerrar o evento? Inscrições e check-in fecham e os certificados são solicitados. Corrija as presenças antes.')">
+        <button>Encerrar evento</button> <small>depois do término; solicita os certificados</small>
+    </form>
+    <% } %>
+    <% if (draft || published) { %>
     <form method="post" action="<%= base %>/cancel">
         <input name="reason" placeholder="Motivo" required>
         <button>Cancelar evento</button>
     </form>
     <% } %>
-    <% if (event.status != 'published') { %>
+    <% if (draft || canceled) { %>
     <form method="post" action="<%= base %>/delete" onsubmit="return confirm('Apagar o evento e suas atividades?')">
         <button>Apagar evento</button>
     </form>

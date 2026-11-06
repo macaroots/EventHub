@@ -34,6 +34,7 @@ router.get('/events/:id', async (req, res) => {
 router.post('/events/:id', action((req) => secretariat.updateEvent(req, req.params.id, eventForm(req.body)), show));
 router.post('/events/:id/delete', action((req) => secretariat.deleteEvent(req, req.params.id), list, show));
 router.post('/events/:id/publish', action((req) => secretariat.publishEvent(req, req.params.id), show));
+router.post('/events/:id/end', action((req) => secretariat.endEvent(req, req.params.id), show));
 router.post('/events/:id/cancel', action((req) => secretariat.cancelEvent(req, req.params.id, req.body.reason), show));
 
 // Organizers: o formulário usa username; a secretaria guarda só o id do usuário.

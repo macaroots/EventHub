@@ -6,11 +6,15 @@
         <% if (registration.event) { %>Evento: <a href="/events/<%= registration.event.id %>"><%= registration.event.name %></a>.<% } %>
         Atividade: <%= registration.activity?.name ?? registration.activityId %>.
     </p>
+<% const ended = registration.event?.status == 'ended'; %>
+<% if (ended) { %>
+    <p><%= registration.attendance ? 'Evento encerrado. Certificado solicitado: você o receberá pelo serviço de certificados.' : 'Evento encerrado. Sem presença registrada, não há certificado.' %></p>
+<% } %>
 <% if (registration.status == 'confirmed') { %>
     <p>Inscrição confirmada!</p>
 <% if (registration.attendance) { %>
     <p>Presença registrada em <%= dateTime(registration.attendance.checkedInAt) %>.</p>
-<% } else { %>
+<% } else if (!ended) { %>
     <form method="post" action="/activities/<%= registration.activityId %>/checkin">
         <input type="hidden" name="registrationId" value="<%= registration.id %>">
         <label><span>Check-in: código mostrado na sala</span><input name="code" required autocomplete="off" autocapitalize="characters" size="8"></label>
@@ -46,7 +50,7 @@
 <% } %>
     <p><a href="">Atualizar</a></p>
 <% } %>
-<% if (registration.status != 'canceled') { %>
+<% if (registration.status != 'canceled' && !ended) { %>
     <form method="post" action="/registrations/<%= registration.id %>/cancel" onsubmit="return confirm('Cancelar a inscrição?')">
         <button>Cancelar inscrição</button>
     </form>

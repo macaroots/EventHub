@@ -4,12 +4,13 @@
     <p>Nenhuma inscrição. <a href="/">Ver eventos</a></p>
 <% } else { %>
     <table>
-        <tr><th>Evento</th><th>Atividade</th><th>Status</th></tr>
+        <tr><th>Evento</th><th>Atividade</th><th>Status</th><th>Certificado</th></tr>
 <% for (const r of registrations) { %>
         <tr>
             <td><%= r.event?.name ?? '' %></td>
             <td><a href="/registrations/<%= r.id %>"><%= r.activity?.name ?? r.activityId %></a></td>
             <td><%- include('status', { status: r.status }) %></td>
+            <td><%= r.event?.status == 'ended' ? (r.attendance ? 'solicitado' : 'sem presença') : '' %></td>
         </tr>
 <% } %>
     </table>
