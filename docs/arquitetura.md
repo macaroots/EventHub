@@ -31,12 +31,13 @@ Cada serviço é dono dos seus dados (um SQLite por serviço) e não lê o banco
 ### Secretaria (`secretariat`)
 - **Capacidade:** planejar e publicar eventos. O organizador monta o evento e a programação, define a oferta de cada atividade (vagas, preço, regras de elegibilidade), publica, cancela e escolhe quem organiza. É a dona de toda a informação do evento ([ADR 011](adrs/evento-imutavel-apos-publicacao.md)).
 - **Dados próprios:**
-  - `events` `{id, name, information, startDate, endDate, status: draft | published | canceled, cancelReason, createdBy, organizers[]}`;
+  - `events` `{id, name, information, startDate, endDate, status: draft | published | ended | canceled, cancelReason, createdBy, organizers[]}`;
   - `activities` `{id, eventId, name, description, location, startsAt, endsAt, capacity, price, rules[]}`.
 
   O conteúdo só muda em `draft`.
 - **Projeções:** nenhuma. Organizers são ids de usuário, sem validação.
-- **Publica:** `EventPublished` (com as atividades), `EventCanceled`, `EventOrganizersChanged`.
+- **Ciclo:** `draft → published → ended | canceled`. `ended` (planejado) é manual, pelo organizador, para permitir correções de presença antes dos certificados.
+- **Publica:** `EventPublished` (com as atividades), `EventCanceled`, `EventOrganizersChanged` e, planejado, `EventEnded`.
 
 ### Credenciamento (`registration`)
 - **Capacidade:** garantir a vaga do participante. Inscrição, elegibilidade, capacidade sob concorrência, fila de espera com promoção, reserva com prazo de pagamento e gestão das inscrições pelo organizador e check-in por código da atividade ([ADR 002](adrs/checkin-no-registration.md), [ADR 012](adrs/forma-do-checkin.md)).
@@ -75,10 +76,11 @@ Cada serviço é dono dos seus dados (um SQLite por serviço) e não lê o banco
 ## O que falta
 
 ### Por contexto
+- **Secretaria:** encerrar evento (`ended`, `EventEnded`).
 - **Identity:** persistência (hoje em memória), hash de senha, `name` e `email` (pré-requisito de certificados e notificações) e `UserUpdated`.
 - **Credenciamento:**
   - check-in: janela de horário (projetar `startsAt`/`endsAt`) e desfazer presença ([ADR 012](adrs/forma-do-checkin.md));
-  - emitir `CertificateRequested`.
+  - ao receber `EventEnded`, avaliar a elegibilidade e emitir um `CertificateRequested` por participante ([ADR 003](adrs/certificados.md)). O critério ainda não está definido.
 - **Caixa:** auth, estorno quando a inscrição é cancelada depois de paga e gateway real (adaptador).
 - **Notificações, Certificados e Relatórios:** criar, conforme os ADRs.
 - **Web:** integrar com as APIs, ou com um API gateway/BFF. A tela de atividade compõe programação (Secretaria) e oferta (Credenciamento).
@@ -116,7 +118,7 @@ flowchart LR
 
     Identity -- "U: OHS/PL (UserCreated)<br/>D: CF (Participant)" --> Credenciamento
     Identity -. "SK: JWT (shared/auth)" .- Secretaria
-    Secretaria -- "U: OHS/PL (EventPublished com atividades, EventCanceled, EventOrganizersChanged)<br/>D: CF (cópia imutável, ADR 011)" --> Credenciamento
+    Secretaria -- "U: OHS/PL (EventPublished com atividades, EventCanceled, EventOrganizersChanged, EventEnded)<br/>D: CF (cópia imutável, ADR 011)" --> Credenciamento
     Credenciamento -- "Customer/Supplier<br/>PaymentRequested ⇄ PaymentConfirmed/Denied" --> Caixa
     Caixa -- "ACL (PaymentGateway)" --> Gateway
     Certificados -. "U: OHS/PL (CertificateRequested)<br/>D: Credenciamento CF" .-> Credenciamento
