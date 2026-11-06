@@ -1,12 +1,156 @@
+:root {
+    --black: #000;
+    --white: #fff;
+    --accent: #fd6408;
+    --gray: #e5e5e5;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0 auto;
+    max-width: 960px;
+    padding: 0 1rem 2rem;
+    font: 16px/1.5 system-ui, sans-serif;
+    color: var(--black);
+    background: var(--white);
+}
+
+h1 {
+    margin: 0;
+    padding: 1rem 0 0.5rem;
+    border-bottom: 3px solid var(--accent);
+}
+
+h2, h3 {
+    margin: 1.5rem 0 0.5rem;
+}
+
+a {
+    color: var(--accent);
+    text-decoration: none;
+}
+a:hover {
+    text-decoration: underline;
+}
+
+nav {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem 0;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--gray);
+}
+nav a {
+    color: var(--black);
+    font-weight: 500;
+}
+nav a:hover {
+    color: var(--accent);
+}
+nav form {
+    margin-left: auto;
+}
+
+article {
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.75rem;
+    border: 1px solid var(--gray);
+    border-left: 4px solid var(--accent);
+}
+article h3 {
+    margin-top: 0;
+}
+
+/* Formulários */
+form {
+    margin: 1rem 0;
+}
+
 label {
     display: table-row;
 }
 label > * {
     display: table-cell;
+    padding: 0.25rem 0.5rem 0.25rem 0;
+    vertical-align: top;
 }
+
+input, textarea, select {
+    font: inherit;
+    padding: 0.4rem 0.6rem;
+    border: 1px solid var(--black);
+    border-radius: 4px;
+    background: var(--white);
+}
+input:focus, textarea:focus, select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(253, 100, 8, 0.25);
+}
+textarea {
+    min-height: 6rem;
+}
+
+button, input[type="submit"] {
+    font: inherit;
+    padding: 0.4rem 1rem;
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    background: var(--accent);
+    color: var(--white);
+    cursor: pointer;
+}
+button:hover, input[type="submit"]:hover {
+    background: var(--black);
+    border-color: var(--black);
+}
+
+nav button {
+    background: var(--white);
+    color: var(--black);
+    border-color: var(--black);
+}
+nav button:hover {
+    background: var(--black);
+    color: var(--white);
+}
+
+/* Tabelas */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+}
+th, td {
+    padding: 0.5rem;
+    text-align: left;
+    border-bottom: 1px solid var(--gray);
+}
+th {
+    background: var(--black);
+    color: var(--white);
+}
+tr:hover td {
+    background: #fff4ec;
+}
+
+.error {
+    padding: 0.5rem 1rem;
+    border-left: 4px solid var(--accent);
+    background: #fff4ec;
+    color: var(--black);
+}
+
+/* Check-in */
 .checkin-code {
     font: bold 2.5em monospace;
     letter-spacing: 0.2em;
+    color: var(--accent);
 }
 .checkin-display {
     text-align: center;
