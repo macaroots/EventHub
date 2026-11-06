@@ -10,10 +10,10 @@ Status: Proposto
 ## Decisão
 Criar um microsserviço `report` que:
 - recebe todos os eventos por uma fila própria ligada a `#` no exchange `topic`;
-- grava cada evento bruto numa tabela só de inserção (`id`, `type`, `occurredAt`, `payload` JSON);
+- grava cada evento bruto numa tabela só de inserção (`id`, `type`, `source`, `time`, `data` JSON);
 - responde a consultas fixas (SQL ou projeções) sobre esses eventos. Consultas livres, inclusive em linguagem natural, ficam para depois.
 
-Para isso, o `publish` do bus passa a incluir `id` e `occurredAt` em toda mensagem.
+Para isso, o `publish` do bus inclui `id`, `source` e `time` em toda mensagem ([envelope](../../microservices/contracts/README.md#envelope)).
 
 ## Justificativa
 - Nenhum serviço muda: o exchange `topic` já permite assinar todos os eventos.

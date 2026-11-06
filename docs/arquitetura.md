@@ -88,7 +88,7 @@ Cada serviço é dono dos seus dados (um SQLite por serviço) e não lê o banco
 - **Mensageria:**
   - outbox, porque a publicação não é transacional com o banco;
   - DLQ, porque hoje um handler que falha confirma a mensagem e ela se perde;
-  - `id` e `occurredAt` em toda mensagem, para idempotência e relatórios;
+  - `id` e `time` em toda mensagem, para idempotência e relatórios (envelope `{id, type, source, time, data}`);
   - id de correlação;
   - contratos versionados (AsyncAPI).
 - **Monitoramento:** `/health`, logs estruturados, métricas e tracing ([ADR 006](adrs/monitoramento.md)).

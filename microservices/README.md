@@ -103,10 +103,11 @@ Pagar: `POST localhost:3004/payments/:id/pay {"receipt": "..."}`; consultar: `GE
 [OutboxMessageBus](shared/messaging/outbox-message-bus.js) fica na frente do [RabbitMqMessageBus](shared/messaging/rabbitmq-message-bus.js), em cada serviço.
 
 - **Outbox:** `messageBus.transaction(() => { repo.update(x); messageBus.publish(m); })` grava o estado e a mensagem (tabela `outbox`) juntos. Um relay envia ao broker depois do COMMIT (logo em seguida e a cada 1 s) e apaga a linha só quando o broker confirma (confirm channel). Se o broker estiver fora do ar, as mensagens esperam no banco, na ordem.
-- **Id:** cada mensagem ganha `messageId` (UUID) e `occurredAt`. O nome não é `id` porque algumas mensagens já têm `id` do domínio (ex.: `RegistrationCreated`).
-- **Idempotência:** o consumidor guarda o `messageId` na tabela `inbox` depois de tratar e ignora repetidas. Entradas com mais de 30 dias são apagadas na subida.
+- **Envelope:** o outbox embrulha a mensagem do domínio em `{id, type, source, time, data}` ([contracts](contracts/README.md#envelope)). `source` vem de `new OutboxMessageBus(db, broker, { source: '<serviço>' })` (obrigatório). Os handlers recebem `(data, envelope)`.
+- **Migração:** mensagens no formato antigo (sem `data`) que tenham ficado no outbox ou nas filas vão para a DLQ. Em dev, `docker compose down -v`.
+- **Idempotência:** o consumidor guarda o `id` na tabela `inbox` depois de tratar e ignora repetidas. Entradas com mais de 30 dias são apagadas na subida.
 - **Retry e DLQ:** se o handler falha, a mensagem vai para `<fila>.retry`, volta depois de `MESSAGE_RETRY_DELAY_MS` (padrão 5000) e é tentada até `MESSAGE_MAX_ATTEMPTS` (padrão 5) vezes. Depois vai para `<fila>.dlq`, com os headers `x-attempt` e `x-error`. Para reprocessar, use "Move messages" da DLQ para a fila na UI do RabbitMQ (requer o plugin shovel).
-- **Logs do consumo:** cada mensagem recebida, repetida ou com falha gera uma linha `[<fila>] <type> messageId=… correlationId=… tentativa=n/MAX` (`correlationId=-` enquanto não for propagado). Ex.: `docker compose logs payment | grep 'falhou'`.
+- **Logs do consumo:** cada mensagem recebida, repetida ou com falha gera uma linha `[<fila>] <type> id=… source=… attempt=n/MAX`. Ex.: `docker compose logs payment | grep 'falhou'`.
 - **Trade-offs:**
   - A entrega é *pelo menos uma vez*. A inbox é gravada depois do handler, fora da transação dele (os handlers são assíncronos). Se o serviço cair entre as duas coisas, a mensagem é tratada de novo, então os handlers continuam idempotentes.
   - Uma mensagem em retry perde a ordem em relação às seguintes.
