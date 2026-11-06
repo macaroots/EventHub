@@ -20,7 +20,7 @@ const messageBus = await RabbitMqMessageBus.connect();
 const eventRepository = new EventSqliteRepository(database);
 const activityRepository = new ActivitySqliteRepository(database);
 const eventService = new EventAppService(eventRepository, activityRepository, messageBus);
-const activityService = new ActivityAppService(activityRepository, eventRepository, messageBus);
+const activityService = new ActivityAppService(activityRepository, eventRepository);
 
 const eventController = new EventController(eventService);
 const activityController = new ActivityController(activityService);

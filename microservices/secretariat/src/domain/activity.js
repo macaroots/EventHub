@@ -9,7 +9,8 @@ const ruleValidators = {
 
 const assertDate = (field, v) => { if (v != null && isNaN(Date.parse(v))) throw new TypeError(`${field} must be an ISO date`) };
 
-// Aggregate separado do Event: muda com frequência (vagas, regras) e é a unidade de inscrição.
+// Aggregate separado do Event: é a unidade de inscrição. Só muda enquanto o evento é rascunho;
+// na publicação, vai inteira (com capacidade, preço e regras) para o registration.
 // Estado privado: só muda pelos setters privados, que validam.
 export class Activity {
     #id;

@@ -1,15 +1,16 @@
-<% const base = `/organizers/events/${event.id}`; const canceled = event.status == 'canceled'; %>
+<% const base = `/organizers/events/${event.id}`; const canceled = event.status == 'canceled'; const draft = event.status == 'draft'; %>
 <p><a href="/organizers/events">← Meus eventos</a></p>
 <section>
     <h2><%= event.name %> <small>(<%= event.status %>)</small></h2>
     <% if (canceled) { %><p>Cancelado: <%= event.cancelReason %></p><% } %>
+    <% if (!draft) { %><p><small>Evento e atividades não mudam depois de publicados.</small></p><% } %>
     <form method="post" action="<%= base %>">
-        <fieldset <%= canceled ? 'disabled' : '' %>>
+        <fieldset <%= draft ? '' : 'disabled' %>>
             <%- include('event-form', { event }) %>
             <button>Salvar</button>
         </fieldset>
     </form>
-    <% if (event.status == 'draft') { %>
+    <% if (draft) { %>
     <form method="post" action="<%= base %>/publish"><button>Publicar</button></form>
     <% } %>
     <% if (!canceled) { %>
@@ -34,26 +35,28 @@
             <td><%= activity.startsAt ?? '' %></td>
             <td><%= activity.capacity %></td>
             <td><%= activity.price %></td>
-            <td><a href="/organizers/activities/<%= activity.id %>/registrations">inscrições</a></td>
+            <td><% if (!draft) { %><a href="/organizers/activities/<%= activity.id %>/registrations">inscrições</a><% } %></td>
         </tr>
 <% } %>
     </table>
-    <% if (!canceled) { %><p><a href="<%= base %>/activities/new">+ Nova atividade</a></p><% } %>
+    <% if (draft) { %><p><a href="<%= base %>/activities/new">+ Nova atividade</a></p><% } %>
 </section>
 <section>
     <h2>Organizadores</h2>
     <ul>
 <% for (const organizer of organizers) { %>
         <li>
-            <%= organizer.username %><% if (organizer.id == event.createdBy) { %> (criador)<% } else { %>
+            <%= organizer.username %><% if (organizer.id == event.createdBy) { %> (criador)<% } else if (!canceled) { %>
             <form method="post" action="<%= base %>/organizers/<%= organizer.id %>/delete" style="display:inline">
                 <button>remover</button>
             </form><% } %>
         </li>
 <% } %>
     </ul>
+    <% if (!canceled) { %>
     <form method="post" action="<%= base %>/organizers">
         <input name="username" placeholder="username" required>
         <button>Adicionar</button>
     </form>
+    <% } %>
 </section>

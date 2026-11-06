@@ -2,7 +2,7 @@
 Número do ADR: 007
 Data: 2026-11-03
 Responsável: Renato
-Status: Proposto
+Status: Substituído em parte pelo [ADR 011](evento-imutavel-apos-publicacao.md): vale a decisão 1 (Catálogo); a decisão 2 (oferta no Credenciamento) foi descartada.
 
 ## Contexto
 Hoje os dados de eventos e atividades se dividem em três contextos:

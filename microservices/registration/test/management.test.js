@@ -16,8 +16,7 @@ const setup = async ({ price = 0, rules = [] } = {}) => {
   const registrations = new RegistrationSqliteRepository(db);
   const service = new RegistrationAppService(new ActivitySqliteRepository(db, registrations), registrations,
     new ParticipantSqliteRepository(db), new EventSqliteRepository(db), new InMemoryMessageBus());
-  await service.updateEvent({ eventId: "e1", name: "E", status: "published", organizers: ["org"] });
-  await service.upsertActivity({ activityId: "a1", eventId: "e1", name: "A", capacity: 2, price, rules });
+  service.publishEvent({ eventId: "e1", name: "E", organizers: ["org"], activities: [{ activityId: "a1", name: "A", capacity: 2, price, rules }] });
   service.upsertParticipant({ userId: "u1", username: "ana" });
   const registration = await service.register({ activityId: "a1" }, "u1");
   return { service, registration };
@@ -53,7 +52,7 @@ test("participant or organizer cancels; stranger cannot", async () => {
 
 test("organizer change in the event updates the projection", async () => {
   const { service } = await setup();
-  await service.updateEvent({ eventId: "e1", name: "E", status: "published", organizers: ["org", "x"] });
+  service.changeOrganizers({ eventId: "e1", organizers: ["org", "x"] });
   assert.ok(service.listActivityRegistrations("a1", stranger));
 });
 
@@ -68,4 +67,15 @@ test("waitlist exposes only ids in order; registration shows its position", asyn
   assert.ok(waitlist.every(id => typeof id == "string"));
   assert.equal(service.getRegistration(waitlist[1], { id: "u4", role: "user" }).waitlistPosition, 2);
   assert.equal(service.getRegistration(waitlist[1], organizer).userId, "u4");
+});
+
+test("published snapshot is created once; event cancel cancels registrations", async () => {
+  const { service, registration } = await setup();
+  service.publishEvent({ eventId: "e1", name: "Outro", organizers: [], activities: [{ activityId: "a1", name: "B", capacity: 99 }] });
+  const { activity, event } = service.listActivityRegistrations("a1", organizer);
+  assert.deepEqual([event.name, activity.name, activity.capacity], ["E", "A", 2]);
+  await service.cancelEvent({ eventId: "e1", reason: "chuva" });
+  assert.equal(service.getRegistration(registration.id, participant).status, "canceled");
+  await assert.rejects(service.register({ activityId: "a1" }, "u1"), /not open/);
+  await service.cancelEvent({ eventId: "draft", reason: "x" }); // nunca publicado: ignora
 });

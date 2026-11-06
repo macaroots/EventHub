@@ -73,15 +73,22 @@ export class Event {
     assertDeletable() {
         if (this.#status == 'published') throw new Error('Cancel the event before deleting it');
     }
+    // Conteúdo (evento e atividades) só muda em rascunho: o publicado é o contrato com os inscritos.
     assertEditable() {
-        if (this.#status == 'canceled') throw new Error('Event is canceled');
+        if (this.#status != 'draft') throw new Error(`Cannot change a ${this.#status} event`);
     }
 
+    // Organizadores não são conteúdo publicado: mudam até o cancelamento.
+    #assertManageable() {
+        if (this.#status == 'canceled') throw new Error('Event is canceled');
+    }
     addOrganizer(userId) {
+        this.#assertManageable();
         if (!userId) throw new BlankError('userId');
         if (!this.#organizers.includes(userId)) this.#organizers.push(userId);
     }
     removeOrganizer(userId) {
+        this.#assertManageable();
         if (userId == this.#createdBy) throw new Error('Cannot remove the creator');
         this.#organizers = this.#organizers.filter(o => o != userId);
     }
