@@ -44,6 +44,16 @@ Cada serviço tem seu SQLite (`node:sqlite`) em `<serviço>/data/<serviço>.db`,
 - Um banco por serviço: nenhum serviço lê a tabela de outro. O que vem de fora chega por mensagem e vira projeção local.
 - Limitação: o banco é salvo antes de publicar as mensagens, sem outbox. Se o serviço cair entre as duas coisas, a mensagem se perde. Alternativa: tabela outbox na mesma transação.
 
+## Documentação da API (Swagger)
+
+Cada serviço serve o Swagger UI em `/docs` e o contrato em `/openapi.yaml` (ex.: http://localhost:3001/docs). Ambos são públicos. No Swagger UI, "Authorize" recebe o token de `POST /auth` do identity.
+
+- O contrato é escrito à mão em `<serviço>/src/openapi.yaml` e servido por [shared/application/api-docs.js](shared/application/api-docs.js) (`swagger-ui-express`). Rota nova → documentar no YAML.
+- O teste `test/openapi.test.js` de cada serviço falha se houver rota sem documentação ou documentação sem rota. Ele não confere corpos nem respostas.
+- O web (BFF) não tem API própria: são telas.
+- Alternativas: anotações JSDoc por rota (`swagger-jsdoc`), que espalham YAML nos comentários; geração automática (`swagger-autogen`), que não enxerga as rotas do `CrudController` nem os corpos; ou schemas de validação (zod + `zod-to-openapi`), que geram o contrato e validam a entrada, mas exigem refatorar as rotas.
+- Depois de mudar dependências do `shared`, suba com `--build`.
+
 ## Autenticação
 
 Todos os endpoints de secretariat e registration exigem `Authorization: Bearer <token>`.

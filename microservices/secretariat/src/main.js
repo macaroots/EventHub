@@ -1,4 +1,6 @@
 import express from 'express';
+import path from 'node:path';
+import { apiDocs } from '../../shared/application/api-docs.js';
 import { EventAppService } from './application/event.app-service.js';
 import { ActivityAppService } from './application/activity.app-service.js';
 import { RabbitMqMessageBus } from '../../shared/messaging/rabbitmq-message-bus.js';
@@ -25,6 +27,7 @@ const activityService = new ActivityAppService(activityRepository, eventReposito
 const eventController = new EventController(eventService);
 const activityController = new ActivityController(activityService);
 
+app.use(apiDocs(path.join(import.meta.dirname, 'openapi.yaml')));
 app.use(eventController.getPublicRouter());
 app.use(authenticate());
 app.use(eventController.getRouter());
