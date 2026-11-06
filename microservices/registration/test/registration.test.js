@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { Activity, MinimumAgeRule } from "../src/domain/activity.js";
+import { Activity } from "../src/domain/activity.js";
+import { MinimumAgeRule } from "../src/domain/rules/minimum-age.rule.js";
 
 const types = (registration) => registration.pullMessages().map(m => m.type);
 

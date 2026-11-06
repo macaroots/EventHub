@@ -3,7 +3,8 @@ import { test } from "node:test";
 import { DatabaseSync } from "node:sqlite";
 import { ActivitySqliteRepository } from "../src/infrastructure/activity.sqlite.repository.js";
 import { RegistrationSqliteRepository } from "../src/infrastructure/registration.sqlite.repository.js";
-import { EventSqliteRepository, ParticipantSqliteRepository } from "../src/infrastructure/projection.sqlite.repository.js";
+import { EventSqliteRepository } from "../src/infrastructure/event.sqlite.repository.js";
+import { ParticipantSqliteRepository } from "../src/infrastructure/participant.sqlite.repository.js";
 import { RegistrationAppService } from "../src/application/registration.app-service.js";
 import { InMemoryMessageBus } from "../../shared/messaging/in-memory-message-bus.js";
 

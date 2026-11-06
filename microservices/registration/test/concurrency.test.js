@@ -5,7 +5,7 @@ import { DatabaseSync } from "node:sqlite";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { SEAT_STATUSES } from "../src/domain/activity.js";
+import { SEAT_STATUSES } from "../src/domain/registration.js";
 
 // Cada worker é uma "instância" do serviço com sua conexão ao mesmo arquivo SQLite.
 const WORKERS = 8, PER_WORKER = 25, CAPACITY = 30;
@@ -16,7 +16,8 @@ import { DatabaseSync } from "node:sqlite";
 const { file, users, start, src, shared } = workerData;
 const { ActivitySqliteRepository } = await import(src + "/infrastructure/activity.sqlite.repository.js");
 const { RegistrationSqliteRepository } = await import(src + "/infrastructure/registration.sqlite.repository.js");
-const { EventSqliteRepository, ParticipantSqliteRepository } = await import(src + "/infrastructure/projection.sqlite.repository.js");
+const { EventSqliteRepository } = await import(src + "/infrastructure/event.sqlite.repository.js");
+const { ParticipantSqliteRepository } = await import(src + "/infrastructure/participant.sqlite.repository.js");
 const { RegistrationAppService } = await import(src + "/application/registration.app-service.js");
 const { InMemoryMessageBus } = await import(shared + "/messaging/in-memory-message-bus.js");
 const db = new DatabaseSync(file);
@@ -39,7 +40,8 @@ test(`${WORKERS * PER_WORKER} concurrent registrations never exceed capacity ${C
   db.exec("PRAGMA journal_mode = WAL");
   const { RegistrationSqliteRepository } = await import("../src/infrastructure/registration.sqlite.repository.js");
   const { ActivitySqliteRepository } = await import("../src/infrastructure/activity.sqlite.repository.js");
-  const { EventSqliteRepository, ParticipantSqliteRepository } = await import("../src/infrastructure/projection.sqlite.repository.js");
+  const { EventSqliteRepository } = await import("../src/infrastructure/event.sqlite.repository.js");
+  const { ParticipantSqliteRepository } = await import("../src/infrastructure/participant.sqlite.repository.js");
   const { RegistrationAppService } = await import("../src/application/registration.app-service.js");
   const { InMemoryMessageBus } = await import("../../shared/messaging/in-memory-message-bus.js");
   const registrations = new RegistrationSqliteRepository(db);

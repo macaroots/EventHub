@@ -4,7 +4,8 @@ import { DatabaseSync } from "node:sqlite";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Activity, MinimumAgeRule } from "../src/domain/activity.js";
+import { Activity } from "../src/domain/activity.js";
+import { MinimumAgeRule } from "../src/domain/rules/minimum-age.rule.js";
 import { ActivitySqliteRepository } from "../src/infrastructure/activity.sqlite.repository.js";
 import { RegistrationSqliteRepository } from "../src/infrastructure/registration.sqlite.repository.js";
 

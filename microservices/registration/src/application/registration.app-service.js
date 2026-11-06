@@ -1,5 +1,7 @@
 import { ConcurrencyError, ForbiddenError, NotFoundError } from "../../../shared/domain/errors.js";
-import { Activity, Participant, ruleFromConfig } from "../domain/activity.js";
+import { Activity } from "../domain/activity.js";
+import { Participant } from "../domain/participant.js";
+import { ruleFromConfig } from "../domain/rules/rule-from-config.js";
 
 const isAdmin = (user) => user.role == 'admin';
 const isOwner = (user, registration) => registration.userId == user.id;
