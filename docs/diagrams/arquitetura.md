@@ -1,3 +1,4 @@
+```mermaid
 ---
 config:
   layout: dagre
@@ -25,12 +26,12 @@ flowchart LR
     subgraph Certificados
         RF10
     end
-    subgraph Credenciamento 
+    subgraph Credenciamento
         RF05
         RF06
         RF09
     end
-    subgraph Relatórios 
+    subgraph Relatórios
         RF11
     end
     subgraph Caixa
@@ -40,16 +41,17 @@ flowchart LR
       RF08
     end
     %% A --> B: A emite um evento que B consome. Dependências dentro de um mesmo serviço não aparecem.
+    %% Linha tracejada: consumidor ainda não implementado (Notificações, Certificados, Relatórios).
     RF01 -- UserCreated --> RF05
-    RF01 -- "UserCreated (contato)" --> RF08
+    RF01 -. "UserCreated (contato)" .-> RF08
     RF02 -- "EventPublished, EventCanceled, EventOrganizersChanged" --> RF05
-    RF03 -- "EventPublished (atividades)" --> RF05
-    RF02 -- EventCanceled --> RF08
+    RF02 -- EventEnded --> RF09
+    RF02 -. EventCanceled .-> RF08
     RF05 -- "PaymentRequested, RegistrationCanceled" --> RF07
     RF07 -- "PaymentConfirmed, PaymentDenied" --> RF05
-    RF05 -- "RegistrationConfirmed, RegistrationCanceled" --> RF09
-    RF05 -- "Registration*, PaymentRequested" --> RF08
-    RF06 -- RegistrationPromoted --> RF08
-    RF09 -- CertificateRequested --> RF10
-    RF10 -- "certificado emitido" --> RF08
-    Identidade & Secretaria & Credenciamento & Caixa & Certificados -- "todos (#)" --> RF11
+    RF05 -. "RegistrationCreated, RegistrationConfirmed, RegistrationCanceled, PaymentRequested" .-> RF08
+    RF06 -. RegistrationPromoted .-> RF08
+    RF09 -. CertificateRequested .-> RF10
+    RF10 -. "certificado emitido" .-> RF08
+    Identidade & Secretaria & Credenciamento & Caixa & Certificados -. "todos (#)" .-> RF11
+```
