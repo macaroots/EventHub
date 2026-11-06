@@ -35,7 +35,7 @@ export class RabbitMqMessageBus {
   publish(event) {
     console.log('EVENT', event);
     return new Promise((ok, fail) => this.channel.publish(EXCHANGE, event.type, Buffer.from(JSON.stringify(event)),
-      { persistent: true, messageId: event.messageId, type: event.type, contentType: "application/json" },
+      { persistent: true, messageId: event.id, type: event.type, appId: event.source, contentType: "application/json" },
       (e) => (e ? fail(e) : ok())));
   }
 
@@ -45,7 +45,8 @@ export class RabbitMqMessageBus {
 
   // Cada serviço tem sua fila durável: se ele cair, os eventos esperam por ele.
   // Falha no handler: volta pela <fila>.retry (espera RETRY_DELAY_MS) até MAX_ATTEMPTS; depois vai para a <fila>.dlq.
-  // inbox {has, add}: ignora messageId já tratado (entrega repetida).
+  // inbox {has, add}: ignora id já tratado (entrega repetida).
+  // O handler recebe (data, envelope).
   async consume(queue, { inbox } = {}) {
     await this.channel.assertQueue(queue, { durable: true });
     await this.channel.assertQueue(`${queue}.retry`, { durable: true, arguments: {
@@ -71,10 +72,11 @@ export class RabbitMqMessageBus {
 
   async #handle(message, inbox, context) {
     const event = JSON.parse(message.content);
-    const id = event.messageId ?? message.properties.messageId;
+    const id = event.id ?? message.properties.messageId;
     if (id && inbox?.has(id)) return console.log(`${context} repeated, ignored`);
     console.log(`${context} received`);
-    for (const fn of this.#listeners[event.type] ?? []) await fn(event);
+    if (!event.data) throw new Error('message without data (envelope {id, type, source, time, data})');
+    for (const fn of this.#listeners[event.type] ?? []) await fn(event.data, event);
     if (id) inbox?.add(id);
   }
 
@@ -93,10 +95,10 @@ export class RabbitMqMessageBus {
 function describe(queue, message) {
   let event = {};
   try { event = JSON.parse(message.content); } catch { /* o handler acusa o erro */ }
-  const { messageId, correlationId, headers = {} } = message.properties;
+  const { messageId, headers = {} } = message.properties;
   const attempt = Number(headers["x-attempt"] ?? 1);
   return `[${queue}] ${event.type ?? message.properties.type ?? "?"}`
-    + ` messageId=${event.messageId ?? messageId ?? "-"}`
-    + ` correlationId=${event.correlationId ?? correlationId ?? "-"}`
+    + ` id=${event.id ?? messageId ?? "-"}`
+    + ` source=${event.source ?? message.properties.appId ?? "-"}`
     + ` attempt=${attempt}/${MAX_ATTEMPTS}`;
 }
