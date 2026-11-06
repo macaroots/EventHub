@@ -20,21 +20,14 @@ flowchart LR
     subgraph Secretaria
         RF02
         RF03
+        RF04
     end
     subgraph Certificados
         RF10
     end
-    subgraph Catálogo
-        RF04
-    end
     subgraph Credenciamento 
         RF05
-    %% end
-    %% subgraph Fila
-    %%   direction LR
         RF06
-    end
-    subgraph Portaria 
         RF09
     end
     subgraph Monitoramento e Relatórios 
