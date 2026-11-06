@@ -115,6 +115,7 @@ Pagar: `POST localhost:3004/payments/:id/pay {"receipt": "..."}`; consultar: `GE
 - **Id:** cada mensagem ganha `messageId` (UUID) e `occurredAt`. O nome não é `id` porque algumas mensagens já têm `id` do domínio (ex.: `RegistrationCreated`).
 - **Idempotência:** o consumidor guarda o `messageId` na tabela `inbox` depois de tratar e ignora repetidas. Entradas com mais de 30 dias são apagadas na subida.
 - **Retry e DLQ:** se o handler falha, a mensagem vai para `<fila>.retry`, volta depois de `MESSAGE_RETRY_DELAY_MS` (padrão 5000) e é tentada até `MESSAGE_MAX_ATTEMPTS` (padrão 5) vezes. Depois vai para `<fila>.dlq`, com os headers `x-attempt` e `x-error`. Para reprocessar, use "Move messages" da DLQ para a fila na UI do RabbitMQ (requer o plugin shovel).
+- **Logs do consumo:** cada mensagem recebida, repetida ou com falha gera uma linha `[<fila>] <type> messageId=… correlationId=… tentativa=n/MAX` (`correlationId=-` enquanto não for propagado). Ex.: `docker compose logs payment | grep 'falhou'`.
 - **Trade-offs:**
   - A entrega é *pelo menos uma vez*. A inbox é gravada depois do handler, fora da transação dele (os handlers são assíncronos). Se o serviço cair entre as duas coisas, a mensagem é tratada de novo, então os handlers continuam idempotentes.
   - Uma mensagem em retry perde a ordem em relação às seguintes.
