@@ -12,8 +12,10 @@ export class UserAppService {
         let exist = this.userRepository.getByUsername(username)
         if (exist) throw new DuplicateError('name');
         const user = new User(username, password, role);
-        await this.userRepository.add(user);
-        this.messageBus.publish({type: 'UserCreated', userId: user.id, username: user.username })
+        this.messageBus.transaction(() => {
+            this.userRepository.add(user);
+            this.messageBus.publish({type: 'UserCreated', userId: user.id, username: user.username });
+        });
         return user.id;
     }
     
