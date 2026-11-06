@@ -164,6 +164,9 @@ GET /users/:id
 GET /users?email=aa@a.com
     { id, name, email }
 
+GET /users?username=x   (exige JWT; 404 se não existe)
+    { id, username, role }
+
 - usado para emails, certificados e para secretaria confirmar que o usuário existe e está ativo
 
 ## Secretaria
