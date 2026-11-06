@@ -25,7 +25,7 @@ router.post('/events', action(
 router.get('/events/:id', async (req, res) => {
     const [event, users] = await Promise.all([
         secretariat.getEvent(req, req.params.id).then(json),
-        identity.listUsers().then(json),
+        identity.listUsers(req).then(json),
     ]);
     const usernames = Object.fromEntries(users.map(u => [u.id, u.username]));
     const organizers = event.organizers.map(id => ({ id, username: usernames[id] ?? id }));
@@ -38,10 +38,10 @@ router.post('/events/:id/cancel', action((req) => secretariat.cancelEvent(req, r
 
 // Organizers: o formulário usa username; a secretaria guarda só o id do usuário.
 router.post('/events/:id/organizers', action(async (req) => {
-    const users = await json(await identity.listUsers());
-    const user = users.find(u => u.username == req.body.username);
-    if (!user) return new Response(`User ${req.body.username} not found`, { status: 404 });
-    return secretariat.addOrganizer(req, req.params.id, user.id);
+    // Composição no BFF (ADR 013): username → id no identity, depois a secretaria.
+    const response = await identity.findUser(req, req.body.username);
+    if (!response.ok) return response;
+    return secretariat.addOrganizer(req, req.params.id, (await response.json()).id);
 }, show));
 router.post('/events/:id/organizers/:userId/delete',
     action((req) => secretariat.removeOrganizer(req, req.params.id, req.params.userId), show));

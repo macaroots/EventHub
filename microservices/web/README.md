@@ -6,9 +6,8 @@ Telas do organizador (`/organizers/...`):
 - `activities/:id/checkin`: abre e fecha o check-in, gera um código novo, mostra presentes/confirmados e marca a presença na mão. `?display=1` mostra só o código em letras grandes, para o projetor, e recarrega a cada 10 s. A página de inscrições mostra o comparecimento e quem está presente.
 - Forms HTML só fazem GET/POST: as ações usam `POST .../delete` em vez de `DELETE` (alternativa: `method-override`).
 - Post/Redirect/Get: depois de cada ação, redireciona. Em erro, volta para a página com `?error=` (mostrado pelo layout). Limitação: o form perde o que foi digitado.
-- Organizadores: o formulário pede o username, e o BFF busca o id em `identity GET /users`, porque a secretaria guarda só ids. A listagem também traduz ids em usernames. Isso é composição no BFF.
-  - Limitações: `GET /users` do identity é público e traz todos os usuários.
-  - Alternativa: a secretaria manter uma projeção de usuários a partir do evento `UserCreated` (sem chamada síncrona, mas eventualmente consistente).
+- Organizadores: o formulário pede o username, e o BFF busca o id em `identity GET /users?username=`, porque a secretaria guarda só ids. A listagem traduz ids em usernames com `GET /users`. As duas chamadas repassam o JWT. Isso é composição no BFF ([ADR 013](../../docs/adrs/organizador-por-username.md)).
+  - Limitação: a listagem ainda traz todos os usuários.
 
 Fluxo do participante:
 - `/` lista os eventos publicados e `/events/:id` mostra o evento e as atividades. As duas são públicas, via `secretariat GET /public/events[/:id]`, que não exige login e não devolve os organizers.
