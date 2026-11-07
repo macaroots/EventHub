@@ -23,7 +23,7 @@ draft → published → ended      (organizador encerra)
 ```
 
 - `ended` é manual para dar uma janela de correção de presenças antes dos certificados. Encerrado não é cancelado nem apagado.
-- `EventEnded` dispara a elegibilidade no registration, que pede os certificados ([ADR 003](../../docs/adrs/certificados.md)).
+- `EventEnded` dispara a elegibilidade no registration, que pede os certificados ([ADR 003](../../docs/adrs/003-certificados.md)).
 
 Erros: 401 sem token, 403 sem permissão, 404 não encontrado, 400 regra de domínio.
 
@@ -33,7 +33,7 @@ Erros: 401 sem token, 403 sem permissão, 404 não encontrado, 400 regra de dom�
 [{"type": "minimumAge", "age": 18}]
 ```
 
-- Imutável após a publicação ([ADR 011](../../docs/adrs/evento-imutavel-apos-publicacao.md)): evento e atividades só mudam em `draft`; publicado só é cancelado. A secretaria é dona de toda a informação (inclusive capacidade, preço e regras); o registration recebe uma cópia no `EventPublished`. Rascunho não gera mensagens.
+- Imutável após a publicação ([ADR 011](../../docs/adrs/011-evento-imutavel-apos-publicacao.md)): evento e atividades só mudam em `draft`; publicado só é cancelado. A secretaria é dona de toda a informação (inclusive capacidade, preço e regras); o registration recebe uma cópia no `EventPublished`. Rascunho não gera mensagens.
 - `Activity` é um aggregate próprio que referencia `eventId`, não uma lista dentro de `Event`: é a unidade de inscrição. A permissão vem do evento.
 - Estado dos aggregates é privado (`#data`): só muda por `update()`/métodos de domínio, que validam. O mesmo construtor valida na criação e na leitura do banco.
 - `CrudController` é só adaptador HTTP → service (não acessa repositório). Gera o CRUD num `basePath` (estilo `resources` do Rails); rotas extras com path absoluto ficam em `addRoutes` (ex.: publicar/cancelar em `EventController`, `GET /events/:eventId/activities` em `ActivityController`). Routers são montados na raiz. Sem dependência extra; alternativas prontas (NestJS + `@nestjsx/crud`, Feathers) trariam um framework inteiro.

@@ -10,7 +10,7 @@ Status: Proposto
 ## Decisão
 Criar um microsserviço `report` que:
 - recebe todos os eventos por uma fila própria ligada a `#` no exchange `topic`;
-- grava cada evento bruto numa tabela só de inserção (`id`, `type`, `source`, `time`, `data` JSON);
+- grava cada evento bruto numa tabela só de inserção (`id`, `type`, `source`, `time`, `data` JSONB), no Postgres ([ADR 000](000-escolha-banco.md));
 - responde a consultas fixas (SQL ou projeções) sobre esses eventos. Consultas livres, inclusive em linguagem natural, ficam para depois.
 
 Para isso, o `publish` do bus inclui `id`, `source` e `time` em toda mensagem ([envelope](../../microservices/contracts/README.md#envelope)).
@@ -32,5 +32,5 @@ Para isso, o `publish` do bus inclui `id`, `source` e `time` em toda mensagem ([
 - **LGPD:** o serviço guarda cópia de dados pessoais. Gravar só o necessário, de preferência ids.
 
 ## Referências
-- [comunicacao-assincrona.md](comunicacao-assincrona.md)
-- [monitoramento.md](monitoramento.md)
+- [001-comunicacao-assincrona.md](001-comunicacao-assincrona.md)
+- [006-monitoramento.md](006-monitoramento.md)

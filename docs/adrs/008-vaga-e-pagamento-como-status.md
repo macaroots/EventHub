@@ -39,7 +39,7 @@ Além disso, a capacidade precisa valer sob forte concorrência, inclusive com m
 
 ## Alternativas Consideradas
 - **Manter pagamento e vaga como pendências e ajustar a ordem:** continuaria misturando conceitos, e a cobrança da fila exigiria exceções.
-- **Lock pessimista (`BEGIN IMMEDIATE` desde a leitura):** serializa o serviço inteiro no SQLite e prende a conexão durante a decisão.
+- **Lock pessimista:** no SQLite (`BEGIN IMMEDIATE` desde a leitura), serializa o serviço inteiro. No Postgres ([ADR 000](000-escolha-banco.md)), `SELECT ... FOR UPDATE` na atividade serializaria só a atividade, mas ainda prende a conexão durante a decisão.
 - **Contador atômico (`UPDATE ... SET seatsTaken = seatsTaken + 1 WHERE seatsTaken < capacity`):** aguenta melhor uma disputa muito grande numa só atividade, mas tira a regra do domínio. Fica para quando houver carga real que o justifique.
 
 ## Consequências
@@ -50,6 +50,6 @@ Além disso, a capacidade precisa valer sob forte concorrência, inclusive com m
 - As mensagens são publicadas depois do commit, sem outbox: uma queda entre os dois perde a mensagem.
 
 ## Referências
-- [checkin-no-registration.md](checkin-no-registration.md)
-- [fronteiras-secretaria-credenciamento.md](fronteiras-secretaria-credenciamento.md)
+- [002-checkin-no-registration.md](002-checkin-no-registration.md)
+- [007-fronteiras-secretaria-credenciamento.md](007-fronteiras-secretaria-credenciamento.md)
 - [../../microservices/registration/README.md](../../microservices/registration/README.md)

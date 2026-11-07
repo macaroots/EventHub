@@ -2,7 +2,7 @@
 
 Cada serviço tem host/porta próprio. Rotas `/public/...` não exigem login.
 
-Fronteiras: [ADR 007](adrs/fronteiras-secretaria-credenciamento.md). O catálogo público fica na Secretaria (programação) e no Credenciamento (oferta).
+Fronteiras: [ADR 007](adrs/007-fronteiras-secretaria-credenciamento.md). O catálogo público fica na Secretaria (programação) e no Credenciamento (oferta).
 
 Autenticação: `Authorization: Bearer <JWT>` emitido pelo identity → `req.user = { id, username, role: 'user' | 'admin' }`.
 "Organizador" não é role: é estar em `event.organizers`. Admin pode tudo.
@@ -414,7 +414,7 @@ RegistrationCanceled { registrationId, userId, reason }
 PaymentRequested { paymentId, registrationId, userId, amount, description }
 ActivityOfferUpdated { activityId, eventId, capacity, price, rules }
 
-## CheckIn como parte do Credenciamento ([ADR 012](adrs/forma-do-checkin.md))
+## CheckIn como parte do Credenciamento ([ADR 012](adrs/012-forma-do-checkin.md))
 ### Organizador
 GET /activities/:id/checkin
     { activity, event, checkIn: { status: open | closed, code, openedAt }, confirmed, present, attendees: [{ registrationId, participant, status, attendance }] }
@@ -471,7 +471,7 @@ GET /certificates/validate/:tokenVerificacao *Validação pública, sem JWT*
 
 
 ## Portaria dentro do Credenciamento
-(Rascunho substituído pelo [ADR 012](adrs/forma-do-checkin.md).)
+(Rascunho substituído pelo [ADR 012](adrs/012-forma-do-checkin.md).)
 Attendance {
     activityId
     userId

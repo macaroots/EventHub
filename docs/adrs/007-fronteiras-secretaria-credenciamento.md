@@ -2,7 +2,7 @@
 Número do ADR: 007
 Data: 2026-11-03
 Responsável: Renato
-Status: Substituído em parte pelo [ADR 011](evento-imutavel-apos-publicacao.md): vale a decisão 1 (Catálogo); a decisão 2 (oferta no Credenciamento) foi descartada.
+Status: Substituído em parte pelo [ADR 011](011-evento-imutavel-apos-publicacao.md): vale a decisão 1 (Catálogo); a decisão 2 (oferta no Credenciamento) foi descartada.
 
 ## Contexto
 Hoje os dados de eventos e atividades se dividem em três contextos:
@@ -29,7 +29,7 @@ Há dois problemas:
 
 ## Alternativas Consideradas
 - **Manter o Catálogo como serviço próprio:** isso só se justificaria pela escala do pico de leitura na abertura das inscrições, que se resolve com cache ou CDN. Se um dia for preciso, dá para extrair um deployable de leitura do mesmo contexto.
-- **Manter a oferta na Secretaria e consultar a ocupação no Credenciamento por HTTP:** cria acoplamento síncrono contra a [ADR 001](comunicacao-assincrona.md) e uma condição de corrida entre a consulta e a alteração.
+- **Manter a oferta na Secretaria e consultar a ocupação no Credenciamento por HTTP:** cria acoplamento síncrono contra a [ADR 001](001-comunicacao-assincrona.md) e uma condição de corrida entre a consulta e a alteração.
 - **Projetar a ocupação na Secretaria:** a ocupação mudaria a cada inscrição, e a checagem continuaria com atraso.
 
 ## Consequências
@@ -44,6 +44,6 @@ Há dois problemas:
   - criar os endpoints `/public` nos dois serviços.
 
 ## Referências
-- [checkin-no-registration.md](checkin-no-registration.md)
+- [002-checkin-no-registration.md](002-checkin-no-registration.md)
 - [../endpoint.md](../endpoint.md)
 - [../arquitetura.md](../arquitetura.md)
