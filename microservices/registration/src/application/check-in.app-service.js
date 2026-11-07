@@ -1,4 +1,4 @@
-import { ForbiddenError, NotFoundError } from "../../../shared/domain/errors.js";
+import { DomainError, ForbiddenError, NotFoundError } from "../../../shared/domain/errors.js";
 import { Attendance } from "../domain/attendance.js";
 import { CheckIn } from "../domain/check-in.js";
 import { canManage } from "./permissions.js";
@@ -58,7 +58,7 @@ export class CheckInAppService {
         const activity = this.activityRepository.getHeader(activityId);
         if (!activity) throw new NotFoundError('activity');
         this.#assertOpenEvent(activity);
-        if (!this.checkInRepository.getById(activityId)?.accepts(code)) throw new Error('Check-in closed or invalid code');
+        if (!this.checkInRepository.getById(activityId)?.accepts(code)) throw new DomainError('Check-in closed or invalid code');
         const registration = this.registrationRepository.findActive(activityId, user.id);
         if (!registration) throw new ForbiddenError('check in without a registration in this activity');
         return this.#attend(registration, { method: 'code', by: user.id });
@@ -87,6 +87,6 @@ export class CheckInAppService {
         return activity;
     }
     #assertOpenEvent(activity) {
-        if (this.eventRepository.getById(activity.eventId)?.status != 'published') throw new Error('Event is not published');
+        if (this.eventRepository.getById(activity.eventId)?.status != 'published') throw new DomainError('Event is not published');
     }
 }

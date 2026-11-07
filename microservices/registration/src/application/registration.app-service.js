@@ -1,4 +1,4 @@
-import { ConcurrencyError, ForbiddenError, NotFoundError } from "../../../shared/domain/errors.js";
+import { ConcurrencyError, DomainError, ForbiddenError, NotFoundError } from "../../../shared/domain/errors.js";
 import { Activity } from "../domain/activity.js";
 import { Participant } from "../domain/participant.js";
 import { ruleFromConfig } from "../domain/rules/rule-from-config.js";
@@ -56,7 +56,7 @@ export class RegistrationAppService {
     async register({ activityId }, userId) {
         if (!this.participantRepository.getById(userId)) throw new NotFoundError('user');
         const registration = await this.#change(activityId, activity => {
-            if (this.eventRepository.getById(activity.eventId)?.status != 'published') throw new Error('Event is not open for registration');
+            if (this.eventRepository.getById(activity.eventId)?.status != 'published') throw new DomainError('Event is not open for registration');
             return activity.register(userId);
         });
         return registration.toJSON();
@@ -115,7 +115,7 @@ export class RegistrationAppService {
         const registration = await this.#change(activityId, activity => {
             const requirement = activity.registrations.find(r => r.id == id).requirements.find(r => r.id == requirementId);
             if (!requirement) throw new NotFoundError('requirement');
-            if (!MANUAL_REQUIREMENTS.includes(requirement.type)) throw new Error(`Requirement ${requirement.type} cannot be fulfilled manually`);
+            if (!MANUAL_REQUIREMENTS.includes(requirement.type)) throw new DomainError(`Requirement ${requirement.type} cannot be fulfilled manually`);
             return activity.fulfill(id, requirementId);
         });
         return this.#view(registration);

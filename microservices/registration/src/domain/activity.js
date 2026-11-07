@@ -1,4 +1,4 @@
-import { DuplicateError } from "../../../shared/domain/errors.js";
+import { DomainError, DuplicateError, NotFoundError } from "../../../shared/domain/errors.js";
 import { Registration, SEAT_STATUSES } from "./registration.js";
 
 // Entity + AggregateRoot. Cópia imutável da Activity publicada pela secretaria (nome, capacidade, preço, regras)
@@ -145,7 +145,7 @@ export class Activity {
     }
     #find(registrationId) {
         const registration = this.#registrations.find(r => r.id == registrationId);
-        if (!registration) throw new Error('Registration not found');
+        if (!registration) throw new NotFoundError('Registration');
         return registration;
     }
 }

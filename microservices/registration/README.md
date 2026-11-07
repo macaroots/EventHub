@@ -11,11 +11,12 @@ Exige login; o usuário vem do token.
 | `GET /activities/:id/registrations` | Organizador/admin: `{activity (com ocupação), event, registrations}`. |
 | `POST /registrations/:id/requirements/:requirementId/fulfill` | Organizador/admin. Pendências de elegibilidade (`age verification`). |
 | `GET /activities/:id/waitlist` | Ordem da fila de espera: só os `registrationId`. Qualquer usuário logado. Usada pelo BFF ([ADR 009](../../docs/adrs/009-posicao-na-fila-de-espera.md)). |
-| `GET /activities` | Atividades publicadas. |
 | `GET /activities/:id/checkin` | Organizador/admin: código, confirmados, presenças e lista. |
 | `POST /activities/:id/checkin/open` / `close` | Organizador/admin: abre (gera código novo, o anterior deixa de valer) ou fecha. |
 | `POST /activities/:id/checkin` `{code}` | Participante confirmado informa o código mostrado na sala. |
 | `POST /registrations/:id/checkin` | Organizador/admin marca a presença na mão. |
+
+Erros: `DomainError` (regra de negócio) → 400; `NotFoundError` 404; `ForbiddenError` 403; `ConcurrencyError` (retentativas esgotadas) 409. Qualquer outro erro é falha interna → 500, só logado, sem a mensagem na resposta. Regra nova deve lançar `DomainError` (ou subclasse), senão vira 500.
 
 `Activity` (nome, horário, capacidade, preço, regras) e o evento (`status`, `organizers`) são cópias imutáveis criadas uma vez pelo `EventPublished` ([ADR 011](../../docs/adrs/011-evento-imutavel-apos-publicacao.md)); depois, só `EventCanceled` (cancela as inscrições), `EventEnded` (certificados) e `EventOrganizersChanged` os alteram; `Participant {id, username}` é projeção de `UserCreated`/`UserUpdated` do identity (upsert, idempotente). O domínio só conhece o `userId`; o participante só entra na listagem.
 
