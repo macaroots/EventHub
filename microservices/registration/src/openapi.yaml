@@ -37,6 +37,8 @@ paths:
               schema: { $ref: '#/components/schemas/Registration' }
         '400': { $ref: '#/components/responses/Error' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
     get:
       tags: [Participante]
       summary: Lista inscrições
@@ -97,16 +99,6 @@ paths:
         '400': { $ref: '#/components/responses/Error' }
         '403': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
-  /activities:
-    get:
-      tags: [Participante]
-      summary: Atividades publicadas
-      responses:
-        '200':
-          description: Atividades
-          content:
-            application/json:
-              schema: { type: array, items: { $ref: '#/components/schemas/Activity' } }
   /activities/{id}/waitlist:
     parameters: [{ $ref: '#/components/parameters/Id' }]
     get:
@@ -331,22 +323,6 @@ components:
                 nullable: true
                 properties: { id: { type: string }, username: { type: string } }
               attendance: { $ref: '#/components/schemas/Attendance' }
-    Activity:
-      type: object
-      properties:
-        id: { type: string }
-        eventId: { type: string }
-        name: { type: string }
-        startsAt: { type: string, nullable: true }
-        endsAt: { type: string, nullable: true }
-        capacity: { type: integer }
-        price: { type: number }
-        registrations: { type: array, items: { $ref: '#/components/schemas/Registration' } }
-        registrationRules:
-          type: array
-          items:
-            type: object
-            properties: { type: { type: string }, age: { type: integer } }
   responses:
     Unauthorized:
       description: Sem token válido
@@ -354,7 +330,7 @@ components:
         text/plain:
           schema: { type: string }
     Error:
-      description: Erro de domínio (400), sem permissão (403) ou não encontrado (404)
+      description: Erro de domínio (400), sem permissão (403), não encontrado (404) ou conflito de concorrência (409)
       content:
         text/plain:
           schema: { type: string }

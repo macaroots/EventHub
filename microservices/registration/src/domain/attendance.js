@@ -1,3 +1,4 @@
+import { DomainError } from "../../../shared/domain/errors.js";
 // Entity. Presença de uma inscrição confirmada numa atividade: no máximo uma por inscrição (ADR 012).
 // method: code (participante informou o código) | manual (marcada pelo organizador, checkedInBy).
 export class Attendance {
@@ -5,7 +6,7 @@ export class Attendance {
         Object.assign(this, { id, registrationId, activityId, userId, method, checkedInBy, checkedInAt });
     }
     static of(registration, { method, by }) {
-        if (registration.status != 'confirmed') throw new Error('Registration is not confirmed');
+        if (registration.status != 'confirmed') throw new DomainError('Registration is not confirmed');
         const { id: registrationId, activityId, userId } = registration;
         return new Attendance({ registrationId, activityId, userId, method, checkedInBy: by });
     }

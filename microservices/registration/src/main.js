@@ -14,7 +14,7 @@ import { CertificateAppService } from './application/certificate.app-service.js'
 import { RabbitMqMessageBus } from '../../shared/messaging/rabbitmq-message-bus.js';
 import { OutboxMessageBus } from '../../shared/messaging/outbox-message-bus.js';
 import { authenticate } from '../../shared/auth/jwt.js';
-import { ForbiddenError, NotFoundError } from '../../shared/domain/errors.js';
+import { ConcurrencyError, DomainError, ForbiddenError, NotFoundError } from '../../shared/domain/errors.js';
 
 const database = openDatabase('registration');
 
@@ -52,21 +52,20 @@ messageBus.listen('PaymentDenied', e => registrationService.denyPayment(e));
 messageBus.listen('UserCreated', e => registrationService.upsertParticipant(e));
 messageBus.listen('UserUpdated', e => registrationService.upsertParticipant(e));
 
-app.get('/activities', (req, res) => {
-    let beans = activityRepository.list();
-    res.json(beans);
-});
-app.get('/registrations', (req, res) => {
-    res.json(registrationService.listRegistrations(req.user));
-});
-// Erros de domínio → status HTTP.
+// Erros de domínio → 4xx; os demais são falha interna → 500 (sem vazar a mensagem).
+const errorStatus = e => e instanceof NotFoundError ? 404 : e instanceof ForbiddenError ? 403
+    : e instanceof ConcurrencyError ? 409 : e instanceof DomainError ? 400 : 500;
 const handle = (fn, status = 200) => async (req, res) => {
     try {
         res.status(status).json(await fn(req));
     } catch (e) {
-        res.status(e instanceof NotFoundError ? 404 : e instanceof ForbiddenError ? 403 : 400).send(e.message);
+        const code = errorStatus(e);
+        if (code == 500) console.error(`${req.method} ${req.path} falhou:`, e);
+        res.status(code).send(code == 500 ? 'Internal server error' : e.message);
     }
 };
+
+app.get('/registrations', handle(req => registrationService.listRegistrations(req.user)));
 app.get('/registrations/:id', handle(req => registrationService.getRegistration(req.params.id, req.user)));
 // Gestão (organizador do evento ou admin).
 app.get('/activities/:id/waitlist', handle(req => registrationService.getWaitlist(req.params.id)));
@@ -80,14 +79,7 @@ app.post('/activities/:id/checkin/open', handle(req => checkInService.open(req.p
 app.post('/activities/:id/checkin/close', handle(req => checkInService.close(req.params.id, req.user)));
 app.post('/activities/:id/checkin', handle(req => checkInService.checkIn({ activityId: req.params.id, code: req.body.code }, req.user)));
 app.post('/registrations/:id/checkin', handle(req => checkInService.checkInManually(req.params.id, req.user)));
-app.post('/registrations', async (req, res) => {
-    try {
-        const registration = await registrationService.register(req.body, req.user.id);
-        res.status(201).json(registration);
-    } catch (e) {
-        res.status(400).send(e.message);
-    }
-});
+app.post('/registrations', handle(req => registrationService.register(req.body, req.user.id), 201));
 
 await messageBus.consume("registration");
 
