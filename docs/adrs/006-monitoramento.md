@@ -30,5 +30,5 @@ Usar ferramentas padrão em vez de um serviço próprio:
 - Pode ser adotado aos poucos: health e DLQ primeiro, depois logs, métricas e rastreamento.
 
 ## Referências
-- [relatorios.md](relatorios.md)
+- [005-relatorios.md](005-relatorios.md)
 - [../../microservices/shared/messaging/rabbitmq-message-bus.js](../../microservices/shared/messaging/rabbitmq-message-bus.js)

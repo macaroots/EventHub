@@ -17,7 +17,7 @@ Check-in aqui não é controle de entrada: ninguém é barrado na porta. O que s
 - **O participante logado informa o código** na página da inscrição. A presença só é registrada se o check-in estiver aberto, o código conferir e a inscrição estiver `confirmed`.
 - **Marcação manual:** o organizador marca a presença de um inscrito confirmado, para quem não tem celular ou não conseguiu informar o código. Fica registrado quem marcou (`method: manual`, `checkedInBy`).
 - **Mensagem:** cada presença nova publica `AttendanceRegistered {attendanceId, registrationId, activityId, userId, method, checkedInAt}`, que mais tarde será usada pelos certificados (RN06).
-- **Onde fica:** no `registration`, como o [ADR 002](checkin-no-registration.md) já decidiu. `CheckIn` e `Attendance` ficam fora do aggregate `Activity`, então um check-in não disputa o lock com as inscrições.
+- **Onde fica:** no `registration`, como o [ADR 002](002-checkin-no-registration.md) já decidiu. `CheckIn` e `Attendance` ficam fora do aggregate `Activity`, então um check-in não disputa o lock com as inscrições.
 
 ## Justificativa
 - O código no local prova que a pessoa estava na sala no momento, sem precisar de porteiro nem de leitor de QR. É o mínimo que o RF09 exige.
@@ -32,13 +32,13 @@ Check-in aqui não é controle de entrada: ninguém é barrado na porta. O que s
 - **Só a marcação manual:** não escala em atividades grandes.
 
 ## Consequências
-- **Muda o [ADR 002](checkin-no-registration.md):** o check-in lê a inscrição no próprio banco do serviço, no momento do check-in, em vez de manter uma projeção alimentada por `RegistrationConfirmed/Canceled`. Se o check-in for extraído para outro serviço, essa leitura vira uma projeção.
+- **Muda o [ADR 002](002-checkin-no-registration.md):** o check-in lê a inscrição no próprio banco do serviço, no momento do check-in, em vez de manter uma projeção alimentada por `RegistrationConfirmed/Canceled`. Se o check-in for extraído para outro serviço, essa leitura vira uma projeção.
 - Uma inscrição cancelada depois do check-in mantém a presença, porque ela já aconteceu. O comparecimento conta as presenças sobre os confirmados.
 - Ainda não há janela de horário: o organizador abre e fecha o check-in. A projeção da atividade não guarda `startsAt` e `endsAt`, que serão necessários para o RN06.
 - Ainda não há como desfazer uma presença marcada por engano.
 - Um código repassado durante a abertura ainda permite presença indevida. Mitigação: gerar um código novo ou passar para o código rotativo.
 
 ## Referências
-- [checkin-no-registration.md](checkin-no-registration.md)
-- [certificados.md](certificados.md)
+- [002-checkin-no-registration.md](002-checkin-no-registration.md)
+- [003-certificados.md](003-certificados.md)
 - [../../microservices/registration/README.md](../../microservices/registration/README.md)

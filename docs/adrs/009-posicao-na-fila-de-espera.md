@@ -5,13 +5,13 @@ Responsável: Renato
 Status: Aceito
 
 ## Contexto
-Com o [ADR 008](vaga-e-pagamento-como-status.md), quem se inscreve sem vaga fica `waitlisted` e é promovido quando uma vaga abre. O participante quer ver sua posição na fila. A página precisa se atualizar conforme a fila anda e, quando ele sair da fila, redirecionar:
+Com o [ADR 008](008-vaga-e-pagamento-como-status.md), quem se inscreve sem vaga fica `waitlisted` e é promovido quando uma vaga abre. O participante quer ver sua posição na fila. A página precisa se atualizar conforme a fila anda e, quando ele sair da fila, redirecionar:
 - para `/payments/:id`, se ficar `awaiting_payment`;
 - para a página da inscrição, se ficar `confirmed` ou `canceled`.
 
 A fila muda pouco: anda quando alguém da frente cancela, tem o pagamento recusado ou perde a reserva por expiração (em minutos), ou quando a capacidade aumenta. Em eventos disputados, porém, ela pode ter milhares de pessoas esperando ao mesmo tempo.
 
-A fila de acesso (`/queue`, sala de espera de tráfego) é outro assunto: ver o [ADR 010](fila-de-acesso.md).
+A fila de acesso (`/queue`, sala de espera de tráfego) é outro assunto: ver o [ADR 010](010-fila-de-acesso.md).
 
 ## Decisão
 Começar pela **opção 2 (polling com cache por atividade no BFF)**, desacoplada para poder migrar para a **opção 3 (push por SSE)** trocando só o transporte.
@@ -82,6 +82,6 @@ Começar pela **opção 2 (polling com cache por atividade no BFF)**, desacoplad
 - A migração para a opção 3 fica restrita ao `WaitlistSource` e ao `watchRegistration`.
 
 ## Referências
-- [vaga-e-pagamento-como-status.md](vaga-e-pagamento-como-status.md)
-- [comunicacao-assincrona.md](comunicacao-assincrona.md)
-- [notificacoes.md](notificacoes.md)
+- [008-vaga-e-pagamento-como-status.md](008-vaga-e-pagamento-como-status.md)
+- [001-comunicacao-assincrona.md](001-comunicacao-assincrona.md)
+- [004-notificacoes.md](004-notificacoes.md)
