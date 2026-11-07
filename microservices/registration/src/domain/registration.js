@@ -1,3 +1,4 @@
+import { DomainError, NotFoundError } from "../../../shared/domain/errors.js";
 // Status que ocupam vaga. A soma deles nunca passa da capacidade.
 export const SEAT_STATUSES = ['pending', 'awaiting_payment', 'confirmed'];
 
@@ -39,8 +40,8 @@ export class Registration {
     }
     fulfill(requirementId, price) {
         const r = this.requirements.find(r => r.id == requirementId);
-        if (!r) throw new Error('Requirement not found');
-        if (this.status == 'canceled') throw new Error('Registration is canceled');
+        if (!r) throw new NotFoundError('Requirement');
+        if (this.status == 'canceled') throw new DomainError('Registration is canceled');
         r.fulfilled = true;
         if (this.status == 'pending') this.#advance(price);
     }
