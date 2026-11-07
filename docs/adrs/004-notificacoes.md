@@ -25,4 +25,4 @@ Criar um microsserviço `notification`. Ele ouve os eventos de domínio (`Regist
 - O aviso é enviado depois do fato e pode atrasar.
 
 ## Referências
-- [comunicacao-assincrona.md](comunicacao-assincrona.md)
+- [001-comunicacao-assincrona.md](001-comunicacao-assincrona.md)

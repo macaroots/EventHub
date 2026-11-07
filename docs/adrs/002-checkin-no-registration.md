@@ -2,7 +2,7 @@
 Número do ADR: 002
 Data: 2026-11-02
 Responsável: Renato
-Status: Aceito. A forma do check-in está no [ADR 012](forma-do-checkin.md), que troca a reação a mensagens pela leitura da inscrição no próprio banco.
+Status: Aceito. A forma do check-in está no [ADR 012](012-forma-do-checkin.md), que troca a reação a mensagens pela leitura da inscrição no próprio banco.
 
 ## Contexto
 Hoje o serviço `registration` faz a inscrição em atividades: regras, pendências como pagamento e projeção do `Participant`. Falta o check-in no dia do evento. Ele pode acontecer meses depois da inscrição, e é preciso decidir se fica no mesmo serviço ou num serviço próprio.
@@ -32,5 +32,5 @@ O check-in fica no `registration`, como um aggregate próprio (`Attendance`), se
   - crescimento da lógica pós-evento, como presença mínima e certificados.
 
 ## Referências
-- [comunicacao-assincrona.md](comunicacao-assincrona.md)
+- [001-comunicacao-assincrona.md](001-comunicacao-assincrona.md)
 - [../ddd.md](../ddd.md)

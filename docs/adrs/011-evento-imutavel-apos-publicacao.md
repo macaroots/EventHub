@@ -10,7 +10,7 @@ A Secretaria permitia alterar eventos e atividades publicados, inclusive `capaci
 - preço alterado com cobranças em andamento;
 - regra nova sobre inscrições já aceitas.
 
-O [ADR 007](fronteiras-secretaria-credenciamento.md) propunha resolver isso movendo a oferta (`capacity`, `price`, `rules`) para o Credenciamento, o que obrigaria o organizador a editar a atividade em dois serviços.
+O [ADR 007](007-fronteiras-secretaria-credenciamento.md) propunha resolver isso movendo a oferta (`capacity`, `price`, `rules`) para o Credenciamento, o que obrigaria o organizador a editar a atividade em dois serviços.
 
 ## Decisão
 1. **O conteúdo do evento e das atividades só muda em `draft`.** Depois de publicado, o evento só pode ser cancelado. Organizadores continuam mudando até o cancelamento, porque são controle de acesso, não conteúdo publicado.
@@ -31,7 +31,7 @@ O [ADR 007](fronteiras-secretaria-credenciamento.md) propunha resolver isso move
 - Uma única mensagem na publicação resolve a ordem de chegada (atividades antes do evento) e o descarte de rascunhos nas projeções.
 
 ## Alternativas Consideradas
-- **Oferta no Credenciamento ([ADR 007](fronteiras-secretaria-credenciamento.md)):** edição em dois lugares, composição na tela e uma atividade sem oferta até alguém configurá-la.
+- **Oferta no Credenciamento ([ADR 007](007-fronteiras-secretaria-credenciamento.md)):** edição em dois lugares, composição na tela e uma atividade sem oferta até alguém configurá-la.
 - **Permitir mudanças após a publicação com regras de reconciliação:** cada campo exigiria uma política (o que fazer com quem já pagou se o preço muda, com quem ficou sem vaga se a capacidade cai) e mensagens de correção.
 - **Permitir só mudanças "seguras" (aumentar capacidade, corrigir texto):** é útil, mas reabre o canal de atualização. Fica para quando houver necessidade real; o caminho seria uma mensagem específica, como `ActivityCapacityIncreased`.
 
@@ -43,5 +43,5 @@ O [ADR 007](fronteiras-secretaria-credenciamento.md) propunha resolver isso move
 - Textos descritivos (descrição, local) não vão para o Credenciamento. Se notificações ou crachás precisarem deles, entram no `EventPublished`.
 
 ## Referências
-- [fronteiras-secretaria-credenciamento.md](fronteiras-secretaria-credenciamento.md)
-- [vaga-e-pagamento-como-status.md](vaga-e-pagamento-como-status.md)
+- [007-fronteiras-secretaria-credenciamento.md](007-fronteiras-secretaria-credenciamento.md)
+- [008-vaga-e-pagamento-como-status.md](008-vaga-e-pagamento-como-status.md)
