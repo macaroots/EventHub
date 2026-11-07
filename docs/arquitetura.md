@@ -61,6 +61,43 @@ Cada serviço é dono dos seus dados (um SQLite por serviço) e não lê o banco
 - **Dados próprios:** nenhum persistido. Guarda em memória dois caches descartáveis: a ordem da fila de espera por atividade (2 s) e o acesso já autorizado por inscrição ([ADR 009](adrs/posicao-na-fila-de-espera.md)).
 - **Projeções:** nenhuma. Lê por HTTP, com o token do usuário.
 
+## Escala
+
+A divisão em serviços segue os contextos, e eles têm perfis de carga diferentes. Cada um pode ganhar mais instâncias sem mexer nos outros, e a fila absorve os picos entre eles.
+
+**Hoje, porém, todo serviço com dados roda com uma instância só**, porque usa SQLite num volume local. Só o BFF já escala na horizontal. A saída é o [ADR 014](adrs/banco-para-varias-instancias.md).
+
+| Serviço | Carga | Gargalo | Como escala | Gatilho |
+|---|---|---|---|---|
+| `web` (BFF) | Todo o tráfego HTML, mais o polling da fila de espera | Requisições por segundo; caches por instância | Na horizontal, porque não tem estado. Página pública sem sessão e cacheável ([ADR 015](adrs/cache-do-catalogo-publico.md)) | CPU ou latência alta |
+| `secretariat` | Escrita baixa (organizadores). Leitura pública alta na abertura das inscrições | Uma instância (SQLite) | Cache HTTP e micro-cache no BFF; CDN com pico real ([ADR 015](adrs/cache-do-catalogo-publico.md)) | Pico de leitura que o cache não absorve |
+| `registration` | Escrita concorrente na abertura das inscrições; check-in na abertura das atividades | Uma instância (SQLite); lock otimista por atividade; a `Activity` carregada com todas as inscrições | Banco com réplicas ([ADR 014](adrs/banco-para-varias-instancias.md)); rate limit; processamento serial por atividade e sala de espera na borda ([ADR 010](adrs/fila-de-acesso.md)) | Conflitos de lock ou CPU saturada no pico |
+| `identity` | Logins na abertura das inscrições | Uma instância; hash de senha (CPU), quando houver | Réplicas, depois do banco. Os outros serviços validam o JWT localmente, então o `identity` não está no caminho de cada requisição | Login lento no pico |
+| `payment` | Acompanha as inscrições pagas | Latência do gateway externo | Assíncrono: a fila absorve. Consumidores concorrentes depois do banco | Fila `payment` crescendo |
+| RabbitMQ | Todas as mensagens | Um nó só | Cluster com quorum queues | Indisponibilidade ou fila acumulando |
+| `notification` (planejado) | Rajadas (cancelamento de evento, promoções) | Limite do provedor de e-mail | Consumidores concorrentes; a fila absorve | Atraso nos avisos |
+| `certificate` (planejado) | Lote no `EventEnded`; validação pública por anos | Geração de PDF (CPU) | Workers em paralelo; validação cacheável | Lote demorado |
+| `report` (planejado) | Grava todas as mensagens; consulta rara | Volume do log | Consumidor único; agregação no banco | Consultas lentas |
+
+**Para ter várias instâncias** ([ADR 014](adrs/banco-para-varias-instancias.md)):
+- banco compartilhado entre as instâncias;
+- um relay de outbox ativo por serviço, para manter a ordem;
+- tarefas periódicas (expiração) em uma instância só.
+
+O lock otimista, o trigger de capacidade e a inbox já funcionam com várias instâncias.
+
+### Subdivisões possíveis
+
+Um contexto pode virar mais de um deployable quando uma parte tiver carga ou disponibilidade diferente das outras. O modelo e o banco continuam do contexto. Nenhuma das subdivisões abaixo é necessária hoje:
+
+| De | Parte | Quando separar | Referência |
+|---|---|---|---|
+| `registration` | Check-in | Pico do check-in afetando as inscrições, ou operação offline no local | [ADR 002](adrs/checkin-no-registration.md) |
+| `registration` | Processamento de inscrições (fila durável e consumidor por atividade) | Disputa pelo lock que o rate limit e as réplicas não resolvem | [ADR 010](adrs/fila-de-acesso.md) |
+| `secretariat` | Leitura do catálogo (projeção própria do `EventPublished`) | Pico de leitura que cache e CDN não absorvem | [ADR 007](adrs/fronteiras-secretaria-credenciamento.md), [ADR 015](adrs/cache-do-catalogo-publico.md) |
+| `web` | BFF público (cacheável) e BFF autenticado | Perfis de carga e de deploy diferentes | [ADR 015](adrs/cache-do-catalogo-publico.md) |
+| `identity` | Troca por um IdP (Keycloak, Auth0) | Login social, MFA ou carga de login | — |
+
 ## O que já temos
 
 - **Infra:** docker-compose com um serviço por contêiner, hot reload no ambiente de dev e RabbitMQ com exchange `topic` e uma fila durável por serviço.
@@ -71,7 +108,7 @@ Cada serviço é dono dos seus dados (um SQLite por serviço) e não lê o banco
 - **Credenciamento:** inscrição com regras (`minimumAge`), vaga com fila de espera, reserva com pagamento e expiração, projeções de atividade, evento e participante check-in com comparecimento (RF09, RF11) e pedido de certificados ao encerrar o evento (RF10).
 - **Caixa:** recebe `PaymentRequested`, paga por `POST /payments/:id/pay` com gateway fake e publica `PaymentConfirmed` ou `PaymentDenied`.
 - **Testes:** secretariat, registration, payment e shared.
-- **ADRs:** 001 a 007.
+- **ADRs:** 001 a 015.
 
 ## O que falta
 
