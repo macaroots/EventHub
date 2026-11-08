@@ -1,0 +1,154 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://event-hub.local/contracts/messages/RegistrationCreated.schema.json",
+  "title": "RegistrationCreated",
+  "description": "registration → (notificações/relatórios, futuro). Retrato completo da inscrição após avaliar regras e vaga. Atenção: o id da inscrição está em 'id', não em 'registrationId'.",
+  "allOf": [
+    {
+      "$ref": "envelope.schema.json"
+    }
+  ],
+  "type": "object",
+  "properties": {
+    "type": {
+      "const": "RegistrationCreated"
+    },
+    "source": {
+      "const": "registration"
+    },
+    "data": {
+      "type": "object",
+      "required": [
+        "id",
+        "userId",
+        "activityId",
+        "status",
+        "requirements",
+        "reasons",
+        "payment",
+        "createdAt"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "envelope.schema.json#/$defs/uuid",
+          "description": "registrationId"
+        },
+        "userId": {
+          "$ref": "envelope.schema.json#/$defs/uuid"
+        },
+        "activityId": {
+          "$ref": "envelope.schema.json#/$defs/uuid"
+        },
+        "status": {
+          "enum": [
+            "pending",
+            "waitlisted",
+            "awaiting_payment",
+            "confirmed",
+            "canceled"
+          ]
+        },
+        "requirements": {
+          "type": "array",
+          "description": "Pendências de elegibilidade.",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "type",
+              "fulfilled"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "envelope.schema.json#/$defs/uuid"
+              },
+              "type": {
+                "type": "string",
+                "examples": [
+                  "age verification"
+                ]
+              },
+              "minimumAge": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "fulfilled": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "reasons": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Motivos de cancelamento."
+        },
+        "payment": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "required": [
+                "id",
+                "amount",
+                "description",
+                "requestedAt",
+                "paid"
+              ],
+              "properties": {
+                "id": {
+                  "$ref": "envelope.schema.json#/$defs/uuid",
+                  "description": "paymentId"
+                },
+                "amount": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                "description": {
+                  "type": "string"
+                },
+                "requestedAt": {
+                  "$ref": "envelope.schema.json#/$defs/dateTime"
+                },
+                "paid": {
+                  "type": "boolean"
+                }
+              }
+            }
+          ]
+        },
+        "createdAt": {
+          "$ref": "envelope.schema.json#/$defs/dateTime"
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "id": "0b9c6c1e-3f0a-4d38-9d2e-6f1c2a7b8e01",
+      "type": "RegistrationCreated",
+      "source": "registration",
+      "time": "2026-11-06T13:00:00.000Z",
+      "data": {
+        "id": "5e4d3c00-0000-4000-8000-000000000f01",
+        "userId": "6a1f0c2e-1b2c-4d3e-8f40-5a6b7c8d9e01",
+        "activityId": "4d3c2b00-0000-4000-8000-00000000a001",
+        "status": "awaiting_payment",
+        "requirements": [],
+        "reasons": [],
+        "payment": {
+          "id": "7f6e5d00-0000-4000-8000-000000000b01",
+          "amount": 50,
+          "description": "Ticket",
+          "requestedAt": "2026-11-06T13:00:00.000Z",
+          "paid": false
+        },
+        "createdAt": "2026-11-06T13:00:00.000Z"
+      }
+    }
+  ]
+}

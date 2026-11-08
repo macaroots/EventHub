@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://event-hub.local/contracts/messages/envelope.schema.json",
+  "title": "Envelope",
+  "description": "Formato de toda mensagem: metadados no envelope, conteúdo em data. Nomes de campos do CloudEvents (subconjunto). Campos extras devem ser ignorados (tolerant reader).",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "source",
+    "time",
+    "data"
+  ],
+  "properties": {
+    "id": {
+      "$ref": "#/$defs/uuid",
+      "description": "Único por mensagem; chave de idempotência do consumidor (inbox). Igual à propriedade AMQP 'messageId'."
+    },
+    "type": {
+      "type": "string",
+      "description": "Nome da mensagem. Igual à routing key e à propriedade AMQP 'type'."
+    },
+    "source": {
+      "enum": [
+        "identity",
+        "payment",
+        "registration",
+        "secretariat"
+      ],
+      "description": "Serviço que publicou. Igual à propriedade AMQP 'appId'."
+    },
+    "time": {
+      "$ref": "#/$defs/dateTime",
+      "description": "Momento em que a mensagem foi gravada no outbox do produtor."
+    },
+    "data": {
+      "type": "object",
+      "description": "Conteúdo da mensagem; o schema de cada tipo o define."
+    }
+  },
+  "$defs": {
+    "uuid": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "dateTime": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 em UTC, ex.: 2026-11-06T13:00:00.000Z"
+    },
+    "isoDate": {
+      "type": "string",
+      "minLength": 1,
+      "description": "ISO 8601, data (2026-11-10) ou data-hora (2026-11-10T09:00:00.000Z)."
+    },
+    "nonEmpty": {
+      "type": "string",
+      "minLength": 1
+    },
+    "organizers": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/uuid"
+      },
+      "uniqueItems": true,
+      "description": "userIds (identity) que gerenciam o evento."
+    }
+  }
+}

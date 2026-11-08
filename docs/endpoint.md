@@ -1,11 +1,13 @@
 # Endpoints
 
-Cada serviço tem host/porta próprio.
+Cada serviço tem host/porta próprio. Rotas `/public/...` não exigem login.
+
+Fronteiras: [ADR 007](adrs/007-fronteiras-secretaria-credenciamento.md). O catálogo público fica na Secretaria (programação) e no Credenciamento (oferta).
 
 Autenticação: `Authorization: Bearer <JWT>` emitido pelo identity → `req.user = { id, username, role: 'user' | 'admin' }`.
 "Organizador" não é role: é estar em `event.organizers`. Admin pode tudo.
 
-Erros: 400 (validação/regra), 401, 403, 404, 409 (duplicado).
+Erros: 400 (validação/regra), 401, 403, 404
 
 ## Entidades
 
@@ -38,10 +40,9 @@ Event
         organizers: List<userId>
     }
     Projeções:
-        - Catálogo { id, name, information, startDate, endDate, status, cancelReason }    ← EventPublished, EventUpdated, EventCanceled, EventDeleted
         - Credenciamento { id, status, organizers }    ← EventCreated, EventUpdated, EventPublished, EventCanceled, EventDeleted
 
-Activity
+Activity (programação)
     Dono: Secretaria
     {
         id
@@ -51,14 +52,20 @@ Activity
         location
         startsAt
         endsAt
-        capacity
+    }
+    Projeções:
+        - Credenciamento { id, eventId }    ← ActivityCreated, ActivityDeleted
+
+Offer (oferta de inscrição da atividade)
+    Dono: Credenciamento
+    {
+        activityId
+        capacity?       // sem capacity a atividade não aceita inscrições
         price = 0
         rules = []
         qrCodeDaAtividade
     }
-    Projeções:
-        - Catálogo { id, eventId, name, description, location, startsAt, endsAt, capacity, price, rules }    ← ActivityCreated, ActivityUpdated, ActivityDeleted
-        - Credenciamento { id, eventId, capacity, price, rules }    ← ActivityCreated, ActivityUpdated, ActivityDeleted
+    Projeções: nenhuma.
 
 Registration
     Dono: Credenciamento
@@ -75,8 +82,12 @@ Registration
 Attendance (check-in)
     Dono: Credenciamento
     {
-        registrationId
+        id
+        registrationId   // único
         activityId
+        userId
+        method: code | manual
+        checkedInBy
         checkedInAt
     }
     Projeções: nenhuma.
@@ -153,12 +164,19 @@ GET /users/:id
 GET /users?email=aa@a.com
     { id, name, email }
 
+GET /users?username=x   (exige JWT; 404 se não existe)
+    { id, username, role }
+
 - usado para emails, certificados e para secretaria confirmar que o usuário existe e está ativo
-## Catálogo
 
-Público (sem login). Só eventos `published` e `canceled`; `draft` → 404.
+## Secretaria
 
-GET /events?name&from&to&page&limit
+### Público
+
+Sem login. Só eventos `published` e `canceled`; `draft` → 404.
+Preço e vagas vêm do Credenciamento (`GET /public/activities/:id/offer`).
+
+GET /public/events?name&from&to&page&limit
     [{
         id
         name
@@ -167,7 +185,7 @@ GET /events?name&from&to&page&limit
         status
     }]
 
-GET /events/:id
+GET /public/events/:id
     {
         id
         name
@@ -176,10 +194,10 @@ GET /events/:id
         endDate
         status
         cancelReason?
-        activities: [{ id, name, startsAt, endsAt, location, price }]
+        activities: [{ id, name, startsAt, endsAt, location }]
     }
 
-GET /activities/:id
+GET /public/activities/:id
     {
         id
         eventId
@@ -188,21 +206,15 @@ GET /activities/:id
         location
         startsAt
         endsAt
-        capacity
-        price
-        rules: List<string>     // descrição legível das regras
+        capacity?
+        price?
     }
 
-### Ouve
-
-EventPublished | EventUpdated | EventCanceled | EventDeleted
-ActivityCreated | ActivityUpdated | ActivityDeleted
-
-## Secretaria
+### Gestão
 
 Todos exigem login. Qualquer usuário cria evento (vira createdBy e organizer); demais ações só organizers ou admin.
 
-### Eventos
+#### Eventos
 
 GET /events?name
     Admin vê todos; demais, só os eventos de que são organizers.
@@ -254,12 +266,12 @@ POST /events/:id/organizers
 DELETE /events/:id/organizers/:userId
     204
 
-### Atividades
+#### Atividades
 
-Permissão herdada do evento.
+Permissão herdada do evento. Capacidade, preço e regras ficam no Credenciamento.
 
 GET /events/:id/activities
-    [{ id, name, startsAt, endsAt, capacity, price }]
+    [{ id, name, startsAt, endsAt }]
 
 POST /events/:id/activities
     {
@@ -268,9 +280,6 @@ POST /events/:id/activities
         location
         startsAt
         endsAt
-        capacity
-        price = 0
-        rules = []
     }
     201 { id }
     400 se evento canceled
@@ -279,14 +288,12 @@ GET /activities/:id
     Activity
 
 PATCH /activities/:id
-    { name?, description?, location?, startsAt?, endsAt?, capacity?, price?, rules? }
+    { name?, description?, location?, startsAt?, endsAt? }
     204
 
 DELETE /activities/:id
     204
     400 se evento published
-
-TODO: reduzir capacity abaixo das inscrições confirmadas. A Secretaria não sabe a ocupação.
 
 ### Emite
 
@@ -295,12 +302,25 @@ EventCanceled { ...idem, reason }
 EventDeleted { eventId }
     Adicionar/remover organizer emite EventUpdated.
 
-ActivityCreated | ActivityUpdated { activityId, eventId, name, description, location, startsAt, endsAt, capacity, price, rules }
+ActivityCreated | ActivityUpdated { activityId, eventId, name, description, location, startsAt, endsAt }
 ActivityDeleted { activityId }
 
 ## Credenciamento
 
-Todos exigem login.
+Exigem login, exceto `/public`.
+
+### Público
+
+GET /public/activities/:id/offer
+    Só atividade de evento `published`.
+    {
+        activityId
+        capacity
+        available       // vagas restantes
+        price
+        rules: List<string>     // descrição legível das regras
+    }
+    404 se não há oferta
 
 ### Participante
 
@@ -318,6 +338,7 @@ POST /activities/:id/registrations
         ...dados do formulário // por enquanto, só userId
     }
     201 Registration
+        Sem oferta (capacity) → 400.
         Regra negada também é 201, com status = canceled e reasons.
         Pagamento vira requirement { id = paymentId, type: 'payment', amount }.
     400 se evento não publicado ou token inválido
@@ -337,6 +358,19 @@ POST /registrations/:id/cancel
 ### Organizador
 
 Organizers do evento da atividade, ou admin.
+
+GET /activities/:id/offer
+    Offer + { confirmed, pending }
+
+PATCH /activities/:id/offer
+    {
+        capacity
+        price = 0
+        rules = []      // ex.: [{ type: 'minimumAge', age: 18 }]
+    }
+    204
+    400 se capacity < inscrições confirmadas
+    400 se evento canceled
 
 GET /activities/:id/registrations?status
     [{
@@ -359,24 +393,45 @@ EventCanceled { eventId, status, reason }
     cancela todas as inscrições
 EventDeleted { eventId }
 
-ActivityCreated | ActivityUpdated { activityId, eventId, capacity, price, rules }
+ActivityCreated { activityId, eventId }
+    cria a atividade sem oferta
 ActivityDeleted { activityId }
 
-UserCreated | UserUpdated { userId, username }
+UserCreated | UserUpdated { userId, email }
 
-PaymentApproved { registrationId, paymentId }
-    fulfill(paymentId); sem pendências → RegistrationConfirmed
+PaymentConfirmed { registrationId, paymentId }
+    awaiting_payment → confirmed (RegistrationConfirmed); reserva perdida → ignora
 
-PaymentDenied { registrationId, paymentId, reason: 'denied' | 'expired' }
-    cancel → RegistrationCanceled
+PaymentDenied { registrationId, paymentId, reason }
+    cancel → RegistrationCanceled; promove a fila
 
 ### Emite
 
 RegistrationCreated { ...Registration }
+RegistrationPromoted { registrationId, userId }
 RegistrationConfirmed { registrationId, userId }
 RegistrationCanceled { registrationId, userId, reason }
 PaymentRequested { paymentId, registrationId, userId, amount, description }
+ActivityOfferUpdated { activityId, eventId, capacity, price, rules }
 
+## CheckIn como parte do Credenciamento ([ADR 012](adrs/012-forma-do-checkin.md))
+### Organizador
+GET /activities/:id/checkin
+    { activity, event, checkIn: { status: open | closed, code, openedAt }, confirmed, present, attendees: [{ registrationId, participant, status, attendance }] }
+POST /activities/:id/checkin/open     // abre ou gera código novo
+POST /activities/:id/checkin/close
+POST /registrations/:id/checkin       // marcação manual, só confirmed
+
+### Participante
+POST /activities/:id/checkin
+    { code }        // mostrado na sala
+    200 { ...Attendance, alreadyCheckedIn }
+    400 código errado, check-in fechado ou inscrição não confirmed
+
+Emite AttendanceRegistered { attendanceId, registrationId, activityId, userId, method, checkedInAt }
+
+GET /activities/:id/waitlist
+    [userId]
 
 ## Certificado
 
@@ -409,6 +464,7 @@ GET /certificates/validate/:tokenVerificacao
 
 
 ## Portaria dentro do Credenciamento
+(Rascunho substituído pelo [ADR 012](adrs/012-forma-do-checkin.md).)
 Attendance {
     activityId
     userId

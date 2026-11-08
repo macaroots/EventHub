@@ -1,0 +1,31 @@
+<% const isNew = !activity.id;
+   const editable = isNew || activity.eventStatus == 'draft';
+   const minimumAge = activity.rules.find(r => r.type == 'minimumAge')?.age ?? '';
+   const action = isNew ? `/organizers/events/${activity.eventId}/activities` : `/organizers/activities/${activity.id}`; %>
+<p><a href="/organizers/events/<%= activity.eventId %>">← Evento</a></p>
+<section>
+    <h2><%= isNew ? 'Nova atividade' : activity.name %></h2>
+    <% if (!editable) { %><p><small>Evento publicado: a atividade não muda mais.</small></p><% } %>
+    <form method="post" action="<%= action %>">
+        <fieldset <%= editable ? '' : 'disabled' %>>
+        <label><span>Nome:</span><input name="name" required value="<%= activity.name ?? '' %>"></label>
+        <label><span>Descrição:</span><textarea name="description"><%= activity.description ?? '' %></textarea></label>
+        <label><span>Local:</span><input name="location" value="<%= activity.location ?? '' %>"></label>
+        <label><span>Início:</span><input type="datetime-local" name="startsAt" value="<%= activity.startsAt?.slice(0, 16) ?? '' %>"></label>
+        <label><span>Fim:</span><input type="datetime-local" name="endsAt" value="<%= activity.endsAt?.slice(0, 16) ?? '' %>"></label>
+        <label><span>Vagas:</span><input type="number" name="capacity" min="0" step="1" required value="<%= activity.capacity ?? '' %>"></label>
+        <label><span>Preço:</span><input type="number" name="price" min="0" step="0.01" value="<%= activity.price ?? 0 %>"></label>
+        <label><span>Idade mínima:</span><input type="number" name="minimumAge" min="1" step="1" value="<%= minimumAge %>"></label>
+        <button><%= isNew ? 'Criar' : 'Salvar' %></button>
+        </fieldset>
+    </form>
+    <% if (!editable) { %>
+    <p><a href="/organizers/activities/<%= activity.id %>/registrations">Gerenciar inscrições</a> · <a href="/organizers/activities/<%= activity.id %>/checkin">Check-in</a></p>
+    <% } %>
+    <% if (!isNew && editable) { %>
+    <form method="post" action="/organizers/activities/<%= activity.id %>/delete" onsubmit="return confirm('Apagar a atividade?')">
+        <input type="hidden" name="eventId" value="<%= activity.eventId %>">
+        <button>Apagar atividade</button>
+    </form>
+    <% } %>
+</section>

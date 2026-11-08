@@ -1,0 +1,336 @@
+openapi: 3.0.3
+info:
+  title: Registration (Credenciamento)
+  version: 1.0.0
+  description: |
+    Inscrições nas atividades publicadas (cópia imutável recebida no `EventPublished`).
+    Status: `pending` (elegibilidade) → `awaiting_payment` (vaga reservada) → `confirmed`; sem vaga → `waitlisted`; `canceled`.
+    Mensagens: `RegistrationCreated/Promoted/Confirmed/Canceled`, `PaymentRequested`, `AttendanceRegistered`, `CertificateRequested` (ao receber `EventEnded`). Ver ADRs 003, 008, 009, 011 e 012.
+    Check-in (ADR 012): o organizador abre o check-in da atividade e mostra o código; o participante confirmado o informa, ou o organizador marca na mão.
+servers:
+  - url: http://localhost:3001
+security:
+  - bearer: []
+tags:
+  - name: Participante
+  - name: Gestão
+    description: Organizador do evento ou admin.
+paths:
+  /registrations:
+    post:
+      tags: [Participante]
+      summary: Inscreve o usuário logado
+      description: Só em evento publicado. Lotada com confirmados → `canceled` (`Full occupation`); sem vaga → `waitlisted`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [activityId]
+              properties: { activityId: { type: string } }
+      responses:
+        '201':
+          description: Inscrição criada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Registration' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+    get:
+      tags: [Participante]
+      summary: Lista inscrições
+      description: Admin vê todas; os demais, só as próprias.
+      responses:
+        '200':
+          description: Inscrições
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/RegistrationView' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /registrations/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Participante]
+      summary: Inscrição (dono, organizador ou admin)
+      responses:
+        '200':
+          description: Inscrição
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RegistrationView' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /registrations/{id}/cancel:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [Participante, Gestão]
+      summary: Cancela (dono, organizador ou admin)
+      description: Libera a vaga e promove o primeiro da fila.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: { reason: { type: string } }
+      responses:
+        '200':
+          description: Inscrição cancelada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RegistrationView' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /registrations/{id}/requirements/{requirementId}/fulfill:
+    parameters:
+      - { $ref: '#/components/parameters/Id' }
+      - { name: requirementId, in: path, required: true, schema: { type: string } }
+    post:
+      tags: [Gestão]
+      summary: Resolve uma pendência de elegibilidade (`age verification`)
+      responses:
+        '200':
+          description: Inscrição atualizada (pode ir para `awaiting_payment` ou `confirmed`)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RegistrationView' }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /activities/{id}/waitlist:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Participante]
+      summary: Ordem da fila de espera (só ids)
+      description: Qualquer usuário logado. Usada pelo BFF para calcular a posição com cache (ADR 009).
+      responses:
+        '200':
+          description: registrationIds em ordem
+          content:
+            application/json:
+              schema: { type: array, items: { type: string } }
+        '404': { $ref: '#/components/responses/Error' }
+  /activities/{id}/registrations:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Gestão]
+      summary: Inscrições da atividade, com a ocupação
+      responses:
+        '200':
+          description: Atividade, evento e inscrições
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  activity:
+                    type: object
+                    properties:
+                      id: { type: string }
+                      name: { type: string }
+                      capacity: { type: integer }
+                      price: { type: number }
+                      occupation: { type: integer, description: 'pending + awaiting_payment + confirmed' }
+                      confirmedOccupation: { type: integer }
+                      present: { type: integer, description: 'presenças (check-in)' }
+                  event:
+                    type: object
+                    properties:
+                      id: { type: string }
+                      name: { type: string }
+                      status: { type: string, enum: [published, canceled] }
+                  registrations: { type: array, items: { $ref: '#/components/schemas/RegistrationView' } }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /activities/{id}/checkin:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Gestão]
+      summary: Painel do check-in (código, confirmados e presenças)
+      responses:
+        '200':
+          description: Check-in da atividade
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CheckInPanel' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    post:
+      tags: [Participante]
+      summary: Check-in do participante com o código mostrado na sala
+      description: Exige check-in aberto, código certo e inscrição `confirmed`. Idempotente (`alreadyCheckedIn`). Publica `AttendanceRegistered` na primeira vez.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties: { code: { type: string } }
+      responses:
+        '200':
+          description: Presença registrada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AttendanceResult' }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /activities/{id}/checkin/open:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [Gestão]
+      summary: Abre o check-in ou gera um código novo (o anterior deixa de valer)
+      description: Só em evento publicado.
+      responses:
+        '200':
+          description: Check-in aberto
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CheckInPanel' }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /activities/{id}/checkin/close:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [Gestão]
+      summary: Fecha o check-in
+      responses:
+        '200':
+          description: Check-in fechado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CheckInPanel' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /registrations/{id}/checkin:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [Gestão]
+      summary: Marca a presença de um inscrito confirmado (sem código)
+      description: Idempotente. Registra quem marcou (`checkedInBy`).
+      responses:
+        '200':
+          description: Presença registrada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AttendanceResult' }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+components:
+  securitySchemes:
+    bearer: { type: http, scheme: bearer, bearerFormat: JWT, description: 'Token do identity (`POST /auth`)' }
+  parameters:
+    Id: { name: id, in: path, required: true, schema: { type: string } }
+  schemas:
+    Requirement:
+      type: object
+      properties:
+        id: { type: string }
+        type: { type: string, enum: [age verification] }
+        minimumAge: { type: integer }
+        fulfilled: { type: boolean }
+    Payment:
+      type: object
+      nullable: true
+      description: Reserva aguardando pagamento; `id` é o paymentId do serviço de pagamento.
+      properties:
+        id: { type: string }
+        amount: { type: number }
+        description: { type: string }
+        requestedAt: { type: string, format: date-time }
+        paid: { type: boolean }
+    Registration:
+      type: object
+      properties:
+        id: { type: string }
+        userId: { type: string }
+        activityId: { type: string }
+        status: { type: string, enum: [pending, waitlisted, awaiting_payment, confirmed, canceled] }
+        requirements: { type: array, items: { $ref: '#/components/schemas/Requirement' } }
+        reasons: { type: array, items: { type: string } }
+        payment: { $ref: '#/components/schemas/Payment' }
+        createdAt: { type: string, format: date-time }
+    RegistrationView:
+      allOf:
+        - $ref: '#/components/schemas/Registration'
+        - type: object
+          properties:
+            waitlistPosition: { type: integer, nullable: true, description: '1, 2... na fila; null fora dela' }
+            participant:
+              type: object
+              nullable: true
+              properties: { id: { type: string }, username: { type: string } }
+            attendance: { $ref: '#/components/schemas/Attendance' }
+            activity:
+              type: object
+              properties: { id: { type: string }, name: { type: string } }
+            event:
+              type: object
+              nullable: true
+              description: "`status: ended` com `attendance` = certificado solicitado."
+              properties: { id: { type: string }, name: { type: string }, status: { type: string, enum: [published, ended, canceled] } }
+    Attendance:
+      type: object
+      nullable: true
+      description: Presença (check-in). Uma por inscrição.
+      properties:
+        id: { type: string }
+        registrationId: { type: string }
+        activityId: { type: string }
+        userId: { type: string }
+        method: { type: string, enum: [code, manual] }
+        checkedInBy: { type: string, nullable: true }
+        checkedInAt: { type: string, format: date-time }
+    AttendanceResult:
+      allOf:
+        - $ref: '#/components/schemas/Attendance'
+        - type: object
+          properties:
+            alreadyCheckedIn: { type: boolean, description: 'true: a presença já existia' }
+    CheckInPanel:
+      type: object
+      properties:
+        activity:
+          type: object
+          properties: { id: { type: string }, name: { type: string } }
+        event:
+          type: object
+          properties: { id: { type: string }, name: { type: string }, status: { type: string, enum: [published, canceled] } }
+        checkIn:
+          type: object
+          properties:
+            status: { type: string, enum: [open, closed] }
+            code: { type: string, nullable: true }
+            openedAt: { type: string, format: date-time, nullable: true }
+        confirmed: { type: integer }
+        present: { type: integer }
+        attendees:
+          type: array
+          description: Confirmados, mais quem fez check-in e cancelou depois.
+          items:
+            type: object
+            properties:
+              registrationId: { type: string }
+              userId: { type: string }
+              status: { type: string }
+              participant:
+                type: object
+                nullable: true
+                properties: { id: { type: string }, username: { type: string } }
+              attendance: { $ref: '#/components/schemas/Attendance' }
+  responses:
+    Unauthorized:
+      description: Sem token válido
+      content:
+        text/plain:
+          schema: { type: string }
+    Error:
+      description: Erro de domínio (400), sem permissão (403), não encontrado (404) ou conflito de concorrência (409)
+      content:
+        text/plain:
+          schema: { type: string }

@@ -1,0 +1,2 @@
+<%= { 'age verification': 'Verificação de idade' }[requirement.type] ?? requirement.type -%>
+<% if (requirement.type == 'age verification') { %> (mínimo <%= requirement.minimumAge %> anos)<% } -%>

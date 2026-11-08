@@ -1,155 +1,151 @@
-import { DuplicateError } from "../../../shared/domain/errors.js";
+import { DomainError, DuplicateError, NotFoundError } from "../../../shared/domain/errors.js";
+import { Registration, SEAT_STATUSES } from "./registration.js";
 
-export class ActivityLine {
-    activity;
-    releasedTokens = [];
-    register(token, registration) {
-        if (this.isTokenReleased(token)) {
-            throw new Error('Wait your turn');
-        }
-        this.activity.register(registration);
-    }
-    isTokenReleased(token) {
-        return this.releasedTokens.some(t => t.id = token.id);
-    }
-    releaseToken(token) {
-        this.releasedTokens.push(token);
-    }
-}
-
-// Entity + AggregateRoot
+// Entity + AggregateRoot. Cópia imutável da Activity publicada pela secretaria (nome, capacidade, preço, regras)
+// + inscrições, que só existem aqui. Toda mudança de inscrição passa por aqui: garante a capacidade e anda a fila.
 export class Activity {
     #id;
+    #eventId;
+    #name;
+    #startsAt;
+    #endsAt;
     #capacity;
+    #price;
     #registrations = [];
     #registrationRules = [];
 
-    constructor(capacity, rules=[], id=crypto.randomUUID()) {
+    // registrations: só ao reconstituir do banco.
+    constructor({ id = crypto.randomUUID(), eventId, name, startsAt = null, endsAt = null, capacity, price = 0, rules = [], registrations = [] } = {}) {
+        if (!(capacity >= 0)) throw new TypeError('Capacity must not be lower than 0');
+        if (!(price >= 0)) throw new TypeError('Price must not be lower than 0');
         this.#id = id;
-        this.setCapacity(capacity);
-        rules.unshift(new CapacityRule());
+        this.#eventId = eventId;
+        this.#name = name;
+        this.#startsAt = startsAt;
+        this.#endsAt = endsAt;
+        this.#capacity = capacity;
+        this.#price = price;
         this.#registrationRules = rules;
+        this.#registrations = registrations;
     }
     get id() { return this.#id; }
-    
+    get eventId() { return this.#eventId; }
+    // Só para exibição (listagens).
+    get name() { return this.#name; }
     get capacity() { return this.#capacity; }
-    setCapacity(capacity) {
-        if (capacity < 0) throw new TypeError('Must not be lower than 0');
-        this.#capacity = capacity;
-    }
+    get price() { return this.#price; }
     get registrations() { return this.#registrations; }
     toJSON() {
         return {
             id: this.#id,
+            eventId: this.#eventId,
+            name: this.#name,
+            startsAt: this.#startsAt,
+            endsAt: this.#endsAt,
             capacity: this.#capacity,
+            price: this.#price,
             registrations: this.#registrations,
             registrationRules: this.#registrationRules
         }
     }
 
-    register(registration) {
-        if (this.isRegistered(registration.user)) throw new DuplicateError('user');
+    // Factory: o aggregate cria a Registration e decide o status.
+    // Ordem: lotada com confirmados → nega; regras de elegibilidade → vaga → pagamento
+    // (só depois das pendências, para não cobrar quem pode ser negado).
+    register(userId) {
+        if (this.isRegistered(userId)) throw new DuplicateError('user');
+        const registration = new Registration({ userId, activityId: this.#id });
+        if (this.isFullConfirmed()) registration.cancel('Full occupation');
         for (const rule of this.#registrationRules) {
-            try {
-                rule.apply(registration);
-            } catch (e) {
-                registration.cancel(e.message);
-            }
+            if (registration.status == 'canceled') break;
+            const outcome = rule.evaluate({ activity: this, userId });
+            if (outcome?.deny) { registration.cancel(outcome.deny); break; }
+            if (outcome?.require) registration.require(outcome.require);
         }
-        registration.confirm();
+        registration.submit(!this.isFull(), this.#price);
         this.#registrations.push(registration);
+        this.#settle();
+        return registration;
+    }
+    // Pendência de elegibilidade resolvida (ex.: idade conferida).
+    fulfill(registrationId, requirementId) {
+        const registration = this.#find(registrationId);
+        registration.fulfill(requirementId, this.#price);
+        this.#settle();
+        return registration;
+    }
+    // Pagamento de outra reserva (expirada, cancelada) é ignorado.
+    confirmPayment(registrationId, paymentId) {
+        const registration = this.#find(registrationId);
+        if (registration.isAwaiting(paymentId)) registration.pay();
+        this.#settle();
+        return registration;
+    }
+    denyPayment(registrationId, paymentId, reason) {
+        const registration = this.#find(registrationId);
+        if (registration.isAwaiting(paymentId)) this.cancel(registrationId, `Payment denied: ${reason}`);
+        return registration;
+    }
+    cancel(registrationId, reason) {
+        const registration = this.#find(registrationId);
+        registration.cancel(reason);
+        this.#settle();
+        return registration;
+    }
+    // Reservas aguardando pagamento desde antes de `before` perdem a vaga.
+    expireOverdue(before) {
+        const overdue = this.#registrations.filter(r => r.status == 'awaiting_payment' && new Date(r.payment.requestedAt) < before);
+        for (const r of overdue) r.cancel('Payment expired');
+        this.#settle();
+        return overdue;
+    }
+    // Evento cancelado: ninguém é promovido.
+    cancelAll(reason) {
+        for (const r of this.#registrations) r.cancel(reason);
     }
     getOccupation() {
-        return this.#registrations.filter(r => r.status != 'canceled').length;
+        return this.#registrations.filter(r => SEAT_STATUSES.includes(r.status)).length;
     }
     getConfirmedOccupation() {
         return this.#registrations.filter(r => r.status == 'confirmed').length;
     }
     isFull() {
-        return this.getOccupation() >= this.capacity;
+        return this.getOccupation() >= this.#capacity;
     }
     isFullConfirmed() {
-        return this.getConfirmedOccupation() >= this.capacity;
+        return this.getConfirmedOccupation() >= this.#capacity;
     }
-    addRule(rule) {
-        this.#registrationRules.push(rule);
-    }
+    // Regras de elegibilidade vindas da secretaria (ver ruleFromConfig).
     getRules() {
-        this.#registrationRules;
+        return this.#registrationRules;
     }
-    isRegistered(user) {
-        return this.#registrations.some(r => r.user.id == user.id);
+    // Inscrição cancelada não bloqueia nova tentativa.
+    isRegistered(userId) {
+        return this.#registrations.some(r => r.userId == userId && r.status != 'canceled');
     }
-}
-export class User {
-    id;
-    constructor(id=crypto.randomUUID()) {
-        this.id = id;
+    // Fila de espera por ordem de chegada. Empate no milissegundo: ordem de inserção (sort estável;
+    // o repositório carrega por createdAt, rowid).
+    getWaitlist() {
+        return this.#registrations.filter(r => r.status == 'waitlisted')
+            .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
     }
-}
-
-// Entity
-export class Registration {
-    id;
-    user;
-    activity;
-    status;
-    reasons = [];
-    constructor(user, activity, status='registered', id=crypto.randomUUID()) {
-        this.id = id;
-        this.user = user;
-        this.activity = activity;
-        this.status = status;
+    // 1, 2, ...; null fora da fila.
+    getWaitlistPosition(registrationId) {
+        const i = this.getWaitlist().findIndex(r => r.id == registrationId);
+        return i < 0 ? null : i + 1;
     }
-    proccess() {
-        try {
-            this.confirm();
-        } catch (e) {
-            this.cancel(e.message);
+    // Fim de toda mudança de inscrição: vaga livre promove a fila; lotada com confirmados, a fila não tem
+    // mais o que esperar e é cancelada.
+    #settle() {
+        for (const r of this.getWaitlist()) {
+            if (this.isFull()) break;
+            r.promote(this.#price);
         }
+        if (this.isFullConfirmed()) for (const r of this.getWaitlist()) r.cancel('Full occupation');
     }
-    cancel(reason) {
-        this.status = 'canceled';
-        this.reasons.push(reason);
-    }
-    confirm() {        
-        if (this.status == 'canceled') return false
-        if (this.hasPendingItems()) return false
-        this.status = 'confirmed';
-        return true;
-    }
-    addPendingItem(item) {        
-        if (this.status == 'canceled') return;
-        this.status = 'pending';
-        this.reasons.push(item);
-    }
-    getReasons() {
-        return this.reasons;
-    }
-    hasPendingItems() {
-        return this.reasons.length > 0;
-    }
-}
-
-
-export class CapacityRule {
-    apply(registration) {        
-        const activity = registration.activity;
-        if (activity.isFullConfirmed()) {
-            registration.cancel('Full occupation');
-            return;
-        }
-        if (activity.isFull()) {
-            registration.addPendingItem({type: 'wait list'});
-        }
-    }
-}
-
-export class PaymentRule {
-    constructor(amount) {
-        this.amount = amount;
-    }
-    apply(registration) {
-        registration.addPendingItem({type: 'payment', amount: this.amount});
+    #find(registrationId) {
+        const registration = this.#registrations.find(r => r.id == registrationId);
+        if (!registration) throw new NotFoundError('Registration');
+        return registration;
     }
 }

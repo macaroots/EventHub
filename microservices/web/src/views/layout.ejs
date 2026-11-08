@@ -4,13 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EventHub</title>
+    <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
     <h1>EventHub</h1>
     <nav>
         <a href="/">Início</a>
+<% if (locals.user) { %>
+        <a href="/registrations">Minhas inscrições</a>
+        <a href="/organizers/events">Meus eventos</a>
+        <form method="post" action="/auth/logout" style="display:inline"><button><%= user.username %>: sair</button></form>
+<% } else { %>
+        <a href="/auth/register">Cadastrar-se</a>
+        <a href="/auth/login">Login</a>
+<% } %>
     </nav>
     <main>
+        <% if (locals.error) { %><p class="error"><%= error %></p><% } %>
         <%- body -%>
     </main>
 </body>

@@ -1,26 +1,39 @@
 import express from 'express';
+import path from 'node:path';
+import { apiDocs } from '../../shared/application/api-docs.js';
 import { EventAppService } from './application/event.app-service.js';
+import { ActivityAppService } from './application/activity.app-service.js';
 import { RabbitMqMessageBus } from '../../shared/messaging/rabbitmq-message-bus.js';
-import { DatabaseSync } from 'node:sqlite';
+import { OutboxMessageBus } from '../../shared/messaging/outbox-message-bus.js';
 import { EventSqliteRepository } from './infrastructure/event.sqlite.repository.js';
+import { ActivitySqliteRepository } from './infrastructure/activity.sqlite.repository.js';
+import { openDatabase } from '../../shared/infrastructure/sqlite.js';
+import { EventController } from './application/event.controller.js';
+import { ActivityController } from './application/activity.controller.js';
+import { authenticate } from '../../shared/auth/jwt.js';
 
-import { join, resolve } from "node:path";
-import { CrudController } from '../../shared/application/CrudController.js';
-
-const database = new DatabaseSync(join(resolve('data', 'registration')));
+const database = openDatabase('secretariat');
 
 const app = express()
 const port = process.env.PORT || 3000;
 
-app.use(express.json()); 
+app.use(express.json());
 
-const messageBus = await RabbitMqMessageBus.connect();
+// Outbox/inbox no banco do serviço; RabbitMQ como transporte.
+const messageBus = new OutboxMessageBus(database, await RabbitMqMessageBus.connect(), { source: 'secretariat' });
 const eventRepository = new EventSqliteRepository(database);
-const eventService = new EventAppService(eventRepository, messageBus);
+const activityRepository = new ActivitySqliteRepository(database);
+const eventService = new EventAppService(eventRepository, activityRepository, messageBus);
+const activityService = new ActivityAppService(activityRepository, eventRepository);
 
-const eventController = new CrudController(eventService, eventRepository);
+const eventController = new EventController(eventService);
+const activityController = new ActivityController(activityService);
 
-app.use('/events', eventController.getRouter());
+app.use(apiDocs(path.join(import.meta.dirname, 'openapi.yaml')));
+app.use(eventController.getPublicRouter());
+app.use(authenticate());
+app.use(eventController.getRouter());
+app.use(activityController.getRouter());
 
 await messageBus.consume("secretariat");
 

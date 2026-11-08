@@ -1,0 +1,345 @@
+openapi: 3.0.3
+info:
+  title: Secretariat (Secretaria)
+  version: 1.0.0
+  description: |
+    Eventos e atividades. Dona de toda a informação do evento, inclusive capacidade, preço e regras.
+    Conteúdo só muda em `draft`; publicado só é cancelado (ADR 011). Admin pode tudo.
+    Mensagens: `EventPublished` (com as atividades), `EventCanceled`, `EventOrganizersChanged`, `EventEnded`.
+servers:
+  - url: http://localhost:3002
+security:
+  - bearer: []
+tags:
+  - name: Público
+  - name: Eventos
+  - name: Atividades
+paths:
+  /public/events:
+    get:
+      tags: [Público]
+      summary: Eventos publicados
+      security: []
+      parameters:
+        - { name: name, in: query, schema: { type: string } }
+      responses:
+        '200':
+          description: Eventos publicados (sem organizers)
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/PublicEvent' } }
+  /public/events/{id}:
+    get:
+      tags: [Público]
+      summary: Evento publicado com as atividades
+      security: []
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '200':
+          description: Evento
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PublicEvent'
+                  - type: object
+                    properties:
+                      activities: { type: array, items: { $ref: '#/components/schemas/Activity' } }
+        '404': { $ref: '#/components/responses/Error' }
+  /events:
+    post:
+      tags: [Eventos]
+      summary: Cria rascunho
+      description: O criador vira `createdBy` e primeiro organizer.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EventInput' }
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '400': { $ref: '#/components/responses/Error' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    get:
+      tags: [Eventos]
+      summary: Lista eventos
+      description: Admin vê todos; os demais, só os que organizam.
+      parameters:
+        - { name: name, in: query, schema: { type: string } }
+      responses:
+        '200':
+          description: Eventos
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Event' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /events/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Eventos]
+      summary: Evento com as atividades (organizer)
+      responses:
+        '200':
+          description: Evento
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Event'
+                  - type: object
+                    properties:
+                      activities: { type: array, items: { $ref: '#/components/schemas/Activity' } }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      tags: [Eventos]
+      summary: Altera os campos enviados (só `draft`)
+      description: '`null` limpa um campo opcional.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EventInput' }
+      responses:
+        '204': { description: Alterado }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    delete:
+      tags: [Eventos]
+      summary: Apaga o evento e as atividades (criador)
+      description: Publicado precisa ser cancelado antes.
+      responses:
+        '204': { description: Apagado }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /events/{id}/publish:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [Eventos]
+      summary: Publica (`draft` → `published`)
+      description: Exige `startDate` e ao menos uma atividade. Publica `EventPublished` com as atividades.
+      responses:
+        '204': { description: Publicado }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /events/{id}/end:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [Eventos]
+      summary: Encerra (`published` → `ended`)
+      description: Só depois do `endDate`. Publica `EventEnded`; o registration pede os certificados de quem teve presença.
+      responses:
+        '204': { description: Encerrado }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /events/{id}/cancel:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [Eventos]
+      summary: Cancela
+      description: Publica `EventCanceled`; o registration cancela as inscrições.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties: { reason: { type: string } }
+      responses:
+        '204': { description: Cancelado }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /events/{id}/organizers:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post:
+      tags: [Eventos]
+      summary: Adiciona organizer
+      description: Até o cancelamento. Em evento publicado, publica `EventOrganizersChanged`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId]
+              properties: { userId: { type: string } }
+      responses:
+        '204': { description: Adicionado }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /events/{id}/organizers/{userId}:
+    parameters:
+      - { $ref: '#/components/parameters/Id' }
+      - { name: userId, in: path, required: true, schema: { type: string } }
+    delete:
+      tags: [Eventos]
+      summary: Remove organizer
+      description: O criador não pode ser removido.
+      responses:
+        '204': { description: Removido }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /events/{eventId}/activities:
+    get:
+      tags: [Atividades]
+      summary: Atividades do evento
+      parameters:
+        - { name: eventId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: Atividades
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Activity' } }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /activities:
+    post:
+      tags: [Atividades]
+      summary: Cria atividade (evento em `draft`)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/ActivityInput'
+                - type: object
+                  required: [eventId, name, capacity]
+                  properties: { eventId: { type: string } }
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    get:
+      tags: [Atividades]
+      summary: Atividades do evento
+      parameters:
+        - { name: eventId, in: query, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: Atividades
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Activity' } }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+  /activities/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Atividades]
+      summary: Atividade
+      responses:
+        '200':
+          description: Atividade, com o status do evento (a tela só edita em `draft`)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Activity'
+                  - type: object
+                    properties: { eventStatus: { $ref: '#/components/schemas/EventStatus' } }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      tags: [Atividades]
+      summary: Altera os campos enviados (evento em `draft`)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ActivityInput' }
+      responses:
+        '204': { description: Alterada }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    delete:
+      tags: [Atividades]
+      summary: Apaga (evento em `draft`)
+      responses:
+        '204': { description: Apagada }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+components:
+  securitySchemes:
+    bearer: { type: http, scheme: bearer, bearerFormat: JWT, description: 'Token do identity (`POST /auth`)' }
+  parameters:
+    Id: { name: id, in: path, required: true, schema: { type: string } }
+  schemas:
+    EventStatus: { type: string, enum: [draft, published, ended, canceled] }
+    EventInput:
+      type: object
+      properties:
+        name: { type: string }
+        information: { type: string, nullable: true }
+        startDate: { type: string, format: date, nullable: true }
+        endDate: { type: string, format: date, nullable: true }
+    Event:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        information: { type: string, nullable: true }
+        startDate: { type: string, nullable: true }
+        endDate: { type: string, nullable: true }
+        status: { $ref: '#/components/schemas/EventStatus' }
+        cancelReason: { type: string, nullable: true }
+        createdBy: { type: string }
+        organizers: { type: array, items: { type: string } }
+    PublicEvent:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        information: { type: string, nullable: true }
+        startDate: { type: string, nullable: true }
+        endDate: { type: string, nullable: true }
+        status: { $ref: '#/components/schemas/EventStatus' }
+    Rule:
+      type: object
+      description: Regra de elegibilidade aplicada pelo registration. Hoje só `minimumAge`.
+      required: [type]
+      properties:
+        type: { type: string, enum: [minimumAge] }
+        age: { type: integer, minimum: 1 }
+    ActivityInput:
+      type: object
+      properties:
+        name: { type: string }
+        description: { type: string, nullable: true }
+        location: { type: string, nullable: true }
+        startsAt: { type: string, format: date-time, nullable: true }
+        endsAt: { type: string, format: date-time, nullable: true }
+        capacity: { type: integer, minimum: 0 }
+        price: { type: number, minimum: 0, default: 0 }
+        rules: { type: array, items: { $ref: '#/components/schemas/Rule' } }
+    Activity:
+      allOf:
+        - type: object
+          properties:
+            id: { type: string }
+            eventId: { type: string }
+        - $ref: '#/components/schemas/ActivityInput'
+  responses:
+    Created:
+      description: Criado
+      content:
+        application/json:
+          schema: { type: object, properties: { id: { type: string } } }
+    Unauthorized:
+      description: Sem token válido
+      content:
+        text/plain:
+          schema: { type: string }
+    Error:
+      description: Erro de domínio (400), sem permissão (403) ou não encontrado (404)
+      content:
+        text/plain:
+          schema: { type: string }
