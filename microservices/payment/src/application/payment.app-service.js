@@ -2,27 +2,33 @@ import { NotFoundError } from "../../../shared/domain/errors.js";
 import { Payment } from "../domain/payment.js";
 
 export class PaymentAppService {
-    constructor(paymentRepository, messageBus) {
+    constructor(paymentRepository, paymentGateway, messageBus) {
         this.paymentRepository = paymentRepository;
+        this.paymentGateway = paymentGateway;
         this.messageBus = messageBus;
     }
-    charge({paymentId, amount}) {
-        this.paymentRepository.add(new Payment(amount, paymentId));
+    // Ouve PaymentRequested. Idempotente: mensagem repetida não duplica a cobrança.
+    charge({ paymentId, amount, registrationId, description }) {
+        if (this.paymentRepository.getById(paymentId)) return;
+        this.paymentRepository.add(new Payment(amount, paymentId, { registrationId, description }));
     }
-    pay({paymentId, receipt}) {
+    // Ouve RegistrationCanceled.
+    cancelByRegistration({ registrationId }) {
+        for (const payment of this.paymentRepository.listByRegistration(registrationId)) {
+            payment.cancel();
+            this.paymentRepository.update(payment);
+        }
+    }
+    async pay({ paymentId, receipt }) {
         const payment = this.paymentRepository.getById(paymentId);
         if (!payment) throw new NotFoundError('payment');
-        // TODO
-        if (receipt == 'nao') {
-            payment.deny('erro');
-        }
-        else {
-            payment.pay(receipt);
-        }
-        this.#sendMessages(payment);
-    }
-
-    async #sendMessages(payment) {
-        for (const m of payment.pullMessages()) await this.messageBus.publish(m);
+        const { approved, reason } = await this.paymentGateway.verify(payment, receipt);
+        if (approved) payment.pay(receipt);
+        else payment.deny(reason);
+        this.messageBus.transaction(() => {
+            this.paymentRepository.update(payment);
+            for (const m of payment.pullMessages()) this.messageBus.publish(m);
+        });
+        return payment;
     }
 }

@@ -1,0 +1,4 @@
+<label><span>Nome:</span><input name="name" required value="<%= event.name ?? '' %>"></label>
+<label><span>Informações:</span><textarea name="information"><%= event.information ?? '' %></textarea></label>
+<label><span>Início:</span><input type="date" name="startDate" value="<%= event.startDate?.slice(0, 10) ?? '' %>"></label>
+<label><span>Fim:</span><input type="date" name="endDate" value="<%= event.endDate?.slice(0, 10) ?? '' %>"></label>

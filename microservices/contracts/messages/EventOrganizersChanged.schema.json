@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://event-hub.local/contracts/messages/EventOrganizersChanged.schema.json",
+  "title": "EventOrganizersChanged",
+  "description": "secretariat → registration. Lista completa (não delta) de organizadores; só para evento já publicado.",
+  "allOf": [
+    {
+      "$ref": "envelope.schema.json"
+    }
+  ],
+  "type": "object",
+  "properties": {
+    "type": {
+      "const": "EventOrganizersChanged"
+    },
+    "source": {
+      "const": "secretariat"
+    },
+    "data": {
+      "type": "object",
+      "required": [
+        "eventId",
+        "organizers"
+      ],
+      "properties": {
+        "eventId": {
+          "$ref": "envelope.schema.json#/$defs/uuid"
+        },
+        "organizers": {
+          "$ref": "envelope.schema.json#/$defs/organizers"
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "id": "0b9c6c1e-3f0a-4d38-9d2e-6f1c2a7b8e01",
+      "type": "EventOrganizersChanged",
+      "source": "secretariat",
+      "time": "2026-11-06T13:00:00.000Z",
+      "data": {
+        "eventId": "3c2b1a00-0000-4000-8000-00000000e001",
+        "organizers": [
+          "6a1f0c2e-1b2c-4d3e-8f40-5a6b7c8d9e01"
+        ]
+      }
+    }
+  ]
+}

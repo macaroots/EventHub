@@ -1,0 +1,20 @@
+<section>
+    <h2>Minhas inscrições</h2>
+<% if (!registrations.length) { %>
+    <p>Nenhuma inscrição. <a href="/">Ver eventos</a></p>
+<% } else { %>
+    <table>
+        <tr><th>Evento</th><th>Atividade</th><th>Status</th><th>Certificado</th></tr>
+<% // Certificado é por evento: basta presença em uma atividade.
+   const certified = new Set(registrations.filter(r => r.event?.status == 'ended' && r.attendance).map(r => r.event.id)); %>
+<% for (const r of registrations) { %>
+        <tr>
+            <td><%= r.event?.name ?? '' %></td>
+            <td><a href="/registrations/<%= r.id %>"><%= r.activity?.name ?? r.activityId %></a></td>
+            <td><%- include('status', { status: r.status }) %></td>
+            <td><%= r.event?.status == 'ended' ? (certified.has(r.event.id) ? 'solicitado' : 'sem presença') : '' %></td>
+        </tr>
+<% } %>
+    </table>
+<% } %>
+</section>

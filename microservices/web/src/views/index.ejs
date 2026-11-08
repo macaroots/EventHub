@@ -1,13 +1,12 @@
 <section>
     <h2>Próximos eventos</h2>
-    <main>
-        <article>
-            <h3>EventoX</h3>
-            <p>Período: </p>
-            <p>Vagas: </p>
-            <p>Valor: </p>
-            <a href="/activity/1">Detalhes</a>
-            <a href="/activity/1/register">Inscrever-se</a>
-        </article>
-    </main>
+<% if (!events.length) { %>
+    <p>Nenhum evento publicado.</p>
+<% } %>
+<% for (const event of events) { %>
+    <article>
+        <h3><a href="/events/<%= event.id %>"><%= event.name %></a></h3>
+        <p>Período: <%= event.startDate?.slice(0, 10) ?? '' %><% if (event.endDate) { %> a <%= event.endDate.slice(0, 10) %><% } %></p>
+    </article>
+<% } %>
 </section>

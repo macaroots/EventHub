@@ -1,0 +1,68 @@
+<% const base = `/organizers/events/${event.id}`; const canceled = event.status == 'canceled'; const draft = event.status == 'draft'; const published = event.status == 'published'; const ended = event.status == 'ended'; %>
+<p><a href="/organizers/events">← Meus eventos</a></p>
+<section>
+    <h2><%= event.name %> <small>(<%= event.status %>)</small></h2>
+    <% if (canceled) { %><p>Cancelado: <%= event.cancelReason %></p><% } %>
+    <% if (ended) { %><p>Encerrado: os certificados de quem teve presença foram solicitados.</p><% } %>
+    <% if (!draft) { %><p><small>Evento e atividades não mudam depois de publicados.</small></p><% } %>
+    <form method="post" action="<%= base %>">
+        <fieldset <%= draft ? '' : 'disabled' %>>
+            <%- include('event-form', { event }) %>
+            <button>Salvar</button>
+        </fieldset>
+    </form>
+    <% if (draft) { %>
+    <form method="post" action="<%= base %>/publish"><button>Publicar</button></form>
+    <% } %>
+    <% if (published) { %>
+    <form method="post" action="<%= base %>/end" onsubmit="return confirm('Encerrar o evento? Inscrições e check-in fecham e os certificados são solicitados. Corrija as presenças antes.')">
+        <button>Encerrar evento</button> <small>depois do término; solicita os certificados</small>
+    </form>
+    <% } %>
+    <% if (draft || published) { %>
+    <form method="post" action="<%= base %>/cancel">
+        <input name="reason" placeholder="Motivo" required>
+        <button>Cancelar evento</button>
+    </form>
+    <% } %>
+    <% if (draft || canceled) { %>
+    <form method="post" action="<%= base %>/delete" onsubmit="return confirm('Apagar o evento e suas atividades?')">
+        <button>Apagar evento</button>
+    </form>
+    <% } %>
+</section>
+<section>
+    <h2>Atividades</h2>
+    <table>
+        <tr><th>Nome</th><th>Início</th><th>Vagas</th><th>Preço</th><th></th></tr>
+<% for (const activity of event.activities) { %>
+        <tr>
+            <td><a href="/organizers/activities/<%= activity.id %>"><%= activity.name %></a></td>
+            <td><%= activity.startsAt ?? '' %></td>
+            <td><%= activity.capacity %></td>
+            <td><%= activity.price %></td>
+            <td><% if (!draft) { %><a href="/organizers/activities/<%= activity.id %>/registrations">inscrições</a> · <a href="/organizers/activities/<%= activity.id %>/checkin">check-in</a><% } %></td>
+        </tr>
+<% } %>
+    </table>
+    <% if (draft) { %><p><a href="<%= base %>/activities/new">+ Nova atividade</a></p><% } %>
+</section>
+<section>
+    <h2>Organizadores</h2>
+    <ul>
+<% for (const organizer of organizers) { %>
+        <li>
+            <%= organizer.username %><% if (organizer.id == event.createdBy) { %> (criador)<% } else if (!canceled) { %>
+            <form method="post" action="<%= base %>/organizers/<%= organizer.id %>/delete" style="display:inline">
+                <button>remover</button>
+            </form><% } %>
+        </li>
+<% } %>
+    </ul>
+    <% if (!canceled) { %>
+    <form method="post" action="<%= base %>/organizers">
+        <input name="username" placeholder="username" required>
+        <button>Adicionar</button>
+    </form>
+    <% } %>
+</section>

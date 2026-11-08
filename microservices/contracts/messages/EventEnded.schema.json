@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://event-hub.local/contracts/messages/EventEnded.schema.json",
+  "title": "EventEnded",
+  "description": "secretariat → registration. Encerramento manual pelo organizador; o registration fecha o check-in e emite CertificateRequested.",
+  "allOf": [
+    {
+      "$ref": "envelope.schema.json"
+    }
+  ],
+  "type": "object",
+  "properties": {
+    "type": {
+      "const": "EventEnded"
+    },
+    "source": {
+      "const": "secretariat"
+    },
+    "data": {
+      "type": "object",
+      "required": [
+        "eventId"
+      ],
+      "properties": {
+        "eventId": {
+          "$ref": "envelope.schema.json#/$defs/uuid"
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "id": "0b9c6c1e-3f0a-4d38-9d2e-6f1c2a7b8e01",
+      "type": "EventEnded",
+      "source": "secretariat",
+      "time": "2026-11-06T13:00:00.000Z",
+      "data": {
+        "eventId": "3c2b1a00-0000-4000-8000-00000000e001"
+      }
+    }
+  ]
+}

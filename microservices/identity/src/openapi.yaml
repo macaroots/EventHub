@@ -1,0 +1,82 @@
+openapi: 3.0.3
+info:
+  title: Identity
+  version: 1.0.0
+  description: Cadastro de usuários e login (emite o JWT usado pelos outros serviços).
+servers:
+  - url: http://localhost:3003
+paths:
+  /users:
+    get:
+      summary: Lista os usuários, ou busca um pelo username
+      description: Exige login. Usado pelo BFF para traduzir ids em usernames e username em id.
+      security:
+        - bearer: []
+      parameters:
+        - { name: username, in: query, required: false, schema: { type: string }, description: Devolve só esse usuário (objeto, não lista). }
+      responses:
+        '200':
+          description: Usuários, ou o usuário quando `username` é informado
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - { type: array, items: { $ref: '#/components/schemas/User' } }
+                  - { $ref: '#/components/schemas/User' }
+        '401': { description: Sem token válido }
+        '404': { $ref: '#/components/responses/Error' }
+    post:
+      summary: Cadastra um usuário (role `user`)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Credentials' }
+      responses:
+        '200':
+          description: Criado. Publica `UserCreated`.
+          content:
+            application/json:
+              schema: { type: object, properties: { id: { type: string } } }
+        '400': { $ref: '#/components/responses/Error' }
+  /auth:
+    post:
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Credentials' }
+      responses:
+        '200':
+          description: 'Token JWT (HS256, 8 h) para o header `Authorization: Bearer <token>`.'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user: { $ref: '#/components/schemas/User' }
+                  token: { type: string }
+        '400': { $ref: '#/components/responses/Error' }
+components:
+  securitySchemes:
+    bearer: { type: http, scheme: bearer, bearerFormat: JWT, description: 'Token do `POST /auth`' }
+  schemas:
+    Credentials:
+      type: object
+      required: [username, password]
+      properties:
+        username: { type: string }
+        password: { type: string, format: password }
+    User:
+      type: object
+      properties:
+        id: { type: string }
+        username: { type: string }
+        role: { type: string, enum: [user, admin] }
+  responses:
+    Error:
+      description: Erro de domínio (mensagem)
+      content:
+        application/json:
+          schema: { type: string }

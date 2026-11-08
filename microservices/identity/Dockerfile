@@ -27,7 +27,8 @@ COPY identity/migrations /app/identity/migrations
 
 WORKDIR /app/identity
 
-# Run as non-root
+# Run as non-rootRUN mkdir -p data && chown node:node data
+
 USER node
 
 ENV NODE_ENV=production

@@ -1,0 +1,20 @@
+<section>
+    <h2>Meus eventos</h2>
+    <table>
+        <tr><th>Nome</th><th>Início</th><th>Status</th></tr>
+<% for (const event of events) { %>
+        <tr>
+            <td><a href="/organizers/events/<%= event.id %>"><%= event.name %></a></td>
+            <td><%= event.startDate ?? '' %></td>
+            <td><%= event.status %></td>
+        </tr>
+<% } %>
+    </table>
+</section>
+<section>
+    <h2>Novo evento</h2>
+    <form method="post" action="/organizers/events">
+        <%- include('event-form', { event: {} }) %>
+        <button>Criar</button>
+    </form>
+</section>

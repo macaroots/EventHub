@@ -2,6 +2,11 @@
 export class InMemoryMessageBus {
   #listeners = {};
 
+  // Sem banco: só executa (o OutboxMessageBus grava estado e mensagens na mesma transação).
+  transaction(fn) {
+    return fn();
+  }
+
   listen(type, fn) {
     (this.#listeners[type] ??= []).push(fn);
   }
