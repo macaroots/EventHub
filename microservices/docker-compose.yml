@@ -2,8 +2,9 @@ x-service: &service
   restart: unless-stopped
   environment: &env
     RABBITMQ_URL: amqp://rabbitmq
-    JWT_SECRET: ${JWT_SECRET}
-    INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN}
+    JWT_SECRET: ${JWT_SECRET} # mesmo segredo em todos (HS256)
+    INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN} # rotas /internal do identity (serviço a serviço)
+    PORT: 3000 # mesma porta em todos: cada contêiner tem IP próprio na rede interna
   depends_on:
     rabbitmq:
       condition: service_healthy
@@ -11,7 +12,6 @@ x-service: &service
 services:
   rabbitmq:
     image: rabbitmq:4-management
-    ports: ["15673:15672"] # AMQP só na rede interna; UI de gestão em :15673
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 5s
@@ -21,22 +21,18 @@ services:
   web:
     <<: *service
     build: { context: ., dockerfile: web/Dockerfile }
-    environment: { <<: *env, PORT: &web-port 3000, IDENTITY_URL: http://identity:3003, SECRETARIAT_URL: http://secretariat:3002, REGISTRATION_URL: http://registration:3001, PAYMENT_URL: http://payment:3004 }
-    ports: [{ published: *web-port, target: *web-port }]
+    environment: { <<: *env, IDENTITY_URL: http://identity:3000, SECRETARIAT_URL: http://secretariat:3000, REGISTRATION_URL: http://registration:3000, PAYMENT_URL: http://payment:3000 }
+    ports: ["3000:3000"] # única entrada publicada (ADR 017)
 
   registration:
     <<: *service
     build: { context: ., dockerfile: registration/Dockerfile }
-    environment: { <<: *env, PORT: &registration-port 3001 }
-    ports: [{ published: *registration-port, target: *registration-port }]
     volumes:
       - registration-data:/app/registration/data
 
   secretariat:
     <<: *service
     build: { context: ., dockerfile: secretariat/Dockerfile }
-    environment: { <<: *env, PORT: &secretariat-port 3002 }
-    ports: [{ published: *secretariat-port, target: *secretariat-port }]
     volumes:
       - secretariat-data:/app/secretariat/data
 
@@ -58,11 +54,9 @@ services:
     command: ["sh", "-c", "node scripts/migrate.js && node src/main.js"]
     environment:
       <<: *env
-      PORT: &identity-port 3003
       DATABASE_URL: postgresql://identity:${IDENTITY_DB_PASSWORD}@identity-db:5432/identity
       JWT_EXPIRES_IN: 1h
       CORS_ORIGIN: http://localhost:3000
-    ports: [{ published: *identity-port, target: *identity-port }]
     depends_on:
       rabbitmq: { condition: service_healthy }
       identity-db: { condition: service_healthy }
@@ -70,8 +64,6 @@ services:
   payment:
     <<: *service
     build: { context: ., dockerfile: payment/Dockerfile }
-    environment: { <<: *env, PORT: &payment-port 3004 }
-    ports: [{ published: *payment-port, target: *payment-port }]
     volumes:
       - payment-data:/app/payment/data
 

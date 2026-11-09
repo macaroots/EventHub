@@ -1,6 +1,7 @@
 # Hot reload: docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 # Monta o código do host e reinicia o processo a cada alteração (node --watch).
 # Volumes anônimos preservam os node_modules instalados na imagem.
+# Só aqui os serviços publicam porta no host (ADR 017). Dentro do contêiner, todos escutam na 3000.
 x-node-dev: &node-dev
   command: ["node", "--watch", "src/main.js"]
   restart: "no"
@@ -10,6 +11,9 @@ x-python-dev: &python-dev
   restart: "no"
 
 services:
+  rabbitmq:
+    ports: ["15673:15672"] # UI de gestão; AMQP fica só na rede interna
+
   web:
     <<: *node-dev
     volumes:
@@ -19,6 +23,7 @@ services:
 
   registration:
     <<: *node-dev
+    ports: ["3001:3000"]
     volumes:
       - ./registration/src:/app/registration/src
       - ./shared:/app/shared
@@ -26,6 +31,7 @@ services:
 
   secretariat:
     <<: *node-dev
+    ports: ["3002:3000"]
     volumes:
       - ./secretariat/src:/app/secretariat/src
       - ./shared:/app/shared
@@ -34,6 +40,7 @@ services:
   identity:
     <<: *node-dev
     command: ["sh", "-c", "node scripts/migrate.js && node --watch src/main.js"]
+    ports: ["3003:3000"]
     volumes:
       - ./identity/src:/app/identity/src
       - ./shared:/app/shared
@@ -41,6 +48,7 @@ services:
 
   payment:
     <<: *node-dev
+    ports: ["3004:3000"]
     volumes:
       - ./payment/src:/app/payment/src
       - ./shared:/app/shared
