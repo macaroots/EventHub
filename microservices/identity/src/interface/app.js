@@ -1,7 +1,6 @@
 // Express application factory – wires middleware and routes.
 import express from 'express';
 import helmet from 'helmet';
-import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
 import cors from 'cors';
 import { config } from '../config.js';
@@ -23,7 +22,6 @@ export function createApp(userService) {
 
   // Body parsing (limit 10kb)
   app.use(express.json({ limit: '10kb' }));
-  app.use(cookieParser());
 
   // Request ID propagation
   app.use(requestIdMiddleware);

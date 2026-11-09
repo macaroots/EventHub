@@ -30,18 +30,12 @@ router.post('/login', async (req, res) => {
     if (!response.ok) {
         return res.status(400).layout('auth/login', { error: await identity.errorMessage(response), next: req.body.next });
     }
-    // O identity devolve o JWT no cookie access_token (do domínio dele); o BFF o guarda no próprio cookie.
-    const token = response.headers.getSetCookie()
-        .map(c => c.match(/^access_token=([^;]+)/)?.[1]).find(Boolean);
-    const { expiresIn } = await response.json();
-    const user = await identity.me(token).then(r => (r.ok ? r.json() : null));
+    const { token, expiresIn } = await response.json();
     res.cookie('token', token, cookieOptions(expiresIn));
-    res.cookie('name', user?.name ?? '', cookieOptions(expiresIn)); // só para exibir no menu
     res.redirect(safeNext(req.body.next));
 });
 
 router.post('/logout', (req, res) => {
     res.clearCookie('token');
-    res.clearCookie('name');
     res.redirect('/');
 });

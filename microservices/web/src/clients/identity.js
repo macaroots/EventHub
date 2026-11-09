@@ -6,9 +6,8 @@ const internal = (path, opts = {}) =>
     call(path, null, { ...opts, headers: { 'x-internal-token': process.env.INTERNAL_API_TOKEN, ...opts.headers } });
 
 export const register = (body) => call('/auth/register', null, { method: 'POST', body }); // {name, username, email, password}
-// {username (ou e-mail), password} → Set-Cookie access_token=<JWT>; corpo {expiresIn}
+// {username (ou e-mail), password} → {token: JWT {userId, name}, expiresIn (segundos)}
 export const login = (credentials) => call('/auth/login', null, { method: 'POST', body: credentials });
-export const me = (token) => call('/me', null, { headers: { cookie: `access_token=${token}` } }); // {id, name, username, email}
 export const findByEmail = (email) => internal(`/internal/users?email=${encodeURIComponent(email)}`); // [{id, name, email}]
 export const findByIds = (ids) => internal('/internal/users/batch', { method: 'POST', body: { ids } }); // [{id, name, email}], só ativos
 
