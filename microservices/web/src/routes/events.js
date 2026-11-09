@@ -37,7 +37,7 @@ router.post('/events/:id/cancel', action((req) => secretariat.cancelEvent(req, r
 
 // Organizers: o formulário usa o e-mail; a secretaria guarda só o id do usuário.
 router.post('/events/:id/organizers', action(async (req) => {
-    // Composição no BFF (ADR 013): e-mail → id no identity, depois a secretaria.
+    // Composição no BFF (ADR 016): e-mail → id no identity, depois a secretaria.
     const response = await identity.findByEmail(req.body.email);
     if (!response.ok) return response;
     const [user] = await response.json();
