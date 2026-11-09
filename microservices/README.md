@@ -9,14 +9,17 @@ docker compose logs -f <serviço>
 docker compose down            # -v para apagar os bancos
 ```
 
-| Serviço      | Host                   |
-|--------------|------------------------|
-| web          | http://localhost:3000  |
-| registration | http://localhost:3001  |
-| secretariat  | http://localhost:3002  |
-| identity     | http://localhost:3003  |
-| payment      | http://localhost:3004  |
-| RabbitMQ UI  | http://localhost:15673 (guest/guest) |
+| Serviço      | Host                   | Publicado em |
+|--------------|------------------------|--------------|
+| web          | http://localhost:3000  | sempre |
+| registration | http://localhost:3001  | só no dev |
+| secretariat  | http://localhost:3002  | só no dev |
+| identity     | http://localhost:3003  | só no dev |
+| payment      | http://localhost:3004  | só no dev |
+| RabbitMQ UI  | http://localhost:15673 (guest/guest) | só no dev |
+
+- Só o `web` publica porta no `docker-compose.yml`. Os outros ficam na rede interna ([ADR 017](../docs/adrs/017-entrada-unica-sem-api-gateway.md)) e só publicam no [docker-compose.dev.yml](docker-compose.dev.yml), para depuração e Swagger.
+- Dentro do contêiner, todos escutam na 3000 (`PORT` no compose): cada contêiner tem IP próprio, então não há conflito, e o número de cada serviço só aparece no mapeamento do dev (`"3001:3000"`). Entre serviços, o endereço é `http://<serviço>:3000`.
 
 - Cada serviço tem seu próprio `<serviço>/Dockerfile` (permite linguagens diferentes no futuro). O build context é `microservices/` para incluir `shared/`, mantendo os imports relativos (`../../shared/...`).
 - O compose define a porta de cada serviço `PORT`; e o endereço do broker `RABBITMQ_URL=amqp://rabbitmq`.

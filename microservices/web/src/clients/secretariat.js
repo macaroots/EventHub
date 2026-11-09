@@ -1,6 +1,6 @@
 import { api } from './http.js';
 
-const call = api(process.env.SECRETARIAT_URL || 'http://secretariat:3002');
+const call = api(process.env.SECRETARIAT_URL || 'http://secretariat:3000');
 const id = encodeURIComponent;
 
 export const listEvents = (req) => call('/events', req);
