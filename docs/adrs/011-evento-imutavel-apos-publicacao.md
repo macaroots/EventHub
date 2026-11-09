@@ -10,7 +10,7 @@ A Secretaria permitia alterar eventos e atividades publicados, inclusive `capaci
 - preço alterado com cobranças em andamento;
 - regra nova sobre inscrições já aceitas.
 
-O [ADR 007](007-fronteiras-secretaria-credenciamento.md) propunha resolver isso movendo a oferta (`capacity`, `price`, `rules`) para o Credenciamento, o que obrigaria o organizador a editar a atividade em dois serviços.
+Uma proposta anterior resolvia isso movendo a oferta (`capacity`, `price`, `rules`) para o Credenciamento, com o argumento de que uma regra que precisa de dados dos dois lados indica fronteira errada: na Secretaria, "atividade" seria programação; no Credenciamento, oferta de vagas. Isso obrigaria o organizador a editar a atividade em dois serviços.
 
 ## Decisão
 1. **O conteúdo do evento e das atividades só muda em `draft`.** Depois de publicado, o evento só pode ser cancelado. Organizadores continuam mudando até o cancelamento, porque são controle de acesso, não conteúdo publicado.
@@ -22,7 +22,6 @@ O [ADR 007](007-fronteiras-secretaria-credenciamento.md) propunha resolver isso 
    - `EventOrganizersChanged {eventId, organizers}`: só de evento publicado.
 
    O rascunho não gera mensagens. Saem `EventCreated`, `EventUpdated`, `EventDeleted` e `ActivityCreated/Updated/Deleted`.
-5. **O ADR 007 é substituído na parte da oferta.** A parte do Catálogo (endpoints `/public` na Secretaria) continua valendo.
 
 ## Justificativa
 - O evento publicado é o contrato com os inscritos. Mudar vagas, preço ou regras depois dele é mudar o contrato com quem já se inscreveu.
@@ -31,7 +30,7 @@ O [ADR 007](007-fronteiras-secretaria-credenciamento.md) propunha resolver isso 
 - Uma única mensagem na publicação resolve a ordem de chegada (atividades antes do evento) e o descarte de rascunhos nas projeções.
 
 ## Alternativas Consideradas
-- **Oferta no Credenciamento ([ADR 007](007-fronteiras-secretaria-credenciamento.md)):** edição em dois lugares, composição na tela e uma atividade sem oferta até alguém configurá-la.
+- **Oferta no Credenciamento:** capacidade e ocupação ficariam no mesmo aggregate, e o catálogo poderia mostrar vagas restantes. Em troca, edição em dois lugares, composição na tela e uma atividade sem oferta até alguém configurá-la. A imutabilidade resolve o mesmo problema sem dividir a atividade.
 - **Permitir mudanças após a publicação com regras de reconciliação:** cada campo exigiria uma política (o que fazer com quem já pagou se o preço muda, com quem ficou sem vaga se a capacidade cai) e mensagens de correção.
 - **Permitir só mudanças "seguras" (aumentar capacidade, corrigir texto):** é útil, mas reabre o canal de atualização. Fica para quando houver necessidade real; o caminho seria uma mensagem específica, como `ActivityCapacityIncreased`.
 
@@ -43,5 +42,4 @@ O [ADR 007](007-fronteiras-secretaria-credenciamento.md) propunha resolver isso 
 - Textos descritivos (descrição, local) não vão para o Credenciamento. Se notificações ou crachás precisarem deles, entram no `EventPublished`.
 
 ## Referências
-- [007-fronteiras-secretaria-credenciamento.md](007-fronteiras-secretaria-credenciamento.md)
 - [008-vaga-e-pagamento-como-status.md](008-vaga-e-pagamento-como-status.md)

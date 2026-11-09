@@ -50,6 +50,5 @@ Além disso, a capacidade precisa valer sob forte concorrência, inclusive com m
 - As mensagens são publicadas depois do commit, sem outbox: uma queda entre os dois perde a mensagem.
 
 ## Referências
-- [002-checkin-no-registration.md](002-checkin-no-registration.md)
-- [007-fronteiras-secretaria-credenciamento.md](007-fronteiras-secretaria-credenciamento.md)
+- [011-evento-imutavel-apos-publicacao.md](011-evento-imutavel-apos-publicacao.md)
 - [../../microservices/registration/README.md](../../microservices/registration/README.md)
