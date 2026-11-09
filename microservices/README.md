@@ -44,7 +44,7 @@ Cada serviço (menos o identity, em Postgres) tem seu SQLite (`node:sqlite`) em 
 
 ## Documentação da API (Swagger)
 
-Cada serviço serve o Swagger UI em `/docs` e o contrato em `/openapi.yaml` (ex.: http://localhost:3001/docs). Ambos são públicos. No Swagger UI, "Authorize" recebe o JWT do cookie `access_token` de `POST /auth/login` do identity.
+Cada serviço serve o Swagger UI em `/docs` e o contrato em `/openapi.yaml` (ex.: http://localhost:3001/docs). Ambos são públicos. No Swagger UI, "Authorize" recebe o `token` de `POST /auth/login` do identity.
 
 - O contrato é escrito à mão em `<serviço>/src/openapi.yaml` e servido por [shared/application/api-docs.js](shared/application/api-docs.js) (`swagger-ui-express`). Rota nova → documentar no YAML.
 - O teste `test/openapi.test.js` de cada serviço falha se houver rota sem documentação ou documentação sem rota. Ele não confere corpos nem respostas.
@@ -58,10 +58,11 @@ Todos os endpoints de secretariat e registration exigem `Authorization: Bearer <
 
 ```sh
 curl -X POST localhost:3003/auth/register -H 'Content-Type: application/json' -d '{"name":"Ana","username":"ana","email":"ana@ex.com","password":"12345678"}'
-curl -i -X POST localhost:3003/auth/login -H 'Content-Type: application/json' -d '{"username":"ana","password":"12345678"}'  # Set-Cookie: access_token=<JWT>
+curl -X POST localhost:3003/auth/login -H 'Content-Type: application/json' -d '{"username":"ana","password":"12345678"}'  # -> {token, expiresIn}
 ```
 
-- JWT HS256 com payload `{userId}`, validade `JWT_EXPIRES_IN` (compose: 1h). O identity assina; os demais validam com [shared/auth/jwt.js](shared/auth/jwt.js) (`req.user = {id}`). Todos usam o mesmo `JWT_SECRET`.
+- JWT HS256 com payload `{userId, name}`, validade `JWT_EXPIRES_IN` (compose: 1h). O identity assina; os demais validam com [shared/auth/jwt.js](shared/auth/jwt.js) (`req.user = {id, name}`). Todos usam o mesmo `JWT_SECRET`.
+- O nome no token evita chamar `GET /me` só para exibir. Trade-off: depois de `PATCH /me`, o nome antigo fica no token até ele expirar. O e-mail ficou fora: o JWT é legível por quem o tem e o e-mail muda; quem precisar usa `/internal`.
 - `.env` (em `microservices/`, fora do git): `JWT_SECRET`, `INTERNAL_API_TOKEN` (rotas `/internal` do identity) e `IDENTITY_DB_PASSWORD`. Sem eles, o compose sobe com valores vazios e o identity não inicia.
 - O identity usa Postgres (`identity-db`, volume `identity-db-data`) e roda as migrações (`scripts/migrate.js`) na subida. Os demais continuam em SQLite ([ADR 000](../docs/adrs/000-escolha-banco.md)).
 - Sem papel de admin: o token não tem role. Quem gerencia um evento é quem está em `organizers` (o código `isAdmin` ficou, mas nunca é verdadeiro).
