@@ -4,7 +4,7 @@
 // Trocar o critério é mexer só aqui.
 export class CertificatePolicy {
     // activities: cabeçalhos das atividades do evento; attendances: presenças delas.
-    // participants: userId → {username}. Devolve as mensagens CertificateRequested, uma por participante.
+    // participants: userId → {name}. Devolve as mensagens CertificateRequested, uma por participante.
     requests(event, activities, attendances, participants) {
         const byId = new Map(activities.map(a => [a.id, a]));
         const byUser = Map.groupBy(attendances, a => a.userId);
@@ -23,7 +23,7 @@ export class CertificatePolicy {
                 requestId: `${event.id}:${userId}`, // um por participante no evento: chave de idempotência para o serviço de certificados
                 eventId: event.id,
                 userId,
-                participantName: participants.get(userId)?.username ?? null, // identity ainda não tem nome completo
+                participantName: participants.get(userId)?.name ?? null,
                 eventName: event.name,
                 activities: items,
                 totalWorkload: Math.round(items.reduce((sum, a) => sum + (a.workload ?? 0), 0) * 10) / 10,

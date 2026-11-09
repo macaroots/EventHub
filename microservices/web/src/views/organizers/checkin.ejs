@@ -26,7 +26,7 @@
         <tr><th>Participante</th><th>Presença</th></tr>
 <% for (const a of attendees) { %>
         <tr>
-            <td><%= a.participant?.username ?? a.userId %><% if (a.status != 'confirmed') { %> <small>(inscrição <%- include('../registrations/status', { status: a.status }) %>)</small><% } %></td>
+            <td><%= a.participant?.name ?? a.userId %><% if (a.status != 'confirmed') { %> <small>(inscrição <%- include('../registrations/status', { status: a.status }) %>)</small><% } %></td>
             <td>
 <% if (a.attendance) { %>
                 presente desde <%= dateTime(a.attendance.checkedInAt) %> (<%= a.attendance.method == 'code' ? 'código' : 'marcada pelo organizador' %>)

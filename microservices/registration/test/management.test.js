@@ -18,7 +18,7 @@ const setup = async ({ price = 0, rules = [] } = {}) => {
   const service = new RegistrationAppService(new ActivitySqliteRepository(db, registrations), registrations,
     new ParticipantSqliteRepository(db), new EventSqliteRepository(db), new InMemoryMessageBus());
   service.publishEvent({ eventId: "e1", name: "E", organizers: ["org"], activities: [{ activityId: "a1", name: "A", capacity: 2, price, rules }] });
-  service.upsertParticipant({ userId: "u1", username: "ana" });
+  service.upsertParticipant({ userId: "u1", name: "ana" });
   const registration = await service.register({ activityId: "a1" }, "u1");
   return { service, registration };
 };
@@ -27,7 +27,7 @@ test("organizer lists activity registrations; others are forbidden", async () =>
   const { service } = await setup();
   const data = service.listActivityRegistrations("a1", organizer);
   assert.equal(data.activity.confirmedOccupation, 1);
-  assert.equal(data.registrations[0].participant.username, "ana");
+  assert.equal(data.registrations[0].participant.name, "ana");
   assert.throws(() => service.listActivityRegistrations("a1", stranger), /Not allowed/);
   assert.ok(service.listActivityRegistrations("a1", { id: "adm", role: "admin" }));
 });
@@ -60,7 +60,7 @@ test("organizer change in the event updates the projection", async () => {
 test("waitlist exposes only ids in order; registration shows its position", async () => {
   const { service } = await setup({ price: 10 });
   for (const u of ["u2", "u3", "u4"]) {
-    service.upsertParticipant({ userId: u, username: u });
+    service.upsertParticipant({ userId: u, name: u });
     await service.register({ activityId: "a1" }, u);
   }
   const waitlist = service.getWaitlist("a1");

@@ -49,8 +49,8 @@ export class RegistrationAppService {
     }
 
     // Projeção do User do identity. Idempotente: upsert.
-    upsertParticipant({ userId, username }) {
-        this.participantRepository.upsert(new Participant({ id: userId, username }));
+    upsertParticipant({ userId, name }) {
+        this.participantRepository.upsert(new Participant({ id: userId, name }));
     }
 
     async register({ activityId }, userId) {

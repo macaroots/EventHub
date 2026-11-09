@@ -52,7 +52,7 @@
     <ul>
 <% for (const organizer of organizers) { %>
         <li>
-            <%= organizer.username %><% if (organizer.id == event.createdBy) { %> (criador)<% } else if (!canceled) { %>
+            <%= organizer.name %><% if (organizer.email) { %> &lt;<%= organizer.email %>&gt;<% } %><% if (organizer.id == event.createdBy) { %> (criador)<% } else if (!canceled) { %>
             <form method="post" action="<%= base %>/organizers/<%= organizer.id %>/delete" style="display:inline">
                 <button>remover</button>
             </form><% } %>
@@ -61,7 +61,7 @@
     </ul>
     <% if (!canceled) { %>
     <form method="post" action="<%= base %>/organizers">
-        <input name="username" placeholder="username" required>
+        <input name="email" type="email" placeholder="e-mail" required>
         <button>Adicionar</button>
     </form>
     <% } %>

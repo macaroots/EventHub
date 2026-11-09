@@ -18,7 +18,7 @@ Exige login; o usuário vem do token.
 
 Erros: `DomainError` (regra de negócio) → 400; `NotFoundError` 404; `ForbiddenError` 403; `ConcurrencyError` (retentativas esgotadas) 409. Qualquer outro erro é falha interna → 500, só logado, sem a mensagem na resposta. Regra nova deve lançar `DomainError` (ou subclasse), senão vira 500.
 
-`Activity` (nome, horário, capacidade, preço, regras) e o evento (`status`, `organizers`) são cópias imutáveis criadas uma vez pelo `EventPublished` ([ADR 011](../../docs/adrs/011-evento-imutavel-apos-publicacao.md)); depois, só `EventCanceled` (cancela as inscrições), `EventEnded` (certificados) e `EventOrganizersChanged` os alteram; `Participant {id, username}` é projeção de `UserCreated`/`UserUpdated` do identity (upsert, idempotente). O domínio só conhece o `userId`; o participante só entra na listagem.
+`Activity` (nome, horário, capacidade, preço, regras) e o evento (`status`, `organizers`) são cópias imutáveis criadas uma vez pelo `EventPublished` ([ADR 011](../../docs/adrs/011-evento-imutavel-apos-publicacao.md)); depois, só `EventCanceled` (cancela as inscrições), `EventEnded` (certificados) e `EventOrganizersChanged` os alteram; `Participant {id, name}` é projeção de `UserRegistered`/`UserUpdated` do identity (upsert, idempotente). O domínio só conhece o `userId`; o participante só entra na listagem.
 
 ### Regras de inscrição ([ADR 008](../../docs/adrs/008-vaga-e-pagamento-como-status.md))
 
@@ -49,7 +49,7 @@ Erros: `DomainError` (regra de negócio) → 400; `NotFoundError` 404; `Forbidde
 - Mensagem: `{requestId (= eventId:userId, para idempotência), eventId, userId, participantName, eventName, activities: [{activityId, name, workload, date}], totalWorkload}`.
   - `workload`: duração da atividade em horas (`endsAt - startsAt`); `null` sem horário (conta 0 no `totalWorkload`).
   - `date`: dia de `startsAt` ou, sem horário, do check-in.
-  - `participantName` é o `username`: o identity ainda não tem nome completo.
+  - `participantName` é o `name` do identity.
 - Idempotente: evento já encerrado, cancelado ou desconhecido não pede de novo.
 - `GET /registrations[/:id]` traz `event.status`; `ended` com `attendance` = certificado solicitado.
 - Limitações: sem reemissão (presença não se desfaz) e sem retorno do serviço de certificados (link do PDF). A projeção da atividade ganhou `startsAt`/`endsAt` (colunas adicionadas na subida); atividades publicadas antes ficam sem horário.

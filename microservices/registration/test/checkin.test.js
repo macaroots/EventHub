@@ -30,7 +30,7 @@ const setup = async ({ price = 0 } = {}) => {
   const checkIns = new CheckInAppService({ activityRepository, registrationRepository, eventRepository, participantRepository,
     checkInRepository: new CheckInSqliteRepository(db), attendanceRepository, messageBus });
   registrations.publishEvent({ eventId: "e1", name: "E", organizers: ["org"], activities: [{ activityId: "a1", name: "A", capacity: 5, price }] });
-  for (const [userId, username] of [["u1", "ana"], ["u2", "bia"]]) registrations.upsertParticipant({ userId, username });
+  for (const [userId, name] of [["u1", "ana"], ["u2", "bia"]]) registrations.upsertParticipant({ userId, name });
   const registration = await registrations.register({ activityId: "a1" }, "u1");
   return { registrations, checkIns, registration, published };
 };

@@ -39,14 +39,14 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 
 ## Persistência
 
-Cada serviço tem seu SQLite (`node:sqlite`) em `<serviço>/data/<serviço>.db`, num volume `<serviço>-data` do compose. O banco é aberto por [shared/infrastructure/sqlite.js](shared/infrastructure/sqlite.js), e os repositórios estendem [SqliteRepository](shared/infrastructure/sqlite.repository.js), que tem `upsert` para as projeções. `MapRepository` (em memória) fica para os testes.
+Cada serviço (menos o identity, em Postgres) tem seu SQLite (`node:sqlite`) em `<serviço>/data/<serviço>.db`, num volume `<serviço>-data` do compose. O banco é aberto por [shared/infrastructure/sqlite.js](shared/infrastructure/sqlite.js), e os repositórios estendem [SqliteRepository](shared/infrastructure/sqlite.repository.js), que tem `upsert` para as projeções. `MapRepository` (em memória) fica para os testes.
 
 - Um banco por serviço: nenhum serviço lê a tabela de outro. O que vem de fora chega por mensagem e vira projeção local. Capacidade de negócio, dados e projeções de cada serviço: [docs/arquitetura.md](../docs/arquitetura.md#capacidades-de-negócio-dados-e-projeções).
 - Estado e mensagens são gravados na mesma transação (outbox). Ver [Entrega das mensagens](#entrega-das-mensagens).
 
 ## Documentação da API (Swagger)
 
-Cada serviço serve o Swagger UI em `/docs` e o contrato em `/openapi.yaml` (ex.: http://localhost:3001/docs). Ambos são públicos. No Swagger UI, "Authorize" recebe o token de `POST /auth` do identity.
+Cada serviço serve o Swagger UI em `/docs` e o contrato em `/openapi.yaml` (ex.: http://localhost:3001/docs). Ambos são públicos. No Swagger UI, "Authorize" recebe o JWT do cookie `access_token` de `POST /auth/login` do identity.
 
 - O contrato é escrito à mão em `<serviço>/src/openapi.yaml` e servido por [shared/application/api-docs.js](shared/application/api-docs.js) (`swagger-ui-express`). Rota nova → documentar no YAML.
 - O teste `test/openapi.test.js` de cada serviço falha se houver rota sem documentação ou documentação sem rota. Ele não confere corpos nem respostas.
@@ -56,17 +56,19 @@ Cada serviço serve o Swagger UI em `/docs` e o contrato em `/openapi.yaml` (ex.
 
 ## Autenticação
 
-Todos os endpoints de secretariat e registration exigem `Authorization: Bearer <token>`.
+Todos os endpoints de secretariat e registration exigem `Authorization: Bearer <token>`. O token vem do identity:
 
 ```sh
-curl -X POST localhost:3003/users -H 'Content-Type: application/json' -d '{"username":"ana","password":"123"}'
-curl -X POST localhost:3003/auth  -H 'Content-Type: application/json' -d '{"username":"ana","password":"123"}'  # -> {user, token}
+curl -X POST localhost:3003/auth/register -H 'Content-Type: application/json' -d '{"name":"Ana","username":"ana","email":"ana@ex.com","password":"12345678"}'
+curl -i -X POST localhost:3003/auth/login -H 'Content-Type: application/json' -d '{"username":"ana","password":"12345678"}'  # Set-Cookie: access_token=<JWT>
 ```
 
-- JWT HS256 ([shared/auth/jwt.js](shared/auth/jwt.js), lib `jsonwebtoken`), validade 8h, payload `{sub, username, role}`. Todos os serviços usam o mesmo `JWT_SECRET` (compose: padrão `dev-secret-change-me`; sem ele o serviço não sobe).
-- Admin: criado na subida do identity a partir de `ADMIN_USERNAME`/`ADMIN_PASSWORD` (padrão `admin`/`admin`). O cadastro público só cria `role: user`.
+- JWT HS256 com payload `{userId}`, validade `JWT_EXPIRES_IN` (compose: 1h). O identity assina; os demais validam com [shared/auth/jwt.js](shared/auth/jwt.js) (`req.user = {id}`). Todos usam o mesmo `JWT_SECRET`.
+- `.env` (em `microservices/`, fora do git): `JWT_SECRET`, `INTERNAL_API_TOKEN` (rotas `/internal` do identity) e `IDENTITY_DB_PASSWORD`. Sem eles, o compose sobe com valores vazios e o identity não inicia.
+- O identity usa Postgres (`identity-db`, volume `identity-db-data`) e roda as migrações (`scripts/migrate.js`) na subida. Os demais continuam em SQLite ([ADR 000](../docs/adrs/000-escolha-banco.md)).
+- Sem papel de admin: o token não tem role. Quem gerencia um evento é quem está em `organizers` (o código `isAdmin` ficou, mas nunca é verdadeiro).
 - Trade-off: com HS256, qualquer serviço que verifica tokens também consegue emiti-los. Alternativa: RS256 (identity assina com chave privada; os demais têm só a pública).
-- Limitações: senha em texto puro no identity; payment ainda sem auth.
+- Limitações: payment ainda sem auth; o seed `002_seed.sql` cria 3 usuários com hash placeholder (não fazem login nem chegam ao registration).
 
 ## Web (BFF)
 

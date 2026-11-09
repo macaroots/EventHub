@@ -31,7 +31,7 @@ router.get('/payments/:id', authenticate, async (req, res) => {
 });
 router.post('/payments/:id', authenticate, async (req, res) => {
     const { payment: p, registration: r } = await load(req);
-    if (r.userId != req.user.sub && req.user.role != 'admin') throw Object.assign(new Error('Not allowed to pay'), { status: 403 });
+    if (r.userId != req.user.sub) throw Object.assign(new Error('Not allowed to pay'), { status: 403 });
     const response = await payment.pay(req, p.id, req.body.receipt);
     if (!response.ok) {
         return res.redirect(`/payments/${encodeURIComponent(p.id)}?error=${encodeURIComponent(await response.text())}`);

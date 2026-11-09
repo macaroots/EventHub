@@ -40,13 +40,32 @@ services:
     volumes:
       - secretariat-data:/app/secretariat/data
 
+  identity-db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment: { POSTGRES_DB: identity, POSTGRES_USER: identity, POSTGRES_PASSWORD: "${IDENTITY_DB_PASSWORD}" }
+    volumes:
+      - identity-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U identity -d identity"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   identity:
     <<: *service
     build: { context: ., dockerfile: identity/Dockerfile }
-    environment: { <<: *env, PORT: &identity-port 3003, ADMIN_USERNAME: "${ADMIN_USERNAME:-admin}", ADMIN_PASSWORD: "${ADMIN_PASSWORD:-admin}" }
+    command: ["sh", "-c", "node scripts/migrate.js && node src/main.js"]
+    environment:
+      <<: *env
+      PORT: &identity-port 3003
+      DATABASE_URL: postgresql://identity:${IDENTITY_DB_PASSWORD}@identity-db:5432/identity
+      JWT_EXPIRES_IN: 1h
+      CORS_ORIGIN: http://localhost:3000
     ports: [{ published: *identity-port, target: *identity-port }]
-    volumes:
-      - identity-data:/app/identity/data
+    depends_on:
+      rabbitmq: { condition: service_healthy }
+      identity-db: { condition: service_healthy }
 
   payment:
     <<: *service
@@ -71,5 +90,5 @@ volumes:
   secretariat-data:
   certificate-data:
   registration-data:
-  identity-data:
+  identity-db-data:
   payment-data:
