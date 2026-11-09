@@ -55,8 +55,9 @@ Obrigações de quem implementa um serviço:
 
 | Mensagem | Produtor → consumidor | O consumidor deve | Idempotência |
 |----------|-----------------------|-------------------|--------------|
-| [UserCreated](messages/UserCreated.schema.json) | identity → registration | criar/atualizar o participante (`userId`, `username`) | upsert |
-| [UserUpdated](messages/UserUpdated.schema.json) | identity → registration | idem. **Reservado:** o registration já ouve, mas o identity ainda não publica | upsert |
+| [UserRegistered](messages/UserRegistered.schema.json) | identity → registration | criar o participante (`userId`, `name`, `email`) | upsert |
+| [UserUpdated](messages/UserUpdated.schema.json) | identity → registration | atualizar o participante | upsert |
+| [UserDeactivated](messages/UserDeactivated.schema.json) | identity → (ninguém ainda) | futuro: secretaria deixa a conta só com leitura | — |
 | [EventPublished](messages/EventPublished.schema.json) | secretariat → registration | criar a cópia imutável do evento e das atividades e abrir as inscrições | ignora evento/atividade que já existe |
 | [EventOrganizersChanged](messages/EventOrganizersChanged.schema.json) | secretariat → registration | substituir a lista de organizadores (lista completa, não delta) | sobrescreve |
 | [EventCanceled](messages/EventCanceled.schema.json) | secretariat → registration | cancelar todas as inscrições, emitindo `RegistrationCanceled` para cada uma | ignora evento desconhecido ou já cancelado |
@@ -89,7 +90,7 @@ sequenceDiagram
     participant P as payment
     participant C as certificate (futuro)
 
-    I->>R: UserCreated
+    I->>R: UserRegistered / UserUpdated
     S->>R: EventPublished
     S->>R: EventOrganizersChanged
     Note over R: POST /registrations (web)
@@ -116,15 +117,15 @@ Linhas tracejadas: mensagem publicada sem consumidor por enquanto.
 
 ## HTTP (síncrono)
 
-Os serviços não se chamam por HTTP: só o `web` (BFF) chama os serviços. O contrato de cada um é o seu `openapi.yaml`, servido também em `/openapi.yaml` e `/docs`.
+Os serviços não se chamam por HTTP: só o `web` (BFF) chama os serviços. As rotas `/internal` do identity são para isso (BFF ou outro serviço) e exigem `X-Internal-Token` (`INTERNAL_API_TOKEN`). O contrato de cada um é o seu `openapi.yaml`, servido também em `/openapi.yaml` e `/docs`.
 
 | Serviço | Contrato | Rotas usadas pelo web ([web/src/clients](../web/src/clients/)) |
 |---------|----------|--------------------------------|
-| identity | [openapi.yaml](../identity/src/openapi.yaml) | `POST /auth`, `GET /users`, `GET /users?username=` |
+| identity | (sem openapi.yaml) [docs/endpoint.md](../../docs/endpoint.md#identidade) | `POST /auth/register`, `POST /auth/login`, `GET /me`; internas (`X-Internal-Token`): `GET /internal/users?email=`, `POST /internal/users/batch {ids}` |
 | payment | [openapi.yaml](../payment/src/openapi.yaml) | `GET /payments/:id`, `POST /payments/:id/pay {receipt}` |
 | registration | [openapi.yaml](../registration/src/openapi.yaml) | inscrições, fila de espera, gestão, check-in ([registration.js](../web/src/clients/registration.js)) |
 
-Autenticação: JWT HS256 com o `JWT_SECRET` compartilhado, enviado em `Authorization: Bearer`, com payload `{sub, username, role}` (`role`: `user` | `admin`) e validade de 8h. O identity emite o token e os demais o validam. Ver [README](../README.md#autenticação).
+Autenticação: JWT HS256 com o `JWT_SECRET` compartilhado, enviado em `Authorization: Bearer`, com payload `{userId}` (sem role) e validade `JWT_EXPIRES_IN` (compose: 1h). O identity emite o token e os demais o validam. Ver [README](../README.md#autenticação).
 
 ## Limitações e alternativas
 

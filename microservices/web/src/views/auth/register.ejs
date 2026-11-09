@@ -1,19 +1,23 @@
 <form action="/auth/register" method="post">
     <label>
         <span>Name</span>
-        <input name="name">
+        <input name="name" value="<%= locals.form?.name ?? '' %>" required>
+    </label>
+    <label>
+        <span>Username</span>
+        <input name="username" value="<%= locals.form?.username ?? '' %>" pattern="[a-z0-9_.\-]{3,30}" title="3-30: a-z, 0-9, _ . -" required>
     </label>
     <label>
         <span>E-mail</span>
-        <input name="email">
+        <input name="email" type="email" value="<%= locals.form?.email ?? '' %>" required>
     </label>
     <label>
         <span>Password</span>
-        <input name="password" type="password">
+        <input name="password" type="password" minlength="8" required>
     </label>
     <label>
         <span>Confirm password</span>
-        <input name="confirmation" type="password">
+        <input name="confirmation" type="password" minlength="8" required>
     </label>
-    <button>Login</button>
+    <button>Cadastrar</button>
 </form>

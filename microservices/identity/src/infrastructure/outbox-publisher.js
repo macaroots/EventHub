@@ -4,8 +4,9 @@ import amqp from 'amqplib';
 import { pool } from './db.js';
 import { config } from '../config.js';
 import { logger } from './logger.js';
+import { toEnvelope } from './envelope.js';
 
-const EXCHANGE = 'eventhub.events';
+const EXCHANGE = 'event-hub'; // mesma exchange do shared/messaging
 const POLL_INTERVAL_MS = 2000;
 const MAX_RETRY = 5;
 
@@ -73,11 +74,12 @@ export class OutboxPublisher {
       );
       for (const row of rows) {
         try {
+          const message = toEnvelope(row.payload);
           this.#channel.publish(
             EXCHANGE,
-            row.routing_key,
-            Buffer.from(row.payload),
-            { persistent: true }
+            message.type,
+            Buffer.from(JSON.stringify(message)),
+            { persistent: true, messageId: message.id, type: message.type, appId: message.source, contentType: 'application/json' }
           );
           await client.query(
             `UPDATE outbox SET published_at = now() WHERE id = $1`,
