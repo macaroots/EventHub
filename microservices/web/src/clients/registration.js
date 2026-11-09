@@ -1,6 +1,6 @@
 import { api } from './http.js';
 
-const call = api(process.env.REGISTRATION_URL || 'http://registration:3001');
+const call = api(process.env.REGISTRATION_URL || 'http://registration:3000');
 const id = encodeURIComponent;
 
 export const register = (req, activityId) => call('/registrations', req, { method: 'POST', body: { activityId } });
