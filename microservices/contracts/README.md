@@ -125,7 +125,7 @@ Os serviços não se chamam por HTTP: só o `web` (BFF) chama os serviços. As r
 | payment | [openapi.yaml](../payment/src/openapi.yaml) | `GET /payments/:id`, `POST /payments/:id/pay {receipt}` |
 | registration | [openapi.yaml](../registration/src/openapi.yaml) | inscrições, fila de espera, gestão, check-in ([registration.js](../web/src/clients/registration.js)) |
 
-Autenticação: JWT HS256 com o `JWT_SECRET` compartilhado, enviado em `Authorization: Bearer`, com payload `{userId}` (sem role) e validade `JWT_EXPIRES_IN` (compose: 1h). O identity emite o token e os demais o validam. Ver [README](../README.md#autenticação).
+Autenticação: JWT HS256 com o `JWT_SECRET` compartilhado, enviado em `Authorization: Bearer`, com payload `{userId, name}` (sem role) e validade `JWT_EXPIRES_IN` (compose: 1h). O identity emite o token e os demais o validam. Ver [README](../README.md#autenticação).
 
 ## Limitações e alternativas
 

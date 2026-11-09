@@ -23,7 +23,7 @@ Fluxo do participante:
 - Em `awaiting_payment`, o link de pagamento leva a `/payments/:id`, onde se informa o comprovante (o gateway fake recusa `deny`). Pagamento recusado cancela a inscrição; reserva expirada cancela a cobrança.
 - Pagar é assíncrono: o registration só fica sabendo por `PaymentConfirmed/Denied`. Por isso o BFF consulta a inscrição até 10× a cada 200 ms antes de redirecionar. Alternativas: websocket/SSE, ou uma página de "processando" com refresh.
 - Autorização do pagamento: o payment ainda não tem auth. O BFF só mostra se o registration devolve a inscrição do pagamento para o usuário (inscrição de outra pessoa → 403; organizador vê) e só paga se a inscrição for do usuário.
-- Cadastro e login: `/auth/register` e `/auth/login` repassam ao identity (login por username ou e-mail). O identity devolve o JWT no cookie `access_token`; o BFF o copia para o próprio cookie `token` (mesma validade) e guarda o nome (`GET /me`) no cookie `name`, só para o menu.
+- Cadastro e login: `/auth/register` e `/auth/login` repassam ao identity (login por username ou e-mail). O identity devolve `{token, expiresIn}`; o BFF grava o token no cookie `token` (httpOnly, mesma validade) e lê o nome do menu do próprio JWT. Logout só apaga o cookie (JWT sem estado, sem revogação).
 - Login: sem sessão, as páginas protegidas redirecionam para `/auth/login?next=<página>` (num POST, a página de origem). O `next` só aceita caminhos locais.
 - Limitações:
   - Cancelar uma inscrição já paga não estorna o pagamento.

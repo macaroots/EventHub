@@ -5,7 +5,7 @@ Responsável: Renato
 Status: Aceito
 
 ## Contexto
-O identity novo (Postgres, bcrypt) não tem mais `GET /users` nem `GET /users?username=` ([ADR 013](013-organizador-por-username.md)). Ele expõe rotas `/internal/users` protegidas por `X-Internal-Token`, e o [endpoint.md](../endpoint.md#identidade) prevê o organizador por e-mail. O JWT só tem `{userId}`.
+O identity novo (Postgres, bcrypt) não tem mais `GET /users` nem `GET /users?username=` ([ADR 013](013-organizador-por-username.md)). Ele expõe rotas `/internal/users` protegidas por `X-Internal-Token`, e o [endpoint.md](../endpoint.md#identidade) prevê o organizador por e-mail. O JWT só tem `{userId, name}`.
 
 ## Decisão
 - O formulário pede o e-mail. O BFF chama `GET /internal/users?email=` e depois `secretariat.addOrganizer` com o id.

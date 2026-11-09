@@ -69,7 +69,6 @@ export function meRouter(userService) {
   router.delete('/', async (req, res) => {
     try {
       await userService.deactivateMe(req.userId, req.requestId);
-      res.clearCookie('access_token', { path: '/' });
       return res.status(204).send();
     } catch (err) {
       return handleServiceError(err, res);

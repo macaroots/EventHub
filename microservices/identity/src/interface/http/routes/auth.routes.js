@@ -2,8 +2,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { sendError, handleServiceError } from '../errors.js';
-import { authenticate } from '../middleware/authenticate.js';
-import { config } from '../../../config.js';
 
 const registerSchema = z.object({
   name: z.string().min(1).max(120),
@@ -16,16 +14,6 @@ const loginSchema = z.object({
   username: z.string().min(1),
   password: z.string().min(1),
 });
-
-function cookieOptions(maxAge) {
-  return {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: config.env === 'production',
-    maxAge: maxAge * 1000,
-    path: '/',
-  };
-}
 
 export function authRouter(userService) {
   const router = Router();
@@ -52,17 +40,10 @@ export function authRouter(userService) {
     }
     try {
       const { token, expiresIn } = await userService.login(parsed.data);
-      res.cookie('access_token', token, cookieOptions(expiresIn));
-      return res.json({ expiresIn });
+      return res.json({ token, expiresIn });
     } catch (err) {
       return handleServiceError(err, res);
     }
-  });
-
-  // POST /auth/logout
-  router.post('/logout', authenticate, (req, res) => {
-    res.clearCookie('access_token', { path: '/' });
-    return res.status(204).send();
   });
 
   return router;

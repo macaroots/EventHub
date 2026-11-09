@@ -78,7 +78,7 @@ export class UserAppService {
     const match = await this.hasher.compare(password, user.passwordHash);
     if (!match) throw invalid();
 
-    const token = this.tokenService.sign({ userId: user.id });
+    const token = this.tokenService.sign({ userId: user.id, name: user.name });
     return { token, expiresIn: this.tokenService.expiresInSeconds() };
   }
 
