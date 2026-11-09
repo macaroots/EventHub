@@ -32,7 +32,7 @@ const setup = async () => {
     { activityId: "a1", name: "Workshop", startsAt: "2026-12-01T09:00:00Z", endsAt: "2026-12-01T12:30:00Z", capacity: 5, price: 0 },
     { activityId: "a2", name: "Palestra", capacity: 5, price: 0 },
   ] });
-  for (const [userId, username] of [["u1", "ana"], ["u2", "bia"]]) registrations.upsertParticipant({ userId, username });
+  for (const [userId, name] of [["u1", "ana"], ["u2", "bia"]]) registrations.upsertParticipant({ userId, name });
   return { registrations, checkIns, certificates, requested };
 };
 

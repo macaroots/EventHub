@@ -21,14 +21,12 @@ router.post('/events', action(
     async (req, response) => `/organizers/events/${(await response.json()).id}`,
     list));
 
-// Página do evento: dados, organizers (ids → usernames via identity) e atividades.
+// Página do evento: dados, organizers (ids → nomes via identity) e atividades.
 router.get('/events/:id', async (req, res) => {
-    const [event, users] = await Promise.all([
-        secretariat.getEvent(req, req.params.id).then(json),
-        identity.listUsers(req).then(json),
-    ]);
-    const usernames = Object.fromEntries(users.map(u => [u.id, u.username]));
-    const organizers = event.organizers.map(id => ({ id, username: usernames[id] ?? id }));
+    const event = await secretariat.getEvent(req, req.params.id).then(json);
+    const users = event.organizers.length ? await identity.findByIds(event.organizers).then(json) : [];
+    const byId = Object.fromEntries(users.map(u => [u.id, u]));
+    const organizers = event.organizers.map(id => ({ id, name: byId[id]?.name ?? id, email: byId[id]?.email }));
     res.layout('organizers/event', { event, organizers });
 });
 router.post('/events/:id', action((req) => secretariat.updateEvent(req, req.params.id, eventForm(req.body)), show));
@@ -37,12 +35,14 @@ router.post('/events/:id/publish', action((req) => secretariat.publishEvent(req,
 router.post('/events/:id/end', action((req) => secretariat.endEvent(req, req.params.id), show));
 router.post('/events/:id/cancel', action((req) => secretariat.cancelEvent(req, req.params.id, req.body.reason), show));
 
-// Organizers: o formulário usa username; a secretaria guarda só o id do usuário.
+// Organizers: o formulário usa o e-mail; a secretaria guarda só o id do usuário.
 router.post('/events/:id/organizers', action(async (req) => {
-    // Composição no BFF (ADR 013): username → id no identity, depois a secretaria.
-    const response = await identity.findUser(req, req.body.username);
+    // Composição no BFF (ADR 013): e-mail → id no identity, depois a secretaria.
+    const response = await identity.findByEmail(req.body.email);
     if (!response.ok) return response;
-    return secretariat.addOrganizer(req, req.params.id, (await response.json()).id);
+    const [user] = await response.json();
+    if (!user) return new Response(`Usuário ${req.body.email} não encontrado`, { status: 404 });
+    return secretariat.addOrganizer(req, req.params.id, user.id);
 }, show));
 router.post('/events/:id/organizers/:userId/delete',
     action((req) => secretariat.removeOrganizer(req, req.params.id, req.params.userId), show));

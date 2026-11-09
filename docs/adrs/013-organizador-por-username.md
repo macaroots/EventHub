@@ -2,7 +2,7 @@
 Número do ADR: 013
 Data: 2026-11-06
 Responsável: Renato
-Status: Aceito
+Status: Substituído pelo [ADR 016](016-organizador-por-email.md)
 
 ## Contexto
 O formulário de organizadores pede o username. A secretaria guarda só o `userId`. Antes, o BFF baixava todos os usuários do identity (`GET /users`, que era público) e filtrava em memória.

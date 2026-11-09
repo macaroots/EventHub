@@ -49,7 +49,7 @@ messageBus.listen('EventEnded', e => certificateService.endEvent(e));
 messageBus.listen('EventOrganizersChanged', e => registrationService.changeOrganizers(e));
 messageBus.listen('PaymentConfirmed', e => registrationService.confirmPayment(e));
 messageBus.listen('PaymentDenied', e => registrationService.denyPayment(e));
-messageBus.listen('UserCreated', e => registrationService.upsertParticipant(e));
+messageBus.listen('UserRegistered', e => registrationService.upsertParticipant(e));
 messageBus.listen('UserUpdated', e => registrationService.upsertParticipant(e));
 
 // Erros de domínio → 4xx; os demais são falha interna → 500 (sem vazar a mensagem).

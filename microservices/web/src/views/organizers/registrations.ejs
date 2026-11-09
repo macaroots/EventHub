@@ -23,7 +23,7 @@
         <tr><th>Participante</th><th>Status</th><th>Pendências / motivo</th><th>Ações</th></tr>
 <% for (const r of registrations) { const pending = r.requirements.filter(q => !q.fulfilled); %>
         <tr>
-            <td><%= r.participant?.username ?? r.userId %></td>
+            <td><%= r.participant?.name ?? r.userId %></td>
             <td><%- include('../registrations/status', { status: r.status }) %><% if (r.attendance) { %>, presente<% } %></td>
             <td>
 <% if (r.status == 'canceled') { %>
