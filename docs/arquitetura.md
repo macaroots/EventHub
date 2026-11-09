@@ -40,7 +40,7 @@ Cada serviço é dono dos seus dados e não lê o banco de outro. No protótipo,
 - **Publica:** `EventPublished` (com as atividades), `EventCanceled`, `EventOrganizersChanged` e `EventEnded`.
 
 ### Credenciamento (`registration`)
-- **Capacidade:** garantir a vaga do participante. Inscrição, elegibilidade, capacidade sob concorrência, fila de espera com promoção, reserva com prazo de pagamento e gestão das inscrições pelo organizador e check-in por código da atividade ([ADR 002](adrs/002-checkin-no-registration.md), [ADR 012](adrs/012-forma-do-checkin.md)).
+- **Capacidade:** garantir a vaga do participante. Inscrição, elegibilidade, capacidade sob concorrência, fila de espera com promoção, reserva com prazo de pagamento e gestão das inscrições pelo organizador e check-in por código da atividade ([ADR 012](adrs/012-forma-do-checkin.md)).
 - **Dados próprios:** `registrations` `{id, userId, activityId, status: pending | waitlisted | awaiting_payment | confirmed | canceled, requirements[], reasons[], payment {id, amount, description, requestedAt, paid}, createdAt}`, mais a `version` da atividade, usada no lock otimista ([ADR 008](adrs/008-vaga-e-pagamento-como-status.md)); `checkins` `{activityId, status: open | closed, code, openedAt}`; `attendances` `{id, registrationId (único), activityId, userId, method: code | manual, checkedInBy, checkedInAt}`.
 - **Projeções:**
   - `activities` `{id, eventId, name, startsAt, endsAt, capacity, price, rules}`: cópia imutável, criada uma vez pelo `EventPublished`;
@@ -92,9 +92,9 @@ Um contexto pode virar mais de um deployable quando uma parte tiver carga ou dis
 
 | De | Parte | Quando separar | Referência |
 |---|---|---|---|
-| `registration` | Check-in | Pico do check-in afetando as inscrições, ou operação offline no local | [ADR 002](adrs/002-checkin-no-registration.md) |
+| `registration` | Check-in | Pico do check-in afetando as inscrições, ou operação offline no local | [ADR 012](adrs/012-forma-do-checkin.md) |
 | `registration` | Processamento de inscrições (fila durável e consumidor por atividade) | Disputa pelo lock que o rate limit e as réplicas não resolvem | [ADR 010](adrs/010-fila-de-acesso.md) |
-| `secretariat` | Leitura do catálogo (projeção própria do `EventPublished`) | Pico de leitura que cache e CDN não absorvem | [ADR 007](adrs/007-fronteiras-secretaria-credenciamento.md), [ADR 015](adrs/015-cache-do-catalogo-publico.md) |
+| `secretariat` | Leitura do catálogo (projeção própria do `EventPublished`) | Pico de leitura que cache e CDN não absorvem | [ADR 015](adrs/015-cache-do-catalogo-publico.md) |
 | `web` | BFF público (cacheável) e BFF autenticado | Perfis de carga e de deploy diferentes | [ADR 015](adrs/015-cache-do-catalogo-publico.md) |
 | `identity` | Troca por um IdP (Keycloak, Auth0) | Login social, MFA ou carga de login | — |
 
@@ -108,7 +108,7 @@ Um contexto pode virar mais de um deployable quando uma parte tiver carga ou dis
 - **Credenciamento:** inscrição com regras (`minimumAge`), vaga com fila de espera, reserva com pagamento e expiração, projeções de atividade, evento e participante check-in com comparecimento (RF09, RF11) e pedido de certificados ao encerrar o evento (RF10).
 - **Caixa:** recebe `PaymentRequested`, paga por `POST /payments/:id/pay` com gateway fake e publica `PaymentConfirmed` ou `PaymentDenied`.
 - **Testes:** secretariat, registration, payment e shared.
-- **ADRs:** 001 a 015.
+- **ADRs:** 000 a 017 (002, 007 e 013 foram mesclados no 012, 015 e 016).
 
 ## O que falta
 
@@ -119,7 +119,7 @@ Um contexto pode virar mais de um deployable quando uma parte tiver carga ou dis
   - certificados: definir o critério de elegibilidade (hoje provisório: um por evento, basta um check-in) e a reemissão.
 - **Caixa:** auth, estorno quando a inscrição é cancelada depois de paga e gateway real (adaptador).
 - **Notificações, Certificados e Relatórios:** criar, conforme os ADRs.
-- **Web:** integrar com as APIs, ou com um API gateway/BFF. A tela de atividade compõe programação (Secretaria) e oferta (Credenciamento).
+- **Web:** integrar com as APIs pelo BFF ([ADR 017](adrs/017-entrada-unica-sem-api-gateway.md)). A tela de atividade compõe programação (Secretaria) e oferta (Credenciamento).
 
 ### Transversal
 - **Persistência:** migrar cada serviço do SQLite para o Postgres antes da produção, com várias instâncias ([ADR 000](adrs/000-escolha-banco.md), [ADR 014](adrs/014-varias-instancias-por-servico.md)).
@@ -131,7 +131,7 @@ Um contexto pode virar mais de um deployable quando uma parte tiver carga ou dis
   - contratos versionados (AsyncAPI).
 - **Monitoramento:** `/health`, logs estruturados, métricas e tracing ([ADR 006](adrs/006-monitoramento.md)).
 - **Segurança:** RS256 no lugar do segredo compartilhado.
-- **Entrada única:** API gateway na frente dos serviços (hoje cada um expõe sua porta).
+- **Entrada única:** o `web` é a única entrada, sem API gateway; os serviços deixam de publicar porta e um proxy reverso faz TLS e rate limit ([ADR 017](adrs/017-entrada-unica-sem-api-gateway.md)).
 - **Fila de acesso:** só com pico real, e terceirizada na borda; até lá, rate limit em `POST /registrations` ([ADR 010](adrs/010-fila-de-acesso.md)).
 - **Docs:** status dos ADRs (todos "Proposto" ou em branco), numeração duplicada (001) e exchange chamado `loja`.
 
@@ -166,7 +166,7 @@ flowchart LR
 ```
 
 - **Credenciamento** é o core domain. Identidade, Notificações, Certificados e Relatórios são genéricos, e Caixa é de suporte.
-- **Secretaria** é dona da programação; o **Credenciamento**, da oferta (capacidade, preço, regras). A projeção entre eles leva só ids, status e organizers ([ADR 007](adrs/007-fronteiras-secretaria-credenciamento.md)).
+- **Secretaria** é dona de toda a informação do evento, inclusive capacidade, preço e regras. O **Credenciamento** recebe uma cópia imutável na publicação e é dono das inscrições e da ocupação ([ADR 011](adrs/011-evento-imutavel-apos-publicacao.md)).
 - **Certificados** é upstream: define a própria mensagem de entrada, e o credenciamento se conforma a ela ([ADR 003](adrs/003-certificados.md)).
 - **Shared Kernel:** `microservices/shared` (bus, auth, repositórios). É acoplamento consciente, porque uma mudança ali afeta todos os serviços.
 

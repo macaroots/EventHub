@@ -37,5 +37,5 @@ Criar um microsserviço `certificate` só para emitir e validar:
 - O certificado é uma cópia dos dados no momento da emissão. Mudanças posteriores (nome, carga horária) exigem reemissão.
 
 ## Referências
-- [002-checkin-no-registration.md](002-checkin-no-registration.md)
+- [012-forma-do-checkin.md](012-forma-do-checkin.md)
 - [001-comunicacao-assincrona.md](001-comunicacao-assincrona.md)
