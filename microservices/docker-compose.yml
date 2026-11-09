@@ -95,5 +95,5 @@ volumes:
   payment-data:
   certificate-data:
   registration-data:
-  identity-data:
+  identity-db-data:
   payment-data:
