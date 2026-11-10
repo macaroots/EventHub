@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EventHub</title>
+    <link rel="stylesheet" href="/css/auth.css">
+</head>
+<body>
+    <div class="auth-wrapper">
+        <!-- Coluna da Esquerda (Branding escuro) -->
+        <aside class="auth-sidebar">
+            <div class="brand-header">
+                <div class="brand-logo">
+                    <span class="logo-box">E</span>
+                    <span class="logo-text">EventHub</span>
+                </div>
+            </div>
+
+            <div class="sidebar-hero">
+                <span class="tagline-badge">EVENTOS SEM COMPLICAÇÃO</span>
+                <h1 class="hero-title">Organize, participe e conecte-se.</h1>
+                <p class="hero-desc">Tudo o que você precisa para viver grandes experiências em um só lugar.</p>
+            </div>
+
+            <footer class="sidebar-footer">
+                <p>&copy; <%= new Date().getFullYear() %> EventHub. Todos os direitos reservados.</p>
+            </footer>
+        </aside>
+
+        <!-- Coluna da Direita (Área do Formulário) -->
+        <main class="auth-main">
+            <div class="auth-container">
+                <% if (locals.error) { %>
+                    <div class="auth-alert error">
+                        <%= error %>
+                    </div>
+                <% } %>
+                <%- body -%>
+            </div>
+        </main>
+    </div>
+</body>
+</html>
+

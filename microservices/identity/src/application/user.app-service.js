@@ -1,4 +1,4 @@
-// Application service – use cases, dependencies injected.
+import { DuplicateError, NotFoundError } from '../../../shared/domain/errors.js';
 import { User } from '../domain/user.js';
 import { pool } from '../infrastructure/db.js';
 import { logger } from '../infrastructure/logger.js';
