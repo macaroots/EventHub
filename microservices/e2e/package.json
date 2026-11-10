@@ -1,0 +1,15 @@
+{
+  "name": "@event-hub/e2e",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "watch": "playwright test --headed",
+    "ui": "playwright test --ui",
+    "debug": "playwright test --debug",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.0"
+  }
+}

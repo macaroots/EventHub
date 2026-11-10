@@ -90,6 +90,7 @@ web/src/
 - Não há API Gateway: com SSR, o browser só fala com o `web`. Se surgir uma SPA, um app mobile ou terceiros, coloque um gateway de infra (Traefik/Nginx), que roteia por configuração e não precisa de código por endpoint.
 - Os clients expõem só o que as telas usam. Se virar repasse puro, uma alternativa é usar um proxy (`http-proxy-middleware`).
 - Telas: ver [web/README.md](web/README.md).
+- Testes das telas no navegador (Playwright): ver [e2e/README.md](e2e/README.md).
 
 ## Entidades de domínio
 
