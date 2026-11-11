@@ -80,3 +80,4 @@ volumes:
   registration-data:
   identity-db-data:
   payment-data:
+  certificate-data:
