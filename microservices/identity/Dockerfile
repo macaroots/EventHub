@@ -25,6 +25,7 @@ COPY identity/src /app/identity/src
 COPY identity/scripts /app/identity/scripts
 COPY identity/migrations /app/identity/migrations
 
+RUN mkdir -p data && chown node:node data
 WORKDIR /app/identity
 
 # Run as non-root

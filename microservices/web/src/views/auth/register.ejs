@@ -1,23 +1,54 @@
-<form action="/auth/register" method="post">
-    <label>
-        <span>Name</span>
-        <input name="name" value="<%= locals.form?.name ?? '' %>" required>
-    </label>
-    <label>
-        <span>Username</span>
-        <input name="username" value="<%= locals.form?.username ?? '' %>" pattern="[a-z0-9_.\-]{3,30}" title="3-30: a-z, 0-9, _ . -" required>
-    </label>
-    <label>
-        <span>E-mail</span>
-        <input name="email" type="email" value="<%= locals.form?.email ?? '' %>" required>
-    </label>
-    <label>
-        <span>Password</span>
-        <input name="password" type="password" minlength="8" required>
-    </label>
-    <label>
-        <span>Confirm password</span>
-        <input name="confirmation" type="password" minlength="8" required>
-    </label>
-    <button>Cadastrar</button>
+<div class="auth-form-header">
+    <span class="auth-badge">Comece agora</span>
+    <h2 class="auth-title">Crie sua conta</h2>
+    <p class="auth-subtitle">Gerencie seus eventos e inscrições.</p>
+</div>
+
+<form action="/auth/register" method="post" class="auth-form">
+    <div class="form-group">
+        <label for="name" class="form-label">Nome completo</label>
+        <input 
+            id="name"
+            name="name" 
+            type="text" 
+            class="form-input" 
+            placeholder="Seu nome" 
+            required 
+            autocomplete="name"
+        >
+    </div>
+
+    <div class="form-group">
+        <label for="email" class="form-label">E-mail</label>
+        <input 
+            id="email"
+            name="email" 
+            type="email" 
+            class="form-input" 
+            placeholder="voce@email.com" 
+            required 
+            autocomplete="email"
+        >
+    </div>
+
+    <div class="form-group">
+        <label for="password" class="form-label">Senha</label>
+        <input 
+            id="password"
+            name="password" 
+            type="password" 
+            class="form-input" 
+            placeholder="Mínimo de 8 caracteres" 
+            required 
+            minlength="8"
+            autocomplete="new-password"
+        >
+    </div>
+
+    <button type="submit" class="auth-button">Criar conta</button>
 </form>
+
+<div class="auth-form-footer">
+    <span>Já possui uma conta?</span>
+    <a href="/auth/login" class="auth-link">Entrar</a>
+</div>
