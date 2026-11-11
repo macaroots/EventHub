@@ -23,29 +23,29 @@ export { expect };
 
 export const newUser = (prefix) => {
     const id = `${prefix}${Date.now().toString(36)}`;
-    return { name: `${prefix} ${id}`, username: id, email: `${id}@ex.com`, password: '12345678' };
+    return { username: id, email: `${id}@ex.com`, password: '12345678' };
 };
 
+// Cadastro faz login automático e leva a /organizers/events.
 export async function register(page, user) {
     await page.goto('/auth/register');
-    await page.getByLabel('Name', { exact: true }).fill(user.name);
-    await page.getByLabel('Username', { exact: true }).fill(user.username);
     await page.getByLabel('E-mail').fill(user.email);
-    await page.getByLabel('Password', { exact: true }).fill(user.password);
-    await page.getByLabel('Confirm password').fill(user.password);
-    await page.getByRole('button', { name: 'Cadastrar' }).click();
-    await expect(page).toHaveURL(/\/auth\/login/);
+    await page.getByLabel('Username').fill(user.username);
+    await page.getByLabel('Senha').fill(user.password);
+    await page.getByRole('button', { name: 'Criar conta' }).click();
+    await expect(page.getByTitle('Sair')).toBeVisible();
 }
 
 export async function login(page, user) {
     await page.goto('/auth/login');
-    await page.getByLabel('Username ou e-mail').fill(user.username);
-    await page.getByLabel('Password').fill(user.password);
-    await page.getByRole('button', { name: 'Login' }).click();
-    await expect(page.getByRole('button', { name: /sair/ })).toBeVisible();
+    await page.getByLabel('E-mail').fill(user.email);
+    await page.getByLabel('Senha').fill(user.password);
+    await page.getByRole('button', { name: 'Entrar' }).click();
+    await expect(page.getByTitle('Sair')).toBeVisible();
 }
 
+// O botão de sair é só um ícone (➔) com title="Sair".
 export async function logout(page) {
-    await page.getByRole('button', { name: /sair/ }).click();
-    await expect(page.getByRole('link', { name: 'Login' })).toBeVisible();
+    await page.getByTitle('Sair').click();
+    await expect(page.getByRole('link', { name: 'Entrar' })).toBeVisible();
 }
