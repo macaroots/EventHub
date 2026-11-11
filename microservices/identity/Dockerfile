@@ -29,6 +29,7 @@ RUN mkdir -p data && chown node:node data
 WORKDIR /app/identity
 
 # Run as non-root
+RUN mkdir -p /app/identity/data && chown -R node:node /app/identity/data
 USER node
 
 ENV NODE_ENV=production

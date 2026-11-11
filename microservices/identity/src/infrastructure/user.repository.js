@@ -61,7 +61,7 @@ export class UserRepository {
 
   async getByUsername(username) {
     const { rows } = await this.database.query(
-      'SELECT * FROM users WHERE lower(username)=lower($1)',
+      'SELECT * FROM users WHERE lower(username)=lower($1) OR lower(email)=lower($1)',
       [username]
     );
     return rowToUser(rows[0]);
@@ -73,6 +73,11 @@ export class UserRepository {
       [email]
     );
     return rowToUser(rows[0]);
+  }
+
+  async list() {
+    const { rows } = await this.database.query('SELECT * FROM users');
+    return rows.map(rowToUser);
   }
 
   async findByEmail(email) {
