@@ -47,12 +47,11 @@ services:
       - /app/shared/node_modules
 
   payment:
-    <<: *node-dev
+    command: ["uv", "run", "--no-sync", "uvicorn", "src.main:app", "--reload", "--host", "0.0.0.0", "--port", "3000"]
+    restart: "no"
     ports: ["3004:3000"]
     volumes:
-      - ./payment/src:/app/payment/src
-      - ./shared:/app/shared
-      - /app/shared/node_modules
+      - ./payment/src:/app/src
 
   certificate:
     <<: *python-dev
