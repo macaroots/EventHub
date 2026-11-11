@@ -448,24 +448,31 @@ Certificado {
     token verificação
 }
 
-POST /events/:eventId/certificates *Emite o certificado (idempotente)* // credenciamento
-    status 201
-    emite CertificateRequested {participantId, participantName, eventId, eventName, eventDate, activities: [{name}]} 
-    
-certificadoService.criar
-    ouve CertificateRequested    
-        *Verifica inscrição aprovada + presença > 74%*
+POST /events/:eventId/certificates *Consulta se o certificado já foi emitido* // certificado
+    status 200 → {certificateId}
+    status 404 → {error: "certificate not available"}  // o evento ainda não chegou
+
+    A emissão é assíncrona. O registration publica:
+    CertificateRequested {participantId, participantName, eventId, eventName, eventDate, activities: [{name}]}
+    e o certificateService.criar consome da fila `certificate`.
+
+    O registration é dono da regra: inscrição confirmada + pelo menos uma presença.
+    Não há percentual mínimo. O certificate não chama o registration por HTTP.
 
 GET /certificates *Lista os certificados do participante* pelo JWT token
-    [{certificateId, eventName}]
+    [{certificateId, eventName, eventDate}]
 
-GET /certificates/:id *Metadados do certificado*
-    {Certificado}
+GET /certificates/:id *Metadados do certificado* (dono ou admin)
+    {id, participantName, eventName, eventDate, activities: [{name}], verificationToken, issuedAt}
 
-GET /certificates/:id/download *Gera e baixa o PDF com PDFKit*
+GET /certificates/:id/download *Gera e baixa o PDF* (dono ou admin)
+    PDF com nome, evento, data, atividades, token, URL e QR Code de validação
 
-GET /certificates/validate/:tokenVerificacao
-    {Certificado}
+GET /certificates/validate/:tokenVerificacao *Validação pública, sem JWT*
+    {valid, participantName, eventName, eventDate, activities: [{name}], issuedAt}
+
+    certificadoService.criar
+    ouve CertificateRequested
 
 
 ## Portaria dentro do Credenciamento

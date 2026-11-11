@@ -16,11 +16,13 @@ docker compose down            # -v para apagar os bancos
 | secretariat  | http://localhost:3002  |
 | identity     | http://localhost:3003  |
 | payment      | http://localhost:3004  |
+| certificate  | http://localhost:3005  |
 | RabbitMQ UI  | http://localhost:15673 (guest/guest) |
 
 - Cada serviço tem seu próprio `<serviço>/Dockerfile` (permite linguagens diferentes no futuro). O build context é `microservices/` para incluir `shared/`, mantendo os imports relativos (`../../shared/...`).
 - O compose define a porta de cada serviço `PORT`; e o endereço do broker `RABBITMQ_URL=amqp://rabbitmq`.
 - AMQP (5672) não é exposto no host, para não conflitar com outro RabbitMQ local. Para rodar um serviço fora do Docker contra este broker, adicione `"5672:5672"` em `ports` do `rabbitmq`.
+- O `certificate` é o único serviço em **Python** (FastAPI + Uvicorn). Ele usa `JWT_SECRET` para validar o token do usuário e consome `CertificateRequested` do RabbitMQ (fila `certificate`) para emitir os certificados. Não há chamada HTTP entre `certificate` e `registration`.
 
 ## Desenvolvimento (hot reload)
 
@@ -28,7 +30,7 @@ docker compose down            # -v para apagar os bancos
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 ```
 
-[docker-compose.dev.yml](docker-compose.dev.yml) monta `<serviço>/src` e `shared/` do host e roda `node --watch`: salvar um arquivo reinicia o serviço.
+[docker-compose.dev.yml](docker-compose.dev.yml) monta `<serviço>/src` e `shared/` do host e roda `node --watch`: salvar um arquivo reinicia o serviço. O `certificate` monta `certificate/app` e roda `uvicorn --reload`.
 
 - Mudanças em `package.json` (dependências) exigem `--build`.
 - Se um serviço quebrar com erro de sintaxe, ele espera a próxima alteração; se o arquivo for substituído (ex.: `git checkout`), pode ser preciso `docker compose ... restart <serviço>`.
