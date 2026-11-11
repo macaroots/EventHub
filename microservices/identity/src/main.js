@@ -1,5 +1,7 @@
-// Entry point – composes everything and starts the server.
-import { config } from './config.js';
+import express from 'express';
+import path from 'node:path';
+import { apiDocs } from '../../shared/application/api-docs.js';
+import { openDatabase } from '../../shared/infrastructure/sqlite.js';
 import { pool } from './infrastructure/db.js';
 import { UserRepository } from './infrastructure/user.repository.js';
 import { BcryptHasher } from './infrastructure/hasher.js';
@@ -19,8 +21,9 @@ app.use(apiDocs(path.join(import.meta.dirname, 'openapi.yaml')));
 const database = openDatabase('identity');
 // Outbox/inbox no banco do serviço; RabbitMQ como transporte.
 const messageBus = new OutboxMessageBus(database, await RabbitMqMessageBus.connect(), { source: 'identity' });
-const userRepository = new UserSqliteRepository(database);
-const userService = new UserAppService(userRepository, messageBus);
+const userRepository = new UserRepository(database);
+const hasher = new BcryptHasher();
+const userService = new UserAppService(userRepository, messageBus, hasher);
 
 app.get('/users', authenticate(), (req, res) => {
     const { username } = req.query;
