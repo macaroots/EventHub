@@ -9,6 +9,22 @@ router.get('/login', (req, res) => res.layout('auth/login', { next: req.query.ne
 // Só caminhos locais: evita open redirect (ex.: next=//site.com).
 const safeNext = (next) => (/^\/(?![/\\])/.test(next ?? '') ? next : '/organizers/events');
 
+const cookieOptions = (seconds) => ({
+    httpOnly: true,                                // JS do browser não lê (XSS)
+    secure: process.env.NODE_ENV === 'production', // só HTTPS em produção
+    sameSite: 'strict',                            // mitiga CSRF
+    maxAge: seconds * 1000,                        // mesma validade do JWT
+});
+
+router.post('/register', async (req, res) => {
+    const { name, username, email, password, confirmation } = req.body;
+    const form = { name, username, email };
+    if (password !== confirmation) return res.status(400).layout('auth/register', { error: 'As senhas não conferem', form });
+    const response = await identity.register({ name, username, email, password });
+    if (!response.ok) return res.status(400).layout('auth/register', { error: await identity.errorMessage(response), form });
+    res.redirect('/auth/login');
+});
+
 router.post('/login', async (req, res) => {
     try {
         const response = await identity.login(req.body);

@@ -29,6 +29,7 @@ services:
 
   identity:
     <<: *node-dev
+    command: ["sh", "-c", "node scripts/migrate.js && node --watch src/main.js"]
     volumes:
       - ./identity/src:/app/identity/src
       - ./shared:/app/shared

@@ -1,8 +1,8 @@
-// Projeção do User do identity (UserCreated). Só para leitura (listagens, crachá);
+// Projeção do User do identity (UserRegistered/UserUpdated). Só para leitura (listagens, crachá);
 // as regras de inscrição não dependem dela.
 export class Participant {
-    constructor({ id, username }) {
+    constructor({ id, name }) {
         this.id = id;
-        this.username = username;
+        this.name = name;
     }
 }

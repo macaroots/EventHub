@@ -4,8 +4,8 @@ Cada serviço tem host/porta próprio. Rotas `/public/...` não exigem login.
 
 Fronteiras: [ADR 007](adrs/007-fronteiras-secretaria-credenciamento.md). O catálogo público fica na Secretaria (programação) e no Credenciamento (oferta).
 
-Autenticação: `Authorization: Bearer <JWT>` emitido pelo identity → `req.user = { id, username, role: 'user' | 'admin' }`.
-"Organizador" não é role: é estar em `event.organizers`. Admin pode tudo.
+Autenticação: `Authorization: Bearer <JWT>` emitido pelo identity (`{ userId, name }`) → `req.user = { id, name }`.
+"Organizador" não é role: é estar em `event.organizers`. Não há admin.
 
 Erros: 400 (validação/regra), 401, 403, 404
 
@@ -18,13 +18,14 @@ User
     {
         id
         name,
+        username,
         email,
         passwordHash,
         active: boolean,
         createdAt
     }
     Projeções:
-        Credenciamento (Participant) { id, name }    ← UserCreated, UserUpdated
+        Credenciamento (Participant) { id, name }    ← UserRegistered, UserUpdated
 
 Event
     Dono: Secretaria
@@ -98,49 +99,51 @@ publics: /auth/register,
 
  obs: o JWT não tem role. Quem é owner/organizer de um evento é decidido pela Secretaria que olha o vínculo do userId com aquele evento.
  Todo usuário nasce como participant, vira owner ao criar um evento.
+ Erros: { error: { code, message, details? } }
 
 
 ### Autenticação
 
 POST /auth/register
 Entrada:
-    { name, 
+    { name,
+    username,   (3-30: a-z 0-9 _ . -)
     email,
-    password }
+    password }  (mín. 8)
 
 Saída:
-    status 201 { id }
+    status 201 { id, name, username, email }
 
-    Emite UserCreated { userId, name, email }
+    Emite UserRegistered { userId, name, email }
 
 
 POST /auth/login
 Entrada:
-    { email, 
+    { username, (username ou e-mail)
     password }
 
 Saída:
-    Set-Cookie: token JWT { userId }
-    { expiresIn }
+    { token,       JWT { userId, name }
+    expiresIn }   (segundos)
 
+    O BFF guarda o token no cookie dele; logout é só apagar esse cookie.
 
-POST /auth/logout
-    Limpa o cookie
-
-### Perfil
+### Perfil (Authorization: Bearer <token>)
 
 GET /me
-    { id, 
-    name, 
+    { id,
+    name,
+    username,
     email }
 
 PATCH /me
 Entrada:
     { name?, email? }
 Saída:
-    status 204
+    { id, name, username, email }
 
 Emite UserUpdated { userId, name, email }
+    o nome no token só muda no próximo login
 
 PUT /me/password
 Entrada:
@@ -155,19 +158,21 @@ DELETE /me
 
 inscrições antigas continuam apontando para esse userId.
 
-### Interno 
+### Interno (header X-Internal-Token)
 
-GET /users/:id
-    { id, name, email }
+GET /internal/users/:id
+    { id, name, email }   (404 se inativo)
 
+GET /internal/users?email=aa@a.com
+    [{ id, name, email }]   (só ativos)
 
-GET /users?email=aa@a.com
-    { id, name, email }
+POST /internal/users/batch
+Entrada:
+    { ids: [uuid] }   (máx. 500)
+Saída:
+    [{ id, name, email }]   (só ativos)
 
-GET /users?username=x   (exige JWT; 404 se não existe)
-    { id, username, role }
-
-- usado para emails, certificados e para secretaria confirmar que o usuário existe e está ativo
+- usado pelo web (organizadores por e-mail, nomes dos organizadores), e futuramente por emails, certificados e secretaria
 
 ## Secretaria
 
@@ -260,7 +265,7 @@ POST /events/:id/cancel
     204
 
 POST /events/:id/organizers
-    { userId } // verificar como é a conversão de email para id.
+    { userId } // o web converte e-mail → id em GET /internal/users?email= (ADR 016)
     204
 
 DELETE /events/:id/organizers/:userId
@@ -397,7 +402,7 @@ ActivityCreated { activityId, eventId }
     cria a atividade sem oferta
 ActivityDeleted { activityId }
 
-UserCreated | UserUpdated { userId, email }
+UserRegistered | UserUpdated { userId, name, email }
 
 PaymentConfirmed { registrationId, paymentId }
     awaiting_payment → confirmed (RegistrationConfirmed); reserva perdida → ignora

@@ -91,7 +91,7 @@ test("registration messages match the schemas", async () => {
     const event = { id: randomUUID(), name: "Congresso" };
     messages.push(...new CertificatePolicy().requests(event,
         [{ id: activityId, name: "Workshop", startsAt: "2026-12-01T09:00:00Z", endsAt: "2026-12-01T12:30:00Z" }],
-        [attendance], new Map([[userId, { username: "ana" }]])));
+        [attendance], new Map([[userId, { name: "ana" }]])));
     messages.forEach(m => bus.publish(m));
     await flush();
 
@@ -111,11 +111,26 @@ test("payment messages match the schemas", async () => {
     sent.forEach(assertValid);
 });
 
-test("identity UserCreated matches the schema", async () => {
+test("identity messages match the schemas", async () => {
+    // O identity lê a config no import; o pool do Postgres é trocado por um cliente fake que guarda o outbox.
+    Object.assign(process.env, { DATABASE_URL: "postgres://fake", JWT_SECRET: "test", INTERNAL_API_TOKEN: "test", LOG_LEVEL: "silent" });
+    const { pool } = await import("../../identity/src/infrastructure/db.js");
     const { UserAppService } = await import("../../identity/src/application/user.app-service.js");
-    const { bus, sent, flush } = outbox("identity");
-    const repo = { getByUsername: () => null, add() {} };
-    await new UserAppService(repo, bus).signin({ username: "ana", password: "123" });
-    await flush();
+    const { toEnvelope } = await import("../../identity/src/infrastructure/envelope.js");
+    const { User } = await import("../../identity/src/domain/user.js");
+    const outboxRows = [];
+    pool.connect = async () => ({
+        query: async (sql, params) => { if (sql.includes("INSERT INTO outbox")) outboxRows.push(params[2]); },
+        release() {},
+    });
+    const ana = new User({ name: "Ana", username: "ana", email: "ana@example.com", passwordHash: "x" });
+    const repo = { getByUsername: async () => null, getByEmail: async () => null, getById: async () => ana };
+    const service = new UserAppService(repo, { hash: async () => "x" }, {});
+    await service.register({ name: "Ana", username: "ana", email: "ana@example.com", password: "12345678" }, "req-1");
+    await service.updateMe(ana.id, { name: "Ana Souza" }, "req-2");
+    await service.deactivateMe(ana.id, "req-3");
+    const sent = outboxRows.map(toEnvelope);
+    assert.deepEqual(sent.map(m => m.type), ["UserRegistered", "UserUpdated", "UserDeactivated"]);
     sent.forEach(assertValid);
+    await pool.end();
 });

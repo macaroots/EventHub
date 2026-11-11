@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://event-hub.local/contracts/messages/UserCreated.schema.json",
-  "title": "UserCreated",
-  "description": "identity → registration. Usuário cadastrado; o registration cria/atualiza a projeção Participant.",
+  "$id": "https://event-hub.local/contracts/messages/UserRegistered.schema.json",
+  "title": "UserRegistered",
+  "description": "identity → registration. Usuário cadastrado; o registration cria a projeção Participant.",
   "allOf": [
     {
       "$ref": "envelope.schema.json"
@@ -11,7 +11,7 @@
   "type": "object",
   "properties": {
     "type": {
-      "const": "UserCreated"
+      "const": "UserRegistered"
     },
     "source": {
       "const": "identity"
@@ -20,14 +20,19 @@
       "type": "object",
       "required": [
         "userId",
-        "username"
+        "name",
+        "email"
       ],
       "properties": {
         "userId": {
           "$ref": "envelope.schema.json#/$defs/uuid"
         },
-        "username": {
+        "name": {
           "$ref": "envelope.schema.json#/$defs/nonEmpty"
+        },
+        "email": {
+          "type": "string",
+          "format": "email"
         }
       }
     }
@@ -35,12 +40,13 @@
   "examples": [
     {
       "id": "0b9c6c1e-3f0a-4d38-9d2e-6f1c2a7b8e01",
-      "type": "UserCreated",
+      "type": "UserRegistered",
       "source": "identity",
       "time": "2026-11-06T13:00:00.000Z",
       "data": {
         "userId": "6a1f0c2e-1b2c-4d3e-8f40-5a6b7c8d9e01",
-        "username": "ana"
+        "name": "Ana Souza",
+        "email": "ana@example.com"
       }
     }
   ]

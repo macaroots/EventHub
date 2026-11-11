@@ -17,16 +17,6 @@ const loginSchema = z.object({
   password: z.string().min(1),
 });
 
-function cookieOptions(maxAge) {
-  return {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: config.env === 'production',
-    maxAge: maxAge * 1000,
-    path: '/',
-  };
-}
-
 export function authRouter(userService) {
   const router = Router();
 
@@ -52,8 +42,7 @@ export function authRouter(userService) {
     }
     try {
       const { token, expiresIn } = await userService.login(parsed.data);
-      res.cookie('access_token', token, cookieOptions(expiresIn));
-      return res.json({ expiresIn });
+      return res.json({ token, expiresIn });
     } catch (err) {
       return handleServiceError(err, res);
     }

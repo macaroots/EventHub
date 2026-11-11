@@ -1,8 +1,10 @@
-import express from 'express';
-import path from 'node:path';
-import { apiDocs } from '../../shared/application/api-docs.js';
-import { UserSqliteRepository } from './infrastructure/user.sqlite.repository.js';
-import { openDatabase } from '../../shared/infrastructure/sqlite.js';
+// Entry point – composes everything and starts the server.
+import { config } from './config.js';
+import { pool } from './infrastructure/db.js';
+import { UserRepository } from './infrastructure/user.repository.js';
+import { BcryptHasher } from './infrastructure/hasher.js';
+import { JwtTokenService } from './infrastructure/token.js';
+import { OutboxPublisher } from './infrastructure/outbox-publisher.js';
 import { UserAppService } from './application/user.app-service.js';
 import { RabbitMqMessageBus } from '../../shared/messaging/rabbitmq-message-bus.js';
 import { OutboxMessageBus } from '../../shared/messaging/outbox-message-bus.js';
@@ -61,8 +63,8 @@ app.post('/auth/register', async (req, res) => {
     }
 });
 
-await messageBus.consume("identity");
-await userService.seedAdmin({ username: process.env.ADMIN_USERNAME, password: process.env.ADMIN_PASSWORD });
+  // Compose application
+  const userService = new UserAppService(userRepository, hasher, tokenService);
 
 app.listen(port, () => {
     console.log(`Identity listening on port http://localhost:${port}`)

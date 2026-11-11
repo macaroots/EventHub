@@ -50,7 +50,7 @@
 <% if (locals.user) { %>
         <a href="/registrations">Minhas inscrições</a>
         <a href="/organizers/events">Meus eventos</a>
-        <form method="post" action="/auth/logout" style="display:inline"><button><%= user.username %>: sair</button></form>
+        <form method="post" action="/auth/logout" style="display:inline"><button><%= user.name || 'Usuário' %>: sair</button></form>
 <% } else { %>
         <a href="/auth/register">Cadastrar-se</a>
         <a href="/auth/login">Login</a>

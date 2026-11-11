@@ -1,9 +1,10 @@
 import jwt from 'jsonwebtoken';
 
-// Usuário do cookie, ou null se não logado / token inválido.
+// Usuário do JWT do cookie ({sub, name}), ou null se não logado / token inválido.
 export const currentUser = (req) => {
     try {
-        return jwt.verify(req.cookies.token, process.env.JWT_SECRET);
+        const { userId, name } = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
+        return userId ? { sub: userId, name } : null;
     } catch {
         return null;
     }

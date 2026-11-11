@@ -2,12 +2,12 @@
 
 Telas do organizador (`/organizers/...`):
 - `events`: lista e cria. `events/:id`: edita, publica, encerra (pede os certificados), cancela, apaga, gerencia organizadores e lista atividades. `activities/:id` e `events/:id/activities/new`: formulário da atividade (a regra `minimumAge` vira um campo "Idade mínima").
-- `activities/:id/registrations`: gestão das inscrições da atividade (link na lista de atividades do evento e na atividade). Mostra a ocupação, filtra por status (`?status=`), mostra fila de espera e reservas aguardando pagamento, aprova a pendência `age verification` e cancela inscrições (motivo opcional). Quem autoriza é o registration (organizador do evento ou admin).
+- `activities/:id/registrations`: gestão das inscrições da atividade (link na lista de atividades do evento e na atividade). Mostra a ocupação, filtra por status (`?status=`), mostra fila de espera e reservas aguardando pagamento, aprova a pendência `age verification` e cancela inscrições (motivo opcional). Quem autoriza é o registration (organizador do evento).
 - `activities/:id/checkin`: abre e fecha o check-in, gera um código novo, mostra presentes/confirmados e marca a presença na mão. `?display=1` mostra só o código em letras grandes, para o projetor, e recarrega a cada 10 s. A página de inscrições mostra o comparecimento e quem está presente.
 - Forms HTML só fazem GET/POST: as ações usam `POST .../delete` em vez de `DELETE` (alternativa: `method-override`).
 - Post/Redirect/Get: depois de cada ação, redireciona. Em erro, volta para a página com `?error=` (mostrado pelo layout). Limitação: o form perde o que foi digitado.
-- Organizadores: o formulário pede o username, e o BFF busca o id em `identity GET /users?username=`, porque a secretaria guarda só ids. A listagem traduz ids em usernames com `GET /users`. As duas chamadas repassam o JWT. Isso é composição no BFF ([ADR 013](../../docs/adrs/013-organizador-por-username.md)).
-  - Limitação: a listagem ainda traz todos os usuários.
+- Organizadores: o formulário pede o e-mail, e o BFF busca o id em `identity GET /internal/users?email=`, porque a secretaria guarda só ids. A listagem traduz ids em nomes com `POST /internal/users/batch`. As duas chamadas usam `X-Internal-Token` (`INTERNAL_API_TOKEN`), não o JWT ([ADR 016](../../docs/adrs/016-organizador-por-email.md)).
+  - Usuário desativado some da listagem (aparece o id).
 
 Fluxo do participante:
 - `/` lista os eventos publicados e `/events/:id` mostra o evento e as atividades. As duas são públicas, via `secretariat GET /public/events[/:id]`, que não exige login e não devolve os organizers.
@@ -22,8 +22,10 @@ Fluxo do participante:
 - Evento encerrado: o certificado é por evento (basta presença em uma atividade). A inscrição diz se a atividade entra no certificado, e some o check-in e o cancelamento. `/registrations` tem a coluna Certificado, por evento. O PDF virá do serviço de certificados (outro time); ainda não há link.
 - Em `awaiting_payment`, o link de pagamento leva a `/payments/:id`, onde se informa o comprovante (o gateway fake recusa `deny`). Pagamento recusado cancela a inscrição; reserva expirada cancela a cobrança.
 - Pagar é assíncrono: o registration só fica sabendo por `PaymentConfirmed/Denied`. Por isso o BFF consulta a inscrição até 10× a cada 200 ms antes de redirecionar. Alternativas: websocket/SSE, ou uma página de "processando" com refresh.
-- Autorização do pagamento: o payment ainda não tem auth. O BFF só mostra se o registration devolve a inscrição do pagamento para o usuário (inscrição de outra pessoa → 403; admin e organizador veem) e só paga se a inscrição for do usuário (ou admin).
+- Autorização do pagamento: o payment ainda não tem auth. O BFF só mostra se o registration devolve a inscrição do pagamento para o usuário (inscrição de outra pessoa → 403; organizador vê) e só paga se a inscrição for do usuário.
+- Cadastro e login: `/auth/register` e `/auth/login` repassam ao identity (login por username ou e-mail). O identity devolve `{token, expiresIn}`; o BFF grava o token no cookie `token` (httpOnly, mesma validade) e lê o nome do menu do próprio JWT. Logout só apaga o cookie (JWT sem estado, sem revogação).
 - Login: sem sessão, as páginas protegidas redirecionam para `/auth/login?next=<página>` (num POST, a página de origem). O `next` só aceita caminhos locais.
 - Limitações:
   - Cancelar uma inscrição já paga não estorna o pagamento.
-  - O admin criado na subida do identity pode não chegar ao registration (corrida com o consumer), e aí a inscrição dele falha com `user not found`.
+  - Logo após o cadastro, a inscrição pode falhar com `user not found` até o `UserRegistered` chegar ao registration.
+  - Sem refresh token: com o JWT expirado, o usuário faz login de novo.

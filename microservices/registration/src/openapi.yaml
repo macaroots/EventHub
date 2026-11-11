@@ -264,7 +264,7 @@ components:
             participant:
               type: object
               nullable: true
-              properties: { id: { type: string }, username: { type: string } }
+              properties: { id: { type: string }, name: { type: string } }
             attendance: { $ref: '#/components/schemas/Attendance' }
             activity:
               type: object
@@ -321,7 +321,7 @@ components:
               participant:
                 type: object
                 nullable: true
-                properties: { id: { type: string }, username: { type: string } }
+                properties: { id: { type: string }, name: { type: string } }
               attendance: { $ref: '#/components/schemas/Attendance' }
   responses:
     Unauthorized:

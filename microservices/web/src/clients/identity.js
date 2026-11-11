@@ -1,6 +1,9 @@
 import { api } from './http.js';
 
 const call = api(process.env.IDENTITY_URL || 'http://identity:3003');
+// Rotas /internal do identity: autenticadas pelo X-Internal-Token (serviço a serviço), não pelo JWT.
+const internal = (path, opts = {}) =>
+    call(path, null, { ...opts, headers: { 'x-internal-token': process.env.INTERNAL_API_TOKEN, ...opts.headers } });
 
 // Suporta /auth/login e fallback para /auth
 export const login = async (credentials) => {
