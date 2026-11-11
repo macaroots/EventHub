@@ -2,6 +2,8 @@ x-service: &service
   restart: unless-stopped
   environment: &env
     RABBITMQ_URL: amqp://rabbitmq
+    JWT_SECRET: ${JWT_SECRET:-dev-secret}
+    INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:-dev-internal-token}
   depends_on:
     rabbitmq:
       condition: service_healthy
@@ -48,5 +50,17 @@ services:
     environment: { <<: *env, PORT: &payment-port 3004 }
     ports: [{ published: *payment-port, target: *payment-port }]
 
+  certificate:
+    <<: *service
+    build: { context: ., dockerfile: certificate/Dockerfile }
+    environment:
+      <<: *env
+      PORT: &certificate-port 3005
+      PUBLIC_BASE_URL: http://localhost:3005
+    ports: [{ published: *certificate-port, target: *certificate-port }]
+    volumes:
+      - certificate-data:/app/data
+
 volumes:
   secretariat-data:
+  certificate-data:
