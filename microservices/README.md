@@ -24,7 +24,8 @@ docker compose down            # -v para apagar os bancos
 - Cada serviço tem seu próprio `<serviço>/Dockerfile` (permite linguagens diferentes no futuro). O build context é `microservices/` para incluir `shared/`, mantendo os imports relativos (`../../shared/...`).
 - O compose define a porta de cada serviço `PORT`; e o endereço do broker `RABBITMQ_URL=amqp://rabbitmq`.
 - AMQP (5672) não é exposto no host, para não conflitar com outro RabbitMQ local. Para rodar um serviço fora do Docker contra este broker, adicione `"5672:5672"` em `ports` do `rabbitmq`.
-- O `certificate` é o único serviço em **Python** (FastAPI + Uvicorn). Ele usa `JWT_SECRET` para validar o token do usuário e consome `CertificateRequested` do RabbitMQ (fila `certificate`) para emitir os certificados. Não há chamada HTTP entre `certificate` e `registration`.
+- `payment` e `certificate` usam **Python/FastAPI + Uvicorn**. Pagamentos valida o JWT emitido por identidade e consome `PaymentRequested` na exchange `event-hub`. Certificados consome `CertificateRequested` (fila `certificate`). Os serviços se integram por eventos.
+- Pagamentos mantém a porta interna 3000 da main, com acesso local em 3004 pelo compose de desenvolvimento. Seu volume guarda `/app/payment/data/payments.db` por meio de `DB_PATH`.
 
 ## Desenvolvimento (hot reload)
 
@@ -49,6 +50,8 @@ Cada serviço (menos o identity, em Postgres) tem seu SQLite (`node:sqlite`) em 
 ## Documentação da API (Swagger)
 
 Cada serviço serve o Swagger UI em `/docs` e o contrato em `/openapi.yaml` (ex.: http://localhost:3001/docs). Ambos são públicos. No Swagger UI, "Authorize" recebe o `token` de `POST /auth/login` do identity.
+
+No pagamento Python, o contrato é gerado pelo FastAPI em `/openapi.json`. Para executar fora do Docker, em `microservices/payment`, use `uv run --env-file ../.env uvicorn src.main:app --port 3004 --reload`. Identidade e pagamentos precisam do mesmo `JWT_SECRET`, e o broker deve estar acessível no endereço definido em `RABBITMQ_URL`.
 
 - O contrato é escrito à mão em `<serviço>/src/openapi.yaml` e servido por [shared/application/api-docs.js](shared/application/api-docs.js) (`swagger-ui-express`). Rota nova → documentar no YAML.
 - O teste `test/openapi.test.js` de cada serviço falha se houver rota sem documentação ou documentação sem rota. Ele não confere corpos nem respostas.
