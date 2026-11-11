@@ -1,20 +1,56 @@
-<section>
-    <h2>Minhas inscrições</h2>
-<% if (!registrations.length) { %>
-    <p>Nenhuma inscrição. <a href="/">Ver eventos</a></p>
-<% } else { %>
-    <table>
-        <tr><th>Evento</th><th>Atividade</th><th>Status</th><th>Certificado</th></tr>
-<% // Certificado é por evento: basta presença em uma atividade.
-   const certified = new Set(registrations.filter(r => r.event?.status == 'ended' && r.attendance).map(r => r.event.id)); %>
-<% for (const r of registrations) { %>
-        <tr>
-            <td><%= r.event?.name ?? '' %></td>
-            <td><a href="/registrations/<%= r.id %>"><%= r.activity?.name ?? r.activityId %></a></td>
-            <td><%- include('status', { status: r.status }) %></td>
-            <td><%= r.event?.status == 'ended' ? (certified.has(r.event.id) ? 'solicitado' : 'sem presença') : '' %></td>
-        </tr>
-<% } %>
-    </table>
-<% } %>
-</section>
+<div class="container" style="max-width: 1000px;">
+    <div class="events-section-header">
+        <div>
+            <h1 class="section-title">Minhas inscrições</h1>
+            <p class="section-subtitle">Acompanhe suas inscrições em atividades e eventos.</p>
+        </div>
+        <a href="/" class="btn-secondary" style="font-size: 0.9rem;">Ver mais eventos</a>
+    </div>
+
+    <% if (!registrations.length) { %>
+        <div class="data-panel" style="text-align: center; padding: 3rem 1rem;">
+            <p style="color: var(--text-muted); font-size: 1.1rem; margin-bottom: 1rem;">Você ainda não possui nenhuma inscrição.</p>
+            <a href="/" class="btn-primary">Explorar eventos abertos</a>
+        </div>
+    <% } else { %>
+        <div class="data-panel">
+            <table class="hub-table">
+                <thead>
+                    <tr>
+                        <th>Evento</th>
+                        <th>Atividade</th>
+                        <th>Status</th>
+                        <th>Certificado</th>
+                        <th style="text-align: right;">Detalhes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% const certified = new Set(registrations.filter(r => r.event?.status == 'ended' && r.attendance).map(r => r.event.id)); %>
+                    <% for (const r of registrations) { %>
+                        <tr>
+                            <td><strong><%= r.event?.name ?? 'Evento' %></strong></td>
+                            <td><%= r.activity?.name ?? r.activityId %></td>
+                            <td>
+                                <span class="status-pill status-<%= r.status %>">
+                                    <%- include('status', { status: r.status }) %>
+                                </span>
+                            </td>
+                            <td>
+                                <% if (r.event?.status == 'ended') { %>
+                                    <span style="font-size: 0.85rem; color: #16a34a; font-weight: 600;">
+                                        <%= certified.has(r.event.id) ? '✓ Solicitado' : 'Sem presença' %>
+                                    </span>
+                                <% } else { %>
+                                    <span style="color: #94a3b8; font-size: 0.85rem;">Em andamento</span>
+                                <% } %>
+                            </td>
+                            <td style="text-align: right;">
+                                <a href="/registrations/<%= r.id %>" class="btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.85rem;">Ver</a>
+                            </td>
+                        </tr>
+                    <% } %>
+                </tbody>
+            </table>
+        </div>
+    <% } %>
+</div>

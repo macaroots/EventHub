@@ -1,25 +1,29 @@
 <% const base = `/organizers/activities/${activity.id}/registrations`;
    const filters = [['', 'Todas'], ['pending', 'Pendentes'], ['awaiting_payment', 'Aguardando pagamento'], ['waitlisted', 'Fila de espera'], ['confirmed', 'Confirmadas'], ['canceled', 'Canceladas']]; %>
-<p><a href="/organizers/activities/<%= activity.id %>">← Atividade</a><% if (event) { %> · <a href="/organizers/events/<%= event.id %>">Evento</a><% } %></p>
-<section>
-    <h2>Inscrições: <%= activity.name %></h2>
-    <% if (event) { %><p>Evento: <%= event.name %> (<%= event.status %>)</p><% } %>
-    <p>
+<div class="page-container">
+<p class="breadcrumb"><a href="/organizers/activities/<%= activity.id %>">Atividade</a><% if (event) { %> <span>›</span> <a href="/organizers/events/<%= event.id %>">Evento</a><% } %></p>
+<section class="page-heading">
+    <span class="eyebrow">GESTÃO</span>
+    <h1>Inscrições: <%= activity.name %></h1>
+    <% if (event) { %><p class="muted">Evento: <%= event.name %> · <%= event.status %></p><% } %>
+    <p class="stats-line">
         Ocupação: <%= activity.occupation %>/<%= activity.capacity %> vagas
         (<%= activity.confirmedOccupation %> confirmadas, <%= counts.pending %> pendentes, <%= counts.awaiting_payment %> aguardando pagamento;
         <%= counts.waitlisted %> na fila de espera, <%= counts.canceled %> canceladas).
         Preço: R$ <%= activity.price.toFixed(2) %>.
     </p>
-    <p>Comparecimento: <%= activity.present %> de <%= activity.confirmedOccupation %> confirmadas. <a href="/organizers/activities/<%= activity.id %>/checkin">Check-in</a></p>
-    <p>
+    <p>Comparecimento: <%= activity.present %> de <%= activity.confirmedOccupation %> confirmadas. <a class="btn-secondary" href="/organizers/activities/<%= activity.id %>/checkin">Abrir check-in</a></p>
+    <div class="filter-links">
 <% for (const [value, label] of filters) { %>
         <% if (value == status) { %><strong><%= label %></strong><% } else { %><a href="<%= base %><%= value ? `?status=${value}` : '' %>"><%= label %></a><% } %>
 <% } %>
-    </p>
+    </div>
+ </section>
+ <section class="data-panel">
 <% if (!registrations.length) { %>
-    <p>Nenhuma inscrição.</p>
+    <p class="empty-state">Nenhuma inscrição.</p>
 <% } else { %>
-    <table>
+    <table class="hub-table">
         <tr><th>Participante</th><th>Status</th><th>Pendências / motivo</th><th>Ações</th></tr>
 <% for (const r of registrations) { const pending = r.requirements.filter(q => !q.fulfilled); %>
         <tr>
@@ -36,7 +40,7 @@
 <% if (q.type == 'age verification') { %>
                     <form method="post" action="/organizers/registrations/<%= r.id %>/requirements/<%= q.id %>/fulfill" style="display:inline">
                         <input type="hidden" name="activityId" value="<%= activity.id %>">
-                        <button>aprovar</button>
+                        <button class="btn-secondary">aprovar</button>
                     </form>
 <% } %>
                 </div>
@@ -47,7 +51,7 @@
                 <form method="post" action="/organizers/registrations/<%= r.id %>/cancel" onsubmit="return confirm('Cancelar a inscrição?')">
                     <input type="hidden" name="activityId" value="<%= activity.id %>">
                     <input name="reason" placeholder="Motivo">
-                    <button>cancelar</button>
+                    <button class="btn-link-danger">cancelar</button>
                 </form>
 <% } %>
             </td>
@@ -56,3 +60,4 @@
     </table>
 <% } %>
 </section>
+</div>

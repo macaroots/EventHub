@@ -44,12 +44,11 @@ router.post('/login', async (req, res) => {
 });
 
 router.post('/register', async (req, res) => {
-    const { name, email, password } = req.body;
-    const username = email ? email.toLowerCase().trim() : (name || '').toLowerCase().replace(/\s+/g, '');
+    const { username, email, password } = req.body;
+    const normalizedEmail = (email || '').trim().toLowerCase();
 
     const payload = {
-        name,
-        email: email ? email.toLowerCase().trim() : '',
+        email: normalizedEmail,
         username,
         password
     };
@@ -65,7 +64,11 @@ router.post('/register', async (req, res) => {
                 const text = await response.text();
                 if (text) errorMsg = text;
             }
-            return res.status(400).layout('auth/register', { error: errorMsg, isAuthPage: true });
+            return res.status(400).layout('auth/register', {
+                error: errorMsg,
+                form: { email: normalizedEmail, username },
+                isAuthPage: true,
+            });
         }
 
         // Tentar autenticar automaticamente após cadastro
@@ -91,7 +94,8 @@ router.post('/register', async (req, res) => {
     } catch (err) {
         return res.status(500).layout('auth/register', { 
             error: 'Não foi possível conectar ao serviço de autenticação. Tente novamente mais tarde.',
-            isAuthPage: true 
+            form: { email: normalizedEmail, username },
+            isAuthPage: true
         });
     }
 });

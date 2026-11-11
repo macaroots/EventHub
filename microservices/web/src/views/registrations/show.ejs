@@ -1,28 +1,30 @@
 <% const pending = registration.requirements.filter(r => !r.fulfilled); %>
-<p><a href="/registrations">← Minhas inscrições</a></p>
-<section>
-    <h2>Inscrição <small>(<%- include('status', { status: registration.status }) %>)</small></h2>
-    <p>
+<div class="page-container page-narrow">
+<p class="breadcrumb"><a href="/registrations">Minhas inscrições</a> <span>›</span> Detalhes</p>
+<section class="page-heading">
+    <span class="eyebrow">MINHA INSCRIÇÃO</span>
+    <h1>Inscrição <span class="status-pill status-<%= registration.status %>"><%- include('status', { status: registration.status }) %></span></h1>
+    <p class="muted">
         <% if (registration.event) { %>Evento: <a href="/events/<%= registration.event.id %>"><%= registration.event.name %></a>.<% } %>
         Atividade: <%= registration.activity?.name ?? registration.activityId %>.
     </p>
 <% const ended = registration.event?.status == 'ended'; %>
 <% if (ended) { %>
-    <p><%= registration.attendance ? 'Evento encerrado. Certificado do evento solicitado, com esta atividade.' : 'Evento encerrado. Sem presença nesta atividade: ela não entra no certificado.' %></p>
+    <p class="notice notice-info"><%= registration.attendance ? 'Evento encerrado. Certificado do evento solicitado, com esta atividade.' : 'Evento encerrado. Sem presença nesta atividade: ela não entra no certificado.' %></p>
 <% } %>
 <% if (registration.status == 'confirmed') { %>
-    <p>Inscrição confirmada!</p>
+    <p class="notice notice-success">Inscrição confirmada!</p>
 <% if (registration.attendance) { %>
     <p>Presença registrada em <%= dateTime(registration.attendance.checkedInAt) %>.</p>
 <% } else if (!ended) { %>
-    <form method="post" action="/activities/<%= registration.activityId %>/checkin">
+    <form class="checkin-form" method="post" action="/activities/<%= registration.activityId %>/checkin">
         <input type="hidden" name="registrationId" value="<%= registration.id %>">
         <label><span>Check-in: código mostrado na sala</span><input name="code" required autocomplete="off" autocapitalize="characters" size="8"></label>
-        <button>Registrar presença</button>
+        <button class="btn-primary">Registrar presença</button>
     </form>
 <% } %>
 <% } else if (registration.status == 'canceled') { %>
-    <p>Motivo: <%= registration.reasons.join('; ') %></p>
+    <p class="notice notice-error">Motivo: <%= registration.reasons.join('; ') %></p>
 <% } else { %>
 <% if (registration.status == 'waitlisted') { %>
     <p>Sem vaga no momento: você está na fila de espera. Sua posição: <strong id="waitlist-position" data-registration-id="<%= registration.id %>"><%= registration.waitlistPosition %></strong>.</p>
@@ -48,11 +50,12 @@
 <% } %>
     </ul>
 <% } %>
-    <p><a href="">Atualizar</a></p>
+    <p><a class="btn-secondary" href="">Atualizar</a></p>
 <% } %>
 <% if (registration.status != 'canceled' && !ended) { %>
     <form method="post" action="/registrations/<%= registration.id %>/cancel" onsubmit="return confirm('Cancelar a inscrição?')">
-        <button>Cancelar inscrição</button>
+        <button class="btn-danger">Cancelar inscrição</button>
     </form>
 <% } %>
 </section>
+</div>
