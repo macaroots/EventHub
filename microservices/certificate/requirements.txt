@@ -1,0 +1,6 @@
+fastapi==0.115.14
+uvicorn[standard]==0.38.0
+PyJWT==2.15.1
+reportlab==5.1.0
+qrcode[pil]==8.2
+aio-pika==10.2.2
