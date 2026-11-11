@@ -5,6 +5,10 @@ x-node-dev: &node-dev
   command: ["node", "--watch", "src/main.js"]
   restart: "no"
 
+x-python-dev: &python-dev
+  command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "3005", "--reload"]
+  restart: "no"
+
 services:
   web:
     <<: *node-dev
@@ -40,3 +44,8 @@ services:
       - ./payment/src:/app/payment/src
       - ./shared:/app/shared
       - /app/shared/node_modules
+
+  certificate:
+    <<: *python-dev
+    volumes:
+      - ./certificate/app:/app/app
