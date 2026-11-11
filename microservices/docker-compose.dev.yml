@@ -35,9 +35,13 @@ services:
       - ./shared:/app/shared
       - /app/shared/node_modules
 
+  rabbitmq:
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
   payment:
-    <<: *node-dev
+    command: ["uv", "run", "--no-sync", "uvicorn", "src.main:app", "--reload", "--host", "0.0.0.0", "--port", "3004"]
+    restart: "no"
     volumes:
-      - ./payment/src:/app/payment/src
-      - ./shared:/app/shared
-      - /app/shared/node_modules
+      - ./payment/src:/app/src

@@ -22,3 +22,14 @@ export const register = async (userData) => {
 
 export const listUsers = (req) => call('/users', req); // [{id, username, role}]
 export const findUser = (req, username) => call(`/users?username=${encodeURIComponent(username)}`, req); // {id, username, role} ou 404
+
+const internalHeaders = () => ({ 'x-internal-token': process.env.INTERNAL_API_TOKEN });
+export const findByIds = ids => call('/internal/users/batch', null, { method: 'POST', body: { ids }, headers: internalHeaders() });
+export const findByEmail = email => call(`/internal/users?email=${encodeURIComponent(email)}`, null, { headers: internalHeaders() });
+export const errorMessage = async response => {
+    const text = await response.text();
+    try {
+        const data = JSON.parse(text);
+        return data.error?.message || data.message || text;
+    } catch { return text; }
+};

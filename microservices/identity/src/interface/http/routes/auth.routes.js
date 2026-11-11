@@ -53,7 +53,7 @@ export function authRouter(userService) {
     try {
       const { token, expiresIn } = await userService.login(parsed.data);
       res.cookie('access_token', token, cookieOptions(expiresIn));
-      return res.json({ expiresIn });
+      return res.json({ token, expiresIn });
     } catch (err) {
       return handleServiceError(err, res);
     }

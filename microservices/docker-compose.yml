@@ -70,7 +70,11 @@ services:
   payment:
     <<: *service
     build: { context: ., dockerfile: payment/Dockerfile }
-    environment: { <<: *env, PORT: &payment-port 3004 }
+    environment:
+      <<: *env
+      PORT: &payment-port 3004
+      DB_PATH: /app/payment/data/payments.db
+      PAYMENT_TIMEOUT_MINUTES: 30
     ports: [{ published: *payment-port, target: *payment-port }]
     volumes:
       - payment-data:/app/payment/data

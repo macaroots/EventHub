@@ -4,8 +4,9 @@ import amqp from 'amqplib';
 import { pool } from './db.js';
 import { config } from '../config.js';
 import { logger } from './logger.js';
+import { toEnvelope } from './envelope.js';
 
-const EXCHANGE = 'eventhub.events';
+const EXCHANGE = 'event-hub';
 const POLL_INTERVAL_MS = 2000;
 const MAX_RETRY = 5;
 
@@ -18,7 +19,7 @@ export class OutboxPublisher {
     for (let attempt = 1; ; attempt++) {
       try {
         const conn = await amqp.connect(config.rabbitmq.url);
-        const ch = await conn.createChannel();
+        const ch = await conn.createConfirmChannel();
         await ch.assertExchange(EXCHANGE, 'topic', { durable: true });
         this.#channel = ch;
         conn.on('error', (err) => {
@@ -73,12 +74,14 @@ export class OutboxPublisher {
       );
       for (const row of rows) {
         try {
-          this.#channel.publish(
+          const event = toEnvelope(row.payload);
+          await new Promise((resolve, reject) => this.#channel.publish(
             EXCHANGE,
             row.routing_key,
-            Buffer.from(row.payload),
-            { persistent: true }
-          );
+            Buffer.from(JSON.stringify(event)),
+            { persistent: true, contentType: 'application/json', messageId: event.id, type: event.type, appId: event.source },
+            error => error ? reject(error) : resolve()
+          ));
           await client.query(
             `UPDATE outbox SET published_at = now() WHERE id = $1`,
             [row.id]

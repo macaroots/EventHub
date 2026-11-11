@@ -112,21 +112,29 @@ test("payment messages match the schemas", async () => {
 });
 
 test("identity messages match the schemas", async () => {
-    // O identity lê a config no import; o pool do Postgres é trocado por um cliente fake que guarda o outbox.
+    // Repositório real com cliente SQL fake: valida os eventos gravados no outbox.
     Object.assign(process.env, { DATABASE_URL: "postgres://fake", JWT_SECRET: "test", INTERNAL_API_TOKEN: "test", LOG_LEVEL: "silent" });
     const { pool } = await import("../../identity/src/infrastructure/db.js");
+    const { UserRepository } = await import("../../identity/src/infrastructure/user.repository.js");
     const { UserAppService } = await import("../../identity/src/application/user.app-service.js");
     const { toEnvelope } = await import("../../identity/src/infrastructure/envelope.js");
-    const { User } = await import("../../identity/src/domain/user.js");
     const outboxRows = [];
-    pool.connect = async () => ({
-        query: async (sql, params) => { if (sql.includes("INSERT INTO outbox")) outboxRows.push(params[2]); },
+    let row;
+    const client = {
+        async query(sql, params) {
+            if (sql.includes("INSERT INTO outbox")) outboxRows.push(params[1]);
+            if (sql.includes("INSERT INTO users")) {
+                const [id, name, username, email, password_hash, active, created_at] = params;
+                row = { id, name, username, email, password_hash, active, created_at };
+            }
+            if (sql.includes("UPDATE users")) Object.assign(row, { name: params[0], email: params[1], password_hash: params[2], active: params[3] });
+            return { rows: sql.includes("SELECT * FROM users") && row ? [row] : [] };
+        },
         release() {},
-    });
-    const ana = new User({ name: "Ana", username: "ana", email: "ana@example.com", passwordHash: "x" });
-    const repo = { getByUsername: async () => null, getByEmail: async () => null, getById: async () => ana };
+    };
+    const repo = new UserRepository({ connect: async () => client, query: (...args) => client.query(...args) });
     const service = new UserAppService(repo, { hash: async () => "x" }, {});
-    await service.register({ name: "Ana", username: "ana", email: "ana@example.com", password: "12345678" }, "req-1");
+    const ana = await service.register({ name: "Ana", username: "ana", email: "ana@example.com", password: "12345678" }, "req-1");
     await service.updateMe(ana.id, { name: "Ana Souza" }, "req-2");
     await service.deactivateMe(ana.id, "req-3");
     const sent = outboxRows.map(toEnvelope);

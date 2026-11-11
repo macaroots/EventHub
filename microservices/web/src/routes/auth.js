@@ -1,114 +1,45 @@
 import { Router } from 'express';
+import { randomUUID } from 'node:crypto';
 import * as identity from '../clients/identity.js';
 
 export const router = Router();
+const safeNext = next => (/^\/(?![/\\])/.test(next ?? '') ? next : '/');
+const cookieOptions = seconds => ({
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    maxAge: seconds * 1000,
+});
 
 router.get('/register', (req, res) => res.layout('auth/register', { isAuthPage: true }));
 router.get('/login', (req, res) => res.layout('auth/login', { next: req.query.next, isAuthPage: true }));
 
-// Só caminhos locais: evita open redirect (ex.: next=//site.com).
-const safeNext = (next) => (/^\/(?![/\\])/.test(next ?? '') ? next : '/organizers/events');
-
-const cookieOptions = (seconds) => ({
-    httpOnly: true,                                // JS do browser não lê (XSS)
-    secure: process.env.NODE_ENV === 'production', // só HTTPS em produção
-    sameSite: 'strict',                            // mitiga CSRF
-    maxAge: seconds * 1000,                        // mesma validade do JWT
-});
-
 router.post('/register', async (req, res) => {
-    const { name, username, email, password, confirmation } = req.body;
+    const { name, email, password, confirmation } = req.body;
+    const username = req.body.username || randomUUID().replaceAll('-', '').slice(0, 30);
     const form = { name, username, email };
-    if (password !== confirmation) return res.status(400).layout('auth/register', { error: 'As senhas não conferem', form });
-    const response = await identity.register({ name, username, email, password });
-    if (!response.ok) return res.status(400).layout('auth/register', { error: await identity.errorMessage(response), form });
-    res.redirect('/auth/login');
+    if (confirmation !== undefined && password !== confirmation) {
+        return res.status(400).layout('auth/register', { error: 'As senhas não conferem', form, isAuthPage: true });
+    }
+    try {
+        const response = await identity.register({ name, username, email, password });
+        if (!response.ok) return res.status(400).layout('auth/register', { error: await identity.errorMessage(response), form, isAuthPage: true });
+        res.redirect('/auth/login');
+    } catch {
+        res.status(503).layout('auth/register', { error: 'Não foi possível conectar ao serviço de identidade.', form, isAuthPage: true });
+    }
 });
 
 router.post('/login', async (req, res) => {
     try {
         const response = await identity.login(req.body);
-        if (!response.ok) {
-            let errorMsg = 'Credenciais inválidas';
-            try {
-                const data = await response.json();
-                errorMsg = data.error?.message || data.message || JSON.stringify(data);
-            } catch {
-                const text = await response.text();
-                if (text) errorMsg = text;
-            }
-            return res.status(400).layout('auth/login', { error: errorMsg, next: req.body.next, isAuthPage: true });
-        }
-        
-        const { token } = await response.json();
-        if (token) {
-            res.cookie('token', token, {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: 'strict',
-                maxAge: 60 * 60 * 1000,
-            });
-        }
-        return res.redirect(safeNext(req.body.next));
-    } catch (err) {
-        return res.status(500).layout('auth/login', { 
-            error: 'Não foi possível conectar ao serviço de autenticação. Tente novamente mais tarde.',
-            next: req.body.next,
-            isAuthPage: true 
-        });
-    }
-});
-
-router.post('/register', async (req, res) => {
-    const { name, email, password } = req.body;
-    const username = email ? email.toLowerCase().trim() : (name || '').toLowerCase().replace(/\s+/g, '');
-
-    const payload = {
-        name,
-        email: email ? email.toLowerCase().trim() : '',
-        username,
-        password
-    };
-
-    try {
-        const response = await identity.register(payload);
-        if (!response.ok) {
-            let errorMsg = 'Erro ao criar conta';
-            try {
-                const data = await response.json();
-                errorMsg = data.error?.message || data.message || JSON.stringify(data);
-            } catch {
-                const text = await response.text();
-                if (text) errorMsg = text;
-            }
-            return res.status(400).layout('auth/register', { error: errorMsg, isAuthPage: true });
-        }
-
-        // Tentar autenticar automaticamente após cadastro
-        try {
-            const loginRes = await identity.login({ username: payload.username, password });
-            if (loginRes.ok) {
-                const { token } = await loginRes.json();
-                if (token) {
-                    res.cookie('token', token, {
-                        httpOnly: true,
-                        secure: process.env.NODE_ENV === 'production',
-                        sameSite: 'strict',
-                        maxAge: 60 * 60 * 1000,
-                    });
-                    return res.redirect('/organizers/events');
-                }
-            }
-        } catch {
-            // Se falhar o auto-login silencioso, redireciona para a página de login
-        }
-
-        return res.redirect('/auth/login');
-    } catch (err) {
-        return res.status(500).layout('auth/register', { 
-            error: 'Não foi possível conectar ao serviço de autenticação. Tente novamente mais tarde.',
-            isAuthPage: true 
-        });
+        if (!response.ok) return res.status(400).layout('auth/login', { error: await identity.errorMessage(response), next: req.body.next, isAuthPage: true });
+        const { token, expiresIn } = await response.json();
+        if (!token) throw new Error('Identity did not return a token');
+        res.cookie('token', token, cookieOptions(expiresIn || 3600));
+        res.redirect(safeNext(req.body.next));
+    } catch {
+        res.status(503).layout('auth/login', { error: 'Não foi possível conectar ao serviço de identidade.', next: req.body.next, isAuthPage: true });
     }
 });
 

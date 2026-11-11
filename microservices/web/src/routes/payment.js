@@ -7,11 +7,18 @@ import { json } from './helpers.js';
 // Pagamento da reserva da inscrição (paymentId = registration.payment.id).
 export const router = Router();
 
-// O payment ainda não tem auth: o BFF só mostra se a inscrição do pagamento for
-// visível ao usuário (registration responde 403 para inscrição de outro; organizador vê),
-// e só paga se for do próprio usuário (ou admin).
+// O JWT de identidade acompanha a chamada ao payment. A inscrição precisa
+// estar visível ao usuário e somente o dono pode realizar o pagamento.
 const load = async (req) => {
-    const p = await json(await payment.getPayment(req, req.params.id));
+    // PaymentRequested chega por mensagem: a cobrança pode ainda estar em trânsito.
+    let response;
+    for (let attempt = 0; attempt < 15; attempt++) {
+        response = await payment.getPayment(req, req.params.id);
+        if (response.status !== 404 || attempt === 14) break;
+        await response.text();
+        await new Promise(resolve => setTimeout(resolve, 200));
+    }
+    const p = await json(response);
     const r = await json(await registration.getRegistration(req, p.registrationId));
     return { payment: p, registration: r };
 };

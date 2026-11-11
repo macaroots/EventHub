@@ -1,20 +1,14 @@
-# Build context: microservices/ (para incluir shared/)
-FROM node:25-alpine
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
 WORKDIR /app
-COPY shared/package*.json shared/
-RUN cd shared && npm ci --omit=dev
+ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy PYTHONUNBUFFERED=1
 
-WORKDIR /app/payment
-COPY payment/package*.json ./
-RUN npm ci --omit=dev
+COPY payment/pyproject.toml payment/uv.lock ./
+RUN uv sync --frozen --no-dev --no-install-project
 
-COPY shared /app/shared
 COPY payment/src ./src
-RUN mkdir -p data && chown node:node data
+RUN mkdir -p /app/payment/data
 
-USER node
-ENV PORT=3000
-EXPOSE 3000
-
-CMD ["node", "src/main.js"]
+ENV PORT=3004
+EXPOSE 3004
+CMD ["uv", "run", "--no-sync", "uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "3004"]
