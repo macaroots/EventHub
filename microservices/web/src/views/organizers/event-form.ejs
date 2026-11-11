@@ -1,4 +1,46 @@
-<label><span>Nome:</span><input name="name" required value="<%= event.name ?? '' %>"></label>
-<label><span>Informações:</span><textarea name="information"><%= event.information ?? '' %></textarea></label>
-<label><span>Início:</span><input type="date" name="startDate" value="<%= event.startDate?.slice(0, 10) ?? '' %>"></label>
-<label><span>Fim:</span><input type="date" name="endDate" value="<%= event.endDate?.slice(0, 10) ?? '' %>"></label>
+<div class="hub-form-group">
+    <label for="eventName">Nome do evento</label>
+    <input
+        id="eventName"
+        name="name"
+        class="hub-form-input"
+        placeholder="Ex: Fórum de Inovação e Tecnologia 2026"
+        value="<%= event.name ?? '' %>"
+        required
+    >
+</div>
+
+<div class="hub-form-group">
+    <label for="eventInfo">Informações / Descrição</label>
+    <textarea
+        id="eventInfo"
+        name="information"
+        class="hub-form-textarea"
+        placeholder="Descreva detalhes, objetivos e programação geral..."
+        rows="4"
+    ><%= event.information ?? '' %></textarea>
+</div>
+
+<div class="form-grid-two">
+    <div class="hub-form-group">
+        <label for="startDate">Data de início</label>
+        <input
+            id="startDate"
+            name="startDate"
+            type="date"
+            class="hub-form-input"
+            value="<%= event.startDate?.slice(0, 10) ?? '' %>"
+        >
+    </div>
+
+    <div class="hub-form-group">
+        <label for="endDate">Data de término</label>
+        <input
+            id="endDate"
+            name="endDate"
+            type="date"
+            class="hub-form-input"
+            value="<%= event.endDate?.slice(0, 10) ?? '' %>"
+        >
+    </div>
+</div>

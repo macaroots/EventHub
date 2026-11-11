@@ -11,14 +11,18 @@ export class UserAppService {
 
     // Cadastro público cria só 'user'; admin vem de seedAdmin.
     async signin({ username, password, email }, role = 'user') {
-        const loginName = username || email;
+        const loginName = (username || '').trim().toLowerCase();
+        const normalizedEmail = (email || '').trim().toLowerCase();
+        if (role == 'user' && !normalizedEmail) {
+            throw new Error('email is required');
+        }
         const exist = await this.userRepository.getByUsername(loginName);
         if (exist) throw new DuplicateError('username');
 
         // Gerar hash seguro com bcrypt
         const passwordHash = this.hasher ? await this.hasher.hash(password) : password;
 
-        const user = new User(loginName, passwordHash, role);
+        const user = new User(loginName, passwordHash, role, undefined, normalizedEmail);
         await this.userRepository.add(user);
         if (this.messageBus?.publish) {
             this.messageBus.publish({ type: 'UserCreated', userId: user.id, username: user.username });

@@ -22,3 +22,28 @@ export const register = async (userData) => {
 
 export const listUsers = (req) => call('/users', req); // [{id, username, role}]
 export const findUser = (req, username) => call(`/users?username=${encodeURIComponent(username)}`, req); // {id, username, role} ou 404
+
+const jsonResponse = (data) => new Response(JSON.stringify(data), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+});
+
+// O identity atual não possui endpoint de busca por vários IDs.
+// Reaproveita o endpoint autenticado já existente para manter o BFF compatível.
+export const findByIds = async (req, ids) => {
+    const response = await listUsers(req);
+    if (!response.ok) return response;
+    const users = await response.json();
+    const wanted = new Set(ids);
+    return jsonResponse(users.filter(user => wanted.has(user.id)));
+};
+
+// O identity atual também não expõe busca por e-mail no endpoint público.
+export const findByEmail = async (req, email) => {
+    const response = await listUsers(req);
+    if (!response.ok) return response;
+    const users = await response.json();
+    const normalizedEmail = email.trim().toLowerCase();
+    return jsonResponse(users.filter(user =>
+        (user.email || user.username || '').toLowerCase() == normalizedEmail));
+};

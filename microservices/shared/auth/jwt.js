@@ -1,4 +1,4 @@
-// Token emitido pelo identity ({userId, name}) e verificado por cada serviço com o mesmo segredo (HS256).
+// Token emitido pelo identity ({userId, name, username, email}) e verificado por cada serviço com o mesmo segredo (HS256).
 // Sem role: quem gerencia um evento é decidido pelo vínculo do userId com o evento (secretaria).
 import jwt from 'jsonwebtoken';
 
@@ -10,13 +10,14 @@ function secret() {
 
 // Só para testes e scripts: o identity é quem emite em produção.
 export function sign(user, expiresIn = '1h') {
-    return jwt.sign({ userId: user.id, name: user.name }, secret(), { expiresIn });
+    return jwt.sign({ userId: user.id, username: user.username,email: user.email }, secret(), { expiresIn });
+
 }
 
 export function verify(token) {
-    const { userId, name } = jwt.verify(token, secret());
+    const { userId, username, email } = jwt.verify(token, secret());
     if (!userId) throw new Error('token without userId');
-    return { id: userId, name };
+    return { id: userId, username, email };
 }
 
 // Middleware: exige "Authorization: Bearer <token>" e preenche req.user = {id, name}.

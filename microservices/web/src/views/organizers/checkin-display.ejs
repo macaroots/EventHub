@@ -1,12 +1,15 @@
 <meta http-equiv="refresh" content="10">
-<p><a href="/organizers/activities/<%= activity.id %>/checkin">← Check-in</a></p>
-<section class="checkin-display">
-    <h2><%= activity.name %></h2>
+<div class="page-container page-narrow">
+<p class="breadcrumb"><a href="/organizers/activities/<%= activity.id %>/checkin">Check-in</a> <span>›</span> Tela</p>
+<section class="data-panel checkin-display">
+    <span class="eyebrow">CHECK-IN DO EVENTO</span>
+    <h1><%= activity.name %></h1>
 <% if (checkIn.status == 'open') { %>
     <p>Para registrar presença, abra sua inscrição no EventHub e informe o código:</p>
     <p class="checkin-code checkin-code-big"><%= checkIn.code %></p>
 <% } else { %>
     <p>Check-in fechado.</p>
 <% } %>
-    <p>Presentes: <%= present %> de <%= confirmed %></p>
+    <p class="stats-line">Presentes: <strong><%= present %></strong> de <%= confirmed %></p>
 </section>
+</div>

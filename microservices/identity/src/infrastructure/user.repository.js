@@ -8,14 +8,15 @@ function rowToUser(row) {
     row.username,
     row.password_hash,
     'user',
-    row.id
+    row.id,
+    row.email
   );
 }
 
 export class UserRepository {
   async add(user) {
     const passwordHash = user.password || user.passwordHash;
-    const email = user.email || (user.username.includes('@') ? user.username : `${user.username}@eventhub.local`);
+    const email = user.email ;
     const name = user.name || user.username;
     await pool.query(
       `INSERT INTO users (id, name, username, email, password_hash, active, created_at)

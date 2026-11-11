@@ -2,10 +2,11 @@
 import { BlankError } from '../../../shared/domain/errors.js';
 
 export class User {
-    constructor(username, password, role = 'user', id = crypto.randomUUID()) {
+    constructor(username, password, role = 'user', id = crypto.randomUUID(), email = null) {
         this.id = id;
         if (!username) throw new BlankError('username');
         this.username = username;
+        this.email = email;
         if (!password || password.length < 2) 
             throw new Error('Password must have at least 2 chars');
         this.password = password;
@@ -17,6 +18,7 @@ export class User {
         return {
             id: this.id,
             username: this.username,
+            email: this.email,
             role: this.role,
         };
     }

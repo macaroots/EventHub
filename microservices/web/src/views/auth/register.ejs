@@ -6,19 +6,6 @@
 
 <form action="/auth/register" method="post" class="auth-form">
     <div class="form-group">
-        <label for="name" class="form-label">Nome completo</label>
-        <input 
-            id="name"
-            name="name" 
-            type="text" 
-            class="form-input" 
-            placeholder="Seu nome" 
-            required 
-            autocomplete="name"
-        >
-    </div>
-
-    <div class="form-group">
         <label for="email" class="form-label">E-mail</label>
         <input 
             id="email"
@@ -29,6 +16,25 @@
             required 
             autocomplete="email"
         >
+    </div>
+
+    <div class="form-group">
+        <label for="username" class="form-label">Username</label>
+        <input
+            id="username"
+            name="username"
+            type="text"
+            class="form-input"
+            placeholder="seu.username"
+            value="<%= locals.form?.username ?? '' %>"
+            required
+            minlength="3"
+            maxlength="30"
+            pattern="[a-z0-9_.-]+"
+            title="Use de 3 a 30 caracteres minúsculos, sem espaços, diferente do e-mail."
+            autocomplete="username"
+        >
+        <small class="form-help">Use apenas letras minúsculas, números, ponto, hífen ou sublinhado. Não use seu e-mail.</small>
     </div>
 
     <div class="form-group">
