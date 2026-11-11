@@ -1,28 +1,32 @@
 <% const base = `/organizers/activities/${activity.id}/checkin`;
    const open = checkIn.status == 'open'; %>
-<p><a href="/organizers/activities/<%= activity.id %>/registrations">← Inscrições</a><% if (event) { %> · <a href="/organizers/events/<%= event.id %>">Evento</a><% } %></p>
-<section>
-    <h2>Check-in: <%= activity.name %></h2>
-    <p>Presentes: <strong><%= present %></strong> de <%= confirmed %> confirmados.</p>
+<div class="page-container">
+<p class="breadcrumb"><a href="/organizers/activities/<%= activity.id %>/registrations">Inscrições</a><% if (event) { %> <span>›</span> <a href="/organizers/events/<%= event.id %>">Evento</a><% } %></p>
+<section class="page-heading">
+    <span class="eyebrow">OPERAÇÃO DO EVENTO</span>
+    <h1>Check-in: <%= activity.name %></h1>
+    <p class="stats-line">Presentes: <strong><%= present %></strong> de <%= confirmed %> confirmados.</p>
+</section>
+<section class="data-panel checkin-panel">
 <% if (open) { %>
-    <p>Check-in aberto desde <%= dateTime(checkIn.openedAt) %>. Código para mostrar na sala:</p>
+    <p class="muted">Check-in aberto desde <%= dateTime(checkIn.openedAt) %>. Código para mostrar na sala:</p>
     <p class="checkin-code"><%= checkIn.code %></p>
-    <p><a href="<%= base %>?display=1">Mostrar em tela cheia</a></p>
-    <form method="post" action="<%= base %>/open" style="display:inline" onsubmit="return confirm('Gerar um código novo? O atual deixa de valer.')"><button>Gerar código novo</button></form>
-    <form method="post" action="<%= base %>/close" style="display:inline"><button>Fechar check-in</button></form>
+    <p><a class="btn-secondary" href="<%= base %>?display=1">Mostrar em tela cheia</a></p>
+    <form method="post" action="<%= base %>/open" class="inline-form" onsubmit="return confirm('Gerar um código novo? O atual deixa de valer.')"><button class="btn-secondary">Gerar código novo</button></form>
+    <form method="post" action="<%= base %>/close" class="inline-form"><button class="btn-danger">Fechar check-in</button></form>
 <% } else if (event?.status == 'published') { %>
     <p>Check-in fechado.</p>
-    <form method="post" action="<%= base %>/open"><button>Abrir check-in</button></form>
+    <form method="post" action="<%= base %>/open"><button class="btn-primary">Abrir check-in</button></form>
 <% } else { %>
     <p>Evento cancelado: sem check-in.</p>
 <% } %>
 </section>
-<section>
-    <h3>Inscritos confirmados</h3>
+<section class="data-panel">
+    <div class="panel-heading"><h2>Inscritos confirmados</h2></div>
 <% if (!attendees.length) { %>
-    <p>Nenhum inscrito confirmado.</p>
+    <p class="empty-state">Nenhum inscrito confirmado.</p>
 <% } else { %>
-    <table>
+    <table class="hub-table">
         <tr><th>Participante</th><th>Presença</th></tr>
 <% for (const a of attendees) { %>
         <tr>
@@ -33,7 +37,7 @@
 <% } else if (event?.status == 'published') { %>
                 <form method="post" action="/organizers/registrations/<%= a.registrationId %>/checkin" style="display:inline">
                     <input type="hidden" name="activityId" value="<%= activity.id %>">
-                    <button>marcar presença</button>
+                    <button class="btn-secondary">marcar presença</button>
                 </form>
 <% } else { %>
                 ausente
@@ -44,3 +48,4 @@
     </table>
 <% } %>
 </section>
+</div>
