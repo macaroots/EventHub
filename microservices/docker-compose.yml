@@ -78,9 +78,21 @@ services:
     volumes:
       - certificate-data:/app/data
 
+  reports:
+    <<: *service
+    build: { context: ., dockerfile: reports/Dockerfile }
+    environment:
+      <<: *env
+      PORT: &reports-port 3006
+      REPORTS_CURRENCY: BRL
+    ports: [{ published: *reports-port, target: *reports-port }]
+    volumes:
+      - reports-data:/app/data
+
 volumes:
   secretariat-data:
   certificate-data:
   registration-data:
   identity-db-data:
   payment-data:
+  reports-data:
