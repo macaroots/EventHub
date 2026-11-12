@@ -1,9 +1,20 @@
+<%
+    const statusLabels = {
+        draft: 'Rascunho',
+        published: 'Publicado',
+        ended: 'Encerrado',
+        canceled: 'Cancelado'
+    };
+%>
+
 <div class="dashboard-layout">
     <section class="dashboard-main">
         <div class="dashboard-header">
             <span class="dashboard-tagline">GESTÃO DE EVENTOS</span>
             <h1 class="dashboard-title">Eventos</h1>
-            <p class="dashboard-subtitle">Acompanhe suas inscrições e eventos em um só lugar.</p>
+            <p class="dashboard-subtitle">
+                Acompanhe suas inscrições e eventos em um só lugar.
+            </p>
         </div>
 
         <div class="data-panel">
@@ -12,7 +23,9 @@
             </div>
 
             <% if (!events.length) { %>
-                <p style="color: var(--text-muted);">Você ainda não possui eventos cadastrados.</p>
+                <p style="color: var(--text-muted);">
+                    Você ainda não possui eventos cadastrados.
+                </p>
             <% } else { %>
                 <table class="hub-table">
                     <thead>
@@ -27,11 +40,21 @@
                         <% for (const event of events) { %>
                             <tr>
                                 <td>
-                                    <strong><a href="/organizers/events/<%= event.id %>"><%= event.name %></a></strong>
+                                    <strong>
+                                        <a href="/organizers/events/<%= event.id %>">
+                                            <%= event.name %>
+                                        </a>
+                                    </strong>
                                 </td>
-                                <td><%= event.startDate ? event.startDate.slice(0, 10) : '—' %></td>
+
                                 <td>
-                                    <span class="status-pill status-<%= event.status %>"><%= event.status %></span>
+                                    <%= event.startDate ? event.startDate.slice(0, 10) : '—' %>
+                                </td>
+                                
+                                <td>
+                                    <span class="status-pill status-<%= event.status %>">
+                                        <%= statusLabels[event.status] ?? event.status %>
+                                    </span>
                                 </td>
                                 <td style="text-align: right;">
                                     <a href="/organizers/events/<%= event.id %>" class="btn-secondary" style="padding: 0.35rem 0.85rem; font-size: 0.85rem;">Gerenciar</a>

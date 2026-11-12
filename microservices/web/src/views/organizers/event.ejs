@@ -49,7 +49,7 @@
         </form>
     </div>
     <section class="critical-actions">
-        <div><h2>Ações do evento</h2><p>Gerencie o encerramento e o cancelamento do evento.</p></div>
+        <div><h2>Ações do evento</h2></div>
         <div class="critical-actions-buttons">
             <% if (draft) { %>
             <form method="post" action="<%= base %>/publish">
@@ -63,8 +63,8 @@
             <% } %>
             <% if (draft || published) { %>
             <form method="post" action="<%= base %>/cancel" class="critical-cancel">
-                <input name="reason" placeholder="Motivo do cancelamento" required>
                 <button class="btn-danger" type="submit" onclick="return confirm('Cancelar este evento?')">Cancelar evento</button>
+                <input name="reason" placeholder="Motivo do cancelamento" required>
             </form>
             <% } %>
             <% if (draft || canceled) { %>
