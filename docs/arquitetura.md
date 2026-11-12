@@ -12,7 +12,7 @@ Visão geral do que existe e do que falta. Detalhes em [ddd.md](ddd.md), [endpoi
 | Caixa | `payment` | RF07 | Parcial |
 | Notificações | — | RF08 | ADR 004 |
 | Certificados | — | RF10 | ADR 003 |
-| Relatórios | — | RF11 | ADR 005 |
+| Relatórios | `reports` | RF11 | Implementado (protótipo) |
 | Monitoramento | — (infra) | — | ADR 006 |
 | Front | `web` | — | Protótipo do fluxo, sem integração |
 
@@ -56,6 +56,14 @@ Cada serviço é dono dos seus dados e não lê o banco de outro. No protótipo,
 - **Ouve:** `PaymentRequested` (cria a cobrança) e `RegistrationCanceled` (cancela a cobrança pendente).
 - **Publica:** `PaymentConfirmed`, `PaymentDenied`.
 
+### Relatórios (`reports`)
+- **Capacidade:** monitoramento e relatórios por evento/atividade. É um **read model (CQRS)**: não lê o banco de outro serviço e não faz chamada HTTP para os donos dos dados ([RF11](ddd.md)).
+- **Dados próprios (projeções):** `events`, `activities`, `registrations`, `attendances`, `payments`, `participants` e `inbox`, num SQLite próprio (`reports.db`).
+- **Ouve:** `Event*`, `Activity*`, `Registration*`, `Payment*`, `UserCheckedIn` e, opcionalmente, `UserCreated`/`UserUpdated`.
+- **Publica:** nada.
+- **API:** `GET /reports/events/:id`, `GET /reports/activities/:id` e `GET /reports/events/:id/participants`, em JSON/CSV/XLSX/PDF; acesso restrito a organizador do evento ou admin.
+- **Trade-off:** a projeção é eventualmente consistente e não é reconstruível sem event store; suba o serviço antes dos publishers e use `dev/seed_report.py` em desenvolvimento.
+
 ### Front (`web`, BFF)
 - **Capacidade:** telas do participante e do organizador. Compõe as chamadas aos serviços.
 - **Dados próprios:** nenhum persistido. Guarda em memória dois caches descartáveis: a ordem da fila de espera por atividade (2 s) e o acesso já autorizado por inscrição ([ADR 009](adrs/009-posicao-na-fila-de-espera.md)).
@@ -77,7 +85,7 @@ A divisão em serviços segue os contextos, e eles têm perfis de carga diferent
 | RabbitMQ | Todas as mensagens | Um nó só | Cluster com quorum queues | Indisponibilidade ou fila acumulando |
 | `notification` (planejado) | Rajadas (cancelamento de evento, promoções) | Limite do provedor de e-mail | Consumidores concorrentes; a fila absorve | Atraso nos avisos |
 | `certificate` (planejado) | Lote no `EventEnded`; validação pública por anos | Geração de PDF (CPU) | Workers em paralelo; validação cacheável | Lote demorado |
-| `report` (planejado) | Grava todas as mensagens; consulta rara | Volume do log | Consumidor único; agregação no banco | Consultas lentas |
+| `reports` | Consulta rara, export sob demanda | Volume das projeções e geração de PDF/XLSX | Consumidor único no protótipo (SQLite); réplicas e Postgres depois; export assíncrono se necessário | Consultas lentas ou fila `reports` crescendo |
 
 **Para ter várias instâncias** ([ADR 014](adrs/014-varias-instancias-por-servico.md)):
 - Postgres compartilhado entre as instâncias do mesmo serviço;
@@ -212,7 +220,7 @@ C4Container
 
         Container(notification, "notification", "planejado", "Avisos por e-mail")
         Container(certificate, "certificate", "planejado", "PDF e validação")
-        Container(report, "report", "planejado", "Log de eventos e consultas")
+        Container(reports, "reports", "Python, FastAPI", "Projeções, relatórios e exports")
     }
 
     System_Ext(gateway, "Gateway de pagamento")
@@ -233,7 +241,7 @@ C4Container
     Rel(payment, rabbit, "PaymentConfirmed/Denied / ouve PaymentRequested")
     Rel(rabbit, notification, "Registration*, EventCanceled...")
     Rel(rabbit, certificate, "CertificateRequested")
-    Rel(rabbit, report, "# (todos)")
+    Rel(rabbit, reports, "Event*, Activity*, Registration*, Payment*, UserCheckedIn")
 
     Rel(payment, gateway, "verify()", "ACL")
     Rel(notification, email, "Envia")

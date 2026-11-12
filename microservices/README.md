@@ -16,16 +16,19 @@ docker compose down            # -v para apagar os bancos
 | secretariat  | http://localhost:3002  | só no dev |
 | identity     | http://localhost:3003  | só no dev |
 | payment      | http://localhost:3004  | só no dev |
+| certificate  | http://localhost:3005  | sempre |
+| reports      | http://localhost:3006  | sempre |
 | RabbitMQ UI  | http://localhost:15673 (guest/guest) | só no dev |
 
-- Só o `web` publica porta no `docker-compose.yml`. Os outros ficam na rede interna ([ADR 017](../docs/adrs/017-entrada-unica-sem-api-gateway.md)) e só publicam no [docker-compose.dev.yml](docker-compose.dev.yml), para depuração e Swagger.
-- Dentro do contêiner, todos escutam na 3000 (`PORT` no compose): cada contêiner tem IP próprio, então não há conflito, e o número de cada serviço só aparece no mapeamento do dev (`"3001:3000"`). Entre serviços, o endereço é `http://<serviço>:3000`.
+- Só o `web`, o `certificate` e o `reports` publicam porta no `docker-compose.yml`. Os outros ficam na rede interna ([ADR 017](../docs/adrs/017-entrada-unica-sem-api-gateway.md)) e só publicam no [docker-compose.dev.yml](docker-compose.dev.yml), para depuração e Swagger.
+- Dentro do contêiner, os serviços Node escutam na 3000 (`PORT` no compose): cada contêiner tem IP próprio, então não há conflito, e o número de cada serviço só aparece no mapeamento do dev (`"3001:3000"`). Entre serviços, o endereço é `http://<serviço>:3000`. O `certificate` e o `reports` escutam em 3005 e 3006, respectivamente.
 
 - Cada serviço tem seu próprio `<serviço>/Dockerfile` (permite linguagens diferentes no futuro). O build context é `microservices/` para incluir `shared/`, mantendo os imports relativos (`../../shared/...`).
 - O compose define a porta de cada serviço `PORT`; e o endereço do broker `RABBITMQ_URL=amqp://rabbitmq`.
 - AMQP (5672) não é exposto no host, para não conflitar com outro RabbitMQ local. Para rodar um serviço fora do Docker contra este broker, adicione `"5672:5672"` em `ports` do `rabbitmq`.
 - `payment` e `certificate` usam **Python/FastAPI + Uvicorn**. Pagamentos valida o JWT emitido por identidade e consome `PaymentRequested` na exchange `event-hub`. Certificados consome `CertificateRequested` (fila `certificate`). Os serviços se integram por eventos.
 - Pagamentos mantém a porta interna 3000 da main, com acesso local em 3004 pelo compose de desenvolvimento. Seu volume guarda `/app/payment/data/payments.db` por meio de `DB_PATH`.
+- O `certificate` e o `reports` são os serviços em **Python** (FastAPI + Uvicorn). Ambos usam `JWT_SECRET` para validar o token do usuário e consomem eventos do RabbitMQ em filas próprias (`certificate` e `reports`). Não há chamada HTTP entre eles e os demais serviços. O `reports` mantém projeções locais (CQRS) e gera CSV/XLSX/PDF sob demanda.
 
 ## Desenvolvimento (hot reload)
 
@@ -33,7 +36,7 @@ docker compose down            # -v para apagar os bancos
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 ```
 
-[docker-compose.dev.yml](docker-compose.dev.yml) monta `<serviço>/src` e `shared/` do host e roda `node --watch`: salvar um arquivo reinicia o serviço. O `certificate` monta `certificate/app` e roda `uvicorn --reload`.
+[docker-compose.dev.yml](docker-compose.dev.yml) monta `<serviço>/src` e `shared/` do host e roda `node --watch`: salvar um arquivo reinicia o serviço. O `certificate` e o `reports` montam `app/` e rodam `uvicorn --reload`.
 
 - Mudanças em `package.json` (dependências) exigem `--build`.
 - Se um serviço quebrar com erro de sintaxe, ele espera a próxima alteração; se o arquivo for substituído (ex.: `git checkout`), pode ser preciso `docker compose ... restart <serviço>`.
