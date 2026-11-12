@@ -2,6 +2,7 @@ import { DuplicateError, NotFoundError } from '../../../shared/domain/errors.js'
 import { User } from '../domain/user.js';
 import { pool } from '../infrastructure/db.js';
 import { logger } from '../infrastructure/logger.js';
+import { sign } from '../../../shared/auth/jwt.js';
 
 export class UserAppService {
     constructor(userRepository, messageBus, hasher) {
