@@ -1,73 +1,161 @@
-<% const base = `/organizers/events/${event.id}`; const canceled = event.status == 'canceled'; const draft = event.status == 'draft'; const published = event.status == 'published'; const ended = event.status == 'ended'; %>
-<div class="page-container">
+<% const base = `/organizers/events/${event.id}`; const canceled = event.status == 'canceled'; const draft = event.status == 'draft'; const published = event.status == 'published'; const ended = event.status == 'ended'; const statusLabel = { draft: 'Rascunho', published: 'Publicado', ended: 'Encerrado', canceled: 'Cancelado' }[event.status] ?? event.status; const activities = event.activities ?? []; %>
+<div class="page-container event-management">
 <p class="breadcrumb"><a href="/organizers/events">Meus eventos</a> <span>›</span> <%= event.name %></p>
 <section class="page-heading event-heading">
-    <span class="eyebrow">VISÃO GERAL DO EVENTO</span>
-    <h1><%= event.name %></h1>
-    <span class="status-pill status-<%= event.status %>"><%= event.status %></span>
+    <div class="event-title-row">
+        <h1><%= event.name %></h1>
+        <span class="status-pill status-<%= event.status %>"><%= statusLabel %></span>
+    </div>
+    <p class="event-subtitle">Gerencie as informações, atividades e organizadores do seu evento.</p>
     <% if (canceled) { %><p class="notice notice-error">Cancelado: <%= event.cancelReason %></p><% } %>
     <% if (ended) { %><p class="notice notice-info">Encerrado: os certificados de quem teve presença foram solicitados.</p><% } %>
     <% if (!draft) { %><p class="muted">Evento e atividades não mudam depois de publicados.</p><% } %>
 </section>
-<section class="data-panel form-panel">
-    <form method="post" action="<%= base %>" class="hub-form">
-        <fieldset <%= draft ? '' : 'disabled' %>>
-            <%- include('event-form', { event }) %>
-            <button class="btn-primary">Salvar alterações</button>
-        </fieldset>
-    </form>
-    <% if (draft) { %>
-    <form method="post" action="<%= base %>/publish" class="inline-form"><button class="btn-primary">Publicar evento</button></form>
-    <% } %>
-    <% if (published) { %>
-    <form method="post" action="<%= base %>/end" onsubmit="return confirm('Encerrar o evento? Inscrições e check-in fecham e os certificados são solicitados. Corrija as presenças antes.')">
-        <button class="btn-secondary">Encerrar evento</button> <small>depois do término; solicita os certificados</small>
-    </form>
-    <% } %>
-    <% if (draft || published) { %>
-    <form method="post" action="<%= base %>/cancel">
-        <input name="reason" placeholder="Motivo" required>
-        <button class="btn-danger">Cancelar evento</button>
-    </form>
-    <% } %>
-    <% if (draft || canceled) { %>
-    <form method="post" action="<%= base %>/delete" onsubmit="return confirm('Apagar o evento e suas atividades?')">
-        <button class="btn-danger">Apagar evento</button>
-    </form>
-    <% } %>
+
+<nav class="event-tabs" aria-label="Seções do evento" role="tablist">
+    <button class="event-tab is-active" id="tab-event" type="button" role="tab" aria-selected="true" aria-controls="panel-event" data-tab="panel-event">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 9h18"/></svg>
+        Informações do evento
+    </button>
+    <button class="event-tab" id="tab-activities" type="button" role="tab" aria-selected="false" aria-controls="panel-activities" data-tab="panel-activities" tabindex="-1">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16M4 12h16M4 19h16"/><circle cx="2.5" cy="5" r=".5"/><circle cx="2.5" cy="12" r=".5"/><circle cx="2.5" cy="19" r=".5"/></svg>
+        Atividades <span class="tab-count"><%= activities.length %></span>
+    </button>
+    <button class="event-tab" id="tab-organizers" type="button" role="tab" aria-selected="false" aria-controls="panel-organizers" data-tab="panel-organizers" tabindex="-1">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Organizadores <span class="tab-count"><%= organizers.length %></span>
+    </button>
+</nav>
+
+<section class="event-tab-panel" id="panel-event" role="tabpanel" aria-labelledby="tab-event">
+    <div class="data-panel event-form-card">
+        <div class="panel-heading event-card-heading">
+            <div><h2>Informações do evento</h2><p>Confira os dados e acompanhe o status do evento.</p></div>
+        </div>
+        <% if (!draft) { %>
+        <div class="event-status-notice">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 10v6M12 7h.01"/></svg>
+            <span>Evento publicado: algumas informações podem ter edição limitada.</span>
+        </div>
+        <% } %>
+        <form method="post" action="<%= base %>" class="hub-form" id="event-details-form">
+            <fieldset <%= draft ? '' : 'disabled' %>>
+                <%- include('event-form', { event }) %>
+                <div class="event-form-actions">
+                    <button class="btn-secondary" type="reset">Descartar alterações</button>
+                    <button class="btn-primary" type="submit">Salvar alterações</button>
+                </div>
+            </fieldset>
+        </form>
+    </div>
+    <section class="critical-actions">
+        <div><h2>Ações do evento</h2><p>Gerencie o encerramento e o cancelamento do evento.</p></div>
+        <div class="critical-actions-buttons">
+            <% if (draft) { %>
+            <form method="post" action="<%= base %>/publish">
+                <button class="btn-primary" type="submit">Publicar evento</button>
+            </form>
+            <% } %>
+            <% if (published) { %>
+            <form method="post" action="<%= base %>/end" onsubmit="return confirm('Encerrar o evento? Inscrições e check-in fecham e os certificados são solicitados. Corrija as presenças antes.')">
+                <button class="btn-secondary" type="submit">Encerrar evento</button>
+            </form>
+            <% } %>
+            <% if (draft || published) { %>
+            <form method="post" action="<%= base %>/cancel" class="critical-cancel">
+                <input name="reason" placeholder="Motivo do cancelamento" required>
+                <button class="btn-danger" type="submit" onclick="return confirm('Cancelar este evento?')">Cancelar evento</button>
+            </form>
+            <% } %>
+            <% if (draft || canceled) { %>
+            <form method="post" action="<%= base %>/delete" onsubmit="return confirm('Apagar o evento e suas atividades?')">
+                <button class="btn-danger" type="submit">Apagar evento</button>
+            </form>
+            <% } %>
+        </div>
+    </section>
 </section>
-<section class="data-panel">
-    <div class="panel-heading"><h2>Atividades</h2><% if (draft) { %><a class="btn-primary" href="<%= base %>/activities/new">+ Nova atividade</a><% } %></div>
-    <table class="hub-table">
-        <tr><th>Nome</th><th>Início</th><th>Vagas</th><th>Preço</th><th></th></tr>
-<% for (const activity of event.activities) { %>
-        <tr>
-            <td><a href="/organizers/activities/<%= activity.id %>"><%= activity.name %></a></td>
-            <td><%= activity.startsAt ?? '' %></td>
-            <td><%= activity.capacity %></td>
-            <td><%= activity.price %></td>
-            <td><% if (!draft) { %><a href="/organizers/activities/<%= activity.id %>/registrations">inscrições</a> · <a href="/organizers/activities/<%= activity.id %>/checkin">check-in</a><% } %></td>
-        </tr>
-<% } %>
-    </table>
+
+<section class="event-tab-panel" id="panel-activities" role="tabpanel" aria-labelledby="tab-activities" hidden>
+    <div class="data-panel">
+        <div class="panel-heading">
+            <div><span class="eyebrow">PROGRAMAÇÃO</span><h2>Atividades do evento</h2></div>
+            <% if (draft) { %><a class="btn-primary" href="<%= base %>/activities/new">Adicionar atividade</a><% } %>
+        </div>
+        <% if (!activities.length) { %>
+            <p class="empty-state">Nenhuma atividade cadastrada para este evento.</p>
+        <% } else { %>
+        <div class="table-scroll">
+            <table class="hub-table">
+                <thead><tr><th>Nome</th><th>Início</th><th>Vagas</th><th>Preço</th><th>Ações</th></tr></thead>
+                <tbody>
+            <% for (const activity of activities) { %>
+                    <tr>
+                        <td><a href="/organizers/activities/<%= activity.id %>"><strong><%= activity.name %></strong></a></td>
+                        <td><%= activity.startsAt ?? 'A definir' %></td>
+                        <td><%= activity.capacity %></td>
+                        <td><%= activity.price > 0 ? `R$ ${Number(activity.price).toFixed(2)}` : 'Gratuita' %></td>
+                        <td class="table-actions"><% if (!draft) { %><a href="/organizers/activities/<%= activity.id %>/registrations">Inscrições</a><a href="/organizers/activities/<%= activity.id %>/checkin">Check-in</a><% } else { %><a href="/organizers/activities/<%= activity.id %>">Editar</a><% } %></td>
+                    </tr>
+            <% } %>
+                </tbody>
+            </table>
+        </div>
+        <% } %>
+    </div>
 </section>
-<section class="data-panel">
-    <div class="panel-heading"><h2>Organizadores</h2></div>
-    <ul class="clean-list">
-<% for (const organizer of organizers) { %>
-        <li>
-            <%= organizer.name %><% if (organizer.email) { %> &lt;<%= organizer.email %>&gt;<% } %><% if (organizer.id == event.createdBy) { %> (criador)<% } else if (!canceled) { %>
-            <form method="post" action="<%= base %>/organizers/<%= organizer.id %>/delete" style="display:inline">
-                <button class="btn-link-danger">remover</button>
-            </form><% } %>
-        </li>
-<% } %>
-    </ul>
-    <% if (!canceled) { %>
-    <form method="post" action="<%= base %>/organizers">
-        <input name="email" type="email" placeholder="e-mail" required>
-        <button class="btn-primary">Adicionar organizador</button>
-    </form>
-    <% } %>
+
+<section class="event-tab-panel" id="panel-organizers" role="tabpanel" aria-labelledby="tab-organizers" hidden>
+    <div class="data-panel">
+        <div class="panel-heading"><div><span class="eyebrow">EQUIPE</span><h2>Organizadores</h2></div></div>
+        <ul class="clean-list organizer-list">
+        <% for (const organizer of organizers) { %>
+            <li>
+                <div class="organizer-identity">
+                    <span class="organizer-avatar"><%= (organizer.name || organizer.id).slice(0, 1).toUpperCase() %></span>
+                    <span><strong><%= organizer.name %></strong><small><%= organizer.email ?? 'E-mail não informado' %></small></span>
+                </div>
+                <% if (organizer.id == event.createdBy) { %><span class="creator-badge">Criador</span><% } else if (!canceled) { %>
+                <form method="post" action="<%= base %>/organizers/<%= organizer.id %>/delete"><button class="btn-link-danger" type="submit">Remover</button></form>
+                <% } %>
+            </li>
+        <% } %>
+        </ul>
+        <% if (!canceled) { %>
+        <form method="post" action="<%= base %>/organizers" class="organizer-add-form">
+            <div class="hub-form-group"><label for="organizer-email">Adicionar por e-mail</label><input id="organizer-email" class="hub-form-input" name="email" type="email" placeholder="organizador@email.com" required></div>
+            <button class="btn-primary" type="submit">Adicionar organizador</button>
+        </form>
+        <% } %>
+    </div>
 </section>
 </div>
+
+<script>
+(() => {
+    const tabs = [...document.querySelectorAll('.event-tab')];
+    const panels = [...document.querySelectorAll('.event-tab-panel')];
+    const activate = (tab) => {
+        tabs.forEach(item => {
+            const active = item === tab;
+            item.classList.toggle('is-active', active);
+            item.setAttribute('aria-selected', String(active));
+            item.tabIndex = active ? 0 : -1;
+        });
+        panels.forEach(panel => {
+            panel.hidden = panel.id !== tab.dataset.tab;
+        });
+    };
+    tabs.forEach((tab, index) => {
+        tab.addEventListener('click', () => activate(tab));
+        tab.addEventListener('keydown', event => {
+            if (!['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(event.key)) return;
+            event.preventDefault();
+            const next = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 :
+                (index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+            tabs[next].focus();
+            activate(tabs[next]);
+        });
+    });
+})();
+</script>

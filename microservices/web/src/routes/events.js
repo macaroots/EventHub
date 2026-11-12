@@ -11,6 +11,7 @@ const eventForm = ({ name, information, startDate, endDate }) =>
     ({ name, information, startDate: orNull(startDate), endDate: orNull(endDate) });
 const list = () => '/organizers/events';
 const show = (req) => `/organizers/events/${encodeURIComponent(req.params.id)}`;
+const successShow = (req, message) => `${show(req)}?success=${encodeURIComponent(message)}`;
 
 router.get('/events', async (req, res) => {
     const events = await json(await secretariat.listEvents(req));
@@ -38,11 +39,26 @@ router.get('/events/:id', async (req, res) => {
     const organizers = organizerIds.map(id => ({ id, name: byId[id]?.name ?? byId[id]?.username ?? id, email: byId[id]?.email }));
     res.layout('organizers/event', { event, organizers });
 });
-router.post('/events/:id', action((req) => secretariat.updateEvent(req, req.params.id, eventForm(req.body)), show));
-router.post('/events/:id/delete', action((req) => secretariat.deleteEvent(req, req.params.id), list, show));
-router.post('/events/:id/publish', action((req) => secretariat.publishEvent(req, req.params.id), show));
-router.post('/events/:id/end', action((req) => secretariat.endEvent(req, req.params.id), show));
-router.post('/events/:id/cancel', action((req) => secretariat.cancelEvent(req, req.params.id, req.body.reason), show));
+router.post('/events/:id', action(
+    (req) => secretariat.updateEvent(req, req.params.id, eventForm(req.body)),
+    (req) => successShow(req, 'Alterações salvas com sucesso.'),
+    show));
+router.post('/events/:id/delete', action(
+    (req) => secretariat.deleteEvent(req, req.params.id),
+    () => `${list()}?success=${encodeURIComponent('Evento apagado com sucesso.')}`,
+    show));
+router.post('/events/:id/publish', action(
+    (req) => secretariat.publishEvent(req, req.params.id),
+    (req) => successShow(req, 'Evento publicado com sucesso.'),
+    show));
+router.post('/events/:id/end', action(
+    (req) => secretariat.endEvent(req, req.params.id),
+    (req) => successShow(req, 'Evento encerrado com sucesso.'),
+    show));
+router.post('/events/:id/cancel', action(
+    (req) => secretariat.cancelEvent(req, req.params.id, req.body.reason),
+    (req) => successShow(req, 'Evento cancelado com sucesso.'),
+    show));
 
 // Organizers: o formulário usa o e-mail; a secretaria guarda só o id do usuário.
 router.post('/events/:id/organizers', action(async (req) => {
