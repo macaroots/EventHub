@@ -4,10 +4,12 @@ import { z } from 'zod';
 import { sendError, handleServiceError } from '../errors.js';
 
 const registerSchema = z.object({
-  name: z.string().min(1).max(120),
   username: z.string().regex(/^[a-z0-9_.-]{3,30}$/, 'username must be 3-30 lowercase chars (a-z0-9_.-）'),
   email: z.string().email(),
   password: z.string().min(8),
+}).refine(data => data.username !== data.email.toLowerCase(), {
+  message: 'username must be different from email',
+  path: ['username'],
 });
 
 const loginSchema = z.object({
@@ -48,4 +50,3 @@ export function authRouter(userService) {
 
   return router;
 }
-

@@ -1,0 +1,302 @@
+/* auth.css - Design System fiel às telas de Login e Cadastro */
+
+:root {
+    --auth-bg-navy: #081d37;
+    --auth-orange: #fd5f00;
+    --auth-orange-hover: #e05300;
+    --auth-title-dark: #0f1e36;
+    --auth-text-muted: #6b7280;
+    --auth-border: #d1d5db;
+    --auth-border-focus: #fd5f00;
+    --auth-input-placeholder: #9ca3af;
+    --auth-white: #ffffff;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html, body.auth-body {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100% !important;
+    min-height: 100vh !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+    color: var(--auth-title-dark);
+    background-color: var(--auth-white) !important;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+}
+
+.auth-wrapper {
+    display: flex;
+    min-height: 100vh;
+    width: 100vw;
+    margin: 0;
+    padding: 0;
+}
+
+/* Coluna Lateral Esquerda */
+.auth-sidebar {
+    width: 42%;
+    min-height: 100vh;
+    background-color: var(--auth-bg-navy);
+    color: var(--auth-white);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 3.5rem 4rem;
+    position: relative;
+    box-sizing: border-box;
+}
+
+.brand-header {
+    display: flex;
+    align-items: center;
+}
+
+.brand-logo {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.logo-box {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background-color: var(--auth-orange);
+    color: var(--auth-white);
+    font-weight: 700;
+    font-size: 1.15rem;
+    border-radius: 4px;
+}
+
+.logo-text {
+    font-size: 1.35rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--auth-white);
+}
+
+.sidebar-hero {
+    max-width: 420px;
+    margin: auto 0;
+}
+
+.tagline-badge {
+    display: inline-block;
+    color: var(--auth-orange);
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+}
+
+.hero-title {
+    font-size: 2.75rem;
+    font-weight: 800;
+    line-height: 1.15;
+    margin-bottom: 1.25rem;
+    color: var(--auth-white);
+    letter-spacing: -0.03em;
+    border-bottom: none !important;
+    padding: 0 !important;
+}
+
+.hero-desc {
+    color: #94a3b8;
+    font-size: 1.05rem;
+    line-height: 1.6;
+}
+
+.sidebar-footer {
+    font-size: 0.825rem;
+    color: #64748b;
+}
+
+/* Coluna Principal Direita */
+.auth-main {
+    flex: 1;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 2rem;
+    background-color: var(--auth-white);
+    box-sizing: border-box;
+}
+
+.auth-container {
+    width: 100%;
+    max-width: 440px;
+}
+
+/* Alertas de erro */
+.auth-alert {
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    margin-bottom: 1.5rem;
+}
+.auth-alert.error {
+    background-color: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #dc2626;
+}
+
+/* Cabeçalho do Formulário */
+.auth-form-header {
+    margin-bottom: 2rem;
+}
+
+.auth-badge {
+    display: block;
+    color: var(--auth-orange);
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.auth-title {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--auth-title-dark);
+    margin-bottom: 0.5rem;
+    letter-spacing: -0.02em;
+}
+
+.auth-subtitle {
+    font-size: 0.95rem;
+    color: var(--auth-text-muted);
+}
+
+/* Formulário e Campos */
+.auth-form {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 1.25rem !important;
+    margin: 0 !important;
+}
+
+.form-group {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.4rem !important;
+}
+
+.form-label {
+    display: block !important;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--auth-title-dark);
+    padding: 0 !important;
+}
+
+.form-input {
+    display: block !important;
+    width: 100% !important;
+    padding: 0.75rem 0.875rem !important;
+    font-size: 0.95rem;
+    border: 1px solid var(--auth-border) !important;
+    border-radius: 6px !important;
+    color: var(--auth-title-dark);
+    background-color: var(--auth-white);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    box-sizing: border-box !important;
+}
+
+.form-input::placeholder {
+    color: var(--auth-input-placeholder);
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: var(--auth-border-focus) !important;
+    box-shadow: 0 0 0 3px rgba(253, 95, 0, 0.12) !important;
+}
+
+/* Link Auxiliar */
+.form-extra {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: -0.25rem;
+}
+
+.link-muted {
+    font-size: 0.825rem;
+    color: var(--auth-orange);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.link-muted:hover {
+    text-decoration: underline;
+}
+
+/* Botão de Ação Primária */
+.auth-button {
+    width: 100% !important;
+    padding: 0.85rem !important;
+    background-color: var(--auth-orange) !important;
+    color: var(--auth-white) !important;
+    border: none !important;
+    border-radius: 6px !important;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 0.5rem;
+    transition: background-color 0.2s ease;
+}
+
+.auth-button:hover {
+    background-color: var(--auth-orange-hover) !important;
+}
+
+/* Rodapé */
+.auth-form-footer {
+    text-align: center;
+    margin-top: 1.75rem;
+    font-size: 0.9rem;
+    color: var(--auth-text-muted);
+}
+
+.auth-link {
+    color: var(--auth-orange);
+    font-weight: 700;
+    text-decoration: none;
+    margin-left: 0.25rem;
+}
+
+.auth-link:hover {
+    text-decoration: underline;
+}
+
+/* Responsividade */
+@media (max-width: 900px) {
+    .auth-wrapper {
+        flex-direction: column;
+    }
+    .auth-sidebar {
+        width: 100%;
+        min-height: auto;
+        padding: 2.5rem 2rem;
+    }
+    .sidebar-hero {
+        margin: 2rem 0;
+    }
+    .hero-title {
+        font-size: 2.15rem;
+    }
+    .auth-main {
+        min-height: auto;
+        padding: 3rem 1.5rem;
+    }
+}

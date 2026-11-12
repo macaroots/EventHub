@@ -1,20 +1,54 @@
-<section>
-    <h2>Meus eventos</h2>
-    <table>
-        <tr><th>Nome</th><th>Início</th><th>Status</th></tr>
-<% for (const event of events) { %>
-        <tr>
-            <td><a href="/organizers/events/<%= event.id %>"><%= event.name %></a></td>
-            <td><%= event.startDate ?? '' %></td>
-            <td><%= event.status %></td>
-        </tr>
-<% } %>
-    </table>
-</section>
-<section>
-    <h2>Novo evento</h2>
-    <form method="post" action="/organizers/events">
-        <%- include('event-form', { event: {} }) %>
-        <button>Criar</button>
-    </form>
-</section>
+<div class="dashboard-layout">
+    <section class="dashboard-main">
+        <div class="dashboard-header">
+            <span class="dashboard-tagline">GESTÃO DE EVENTOS</span>
+            <h1 class="dashboard-title">Eventos</h1>
+            <p class="dashboard-subtitle">Acompanhe suas inscrições e eventos em um só lugar.</p>
+        </div>
+
+        <div class="data-panel">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+                <h3 style="margin: 0;">Meus eventos</h3>
+            </div>
+
+            <% if (!events.length) { %>
+                <p style="color: var(--text-muted);">Você ainda não possui eventos cadastrados.</p>
+            <% } else { %>
+                <table class="hub-table">
+                    <thead>
+                        <tr>
+                            <th>Nome do Evento</th>
+                            <th>Início</th>
+                            <th>Status</th>
+                            <th style="text-align: right;">Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% for (const event of events) { %>
+                            <tr>
+                                <td>
+                                    <strong><a href="/organizers/events/<%= event.id %>"><%= event.name %></a></strong>
+                                </td>
+                                <td><%= event.startDate ? event.startDate.slice(0, 10) : '—' %></td>
+                                <td>
+                                    <span class="status-pill status-<%= event.status %>"><%= event.status %></span>
+                                </td>
+                                <td style="text-align: right;">
+                                    <a href="/organizers/events/<%= event.id %>" class="btn-secondary" style="padding: 0.35rem 0.85rem; font-size: 0.85rem;">Gerenciar</a>
+                                </td>
+                            </tr>
+                        <% } %>
+                    </tbody>
+                </table>
+            <% } %>
+        </div>
+
+        <div class="data-panel" style="max-width: 650px;">
+            <h3>Criar novo evento</h3>
+            <form method="post" action="/organizers/events">
+                <%- include('event-form', { event: {} }) %>
+                <button type="submit" class="btn-primary" style="margin-top: 1rem;">Criar evento</button>
+            </form>
+        </div>
+    </section>
+</div>

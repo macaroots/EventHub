@@ -1,31 +1,59 @@
-<p><a href="/">← Eventos</a></p>
-<section>
-    <h2><%= event.name %></h2>
-    <p>Período: <%= event.startDate?.slice(0, 10) ?? '' %><% if (event.endDate) { %> a <%= event.endDate.slice(0, 10) %><% } %></p>
-    <% if (event.information) { %><p><%= event.information %></p><% } %>
-</section>
-<section>
-    <h2>Atividades</h2>
-<% for (const activity of event.activities) {
-     const minimumAge = activity.rules.find(r => r.type == 'minimumAge')?.age; %>
-    <article>
-        <h3><%= activity.name %></h3>
-        <% if (activity.description) { %><p><%= activity.description %></p><% } %>
-        <p>
-            <% if (activity.startsAt) { %>Início: <%= activity.startsAt.replace('T', ' ') %>.<% } %>
-            <% if (activity.location) { %>Local: <%= activity.location %>.<% } %>
-            Vagas: <%= activity.capacity %>.
-            Valor: <%= activity.price > 0 ? `R$ ${activity.price.toFixed(2)}` : 'gratuito' %>.
-            <% if (minimumAge) { %>Idade mínima: <%= minimumAge %> anos.<% } %>
-        </p>
-        <% if (user) { %>
-        <form method="post" action="/activities/<%= activity.id %>/registrations">
-            <input type="hidden" name="eventId" value="<%= event.id %>">
-            <button>Inscrever-se</button>
-        </form>
-        <% } else { %>
-        <p><a href="/auth/login?next=/events/<%= event.id %>">Entre para se inscrever</a></p>
+<div class="page-container page-public">
+    <p class="breadcrumb"><a href="/">Explorar eventos</a> <span>›</span> Detalhe do evento</p>
+
+    <div class="page-heading">
+        <span class="eyebrow">DETALHES DO EVENTO</span>
+        <h1><%= event.name %></h1>
+        <p class="muted"><%= event.information ?? 'Conhecimento que conecta pessoas e ideias.' %></p>
+    </div>
+    <div class="data-panel event-summary">
+        
+        <div class="summary-grid">
+            <span>📅 <strong>Período:</strong> <%= event.startDate?.slice(0, 10) ?? 'A definir' %><% if (event.endDate) { %> a <%= event.endDate.slice(0, 10) %><% } %></span>
+            <span>📍 <strong>Local:</strong> Presencial / Online</span>
+        </div>
+
+        <% if (event.information) { %>
+            <div class="event-description">
+                <%= event.information %>
+            </div>
         <% } %>
-    </article>
-<% } %>
-</section>
+    </div>
+
+    <div class="data-panel">
+        <div class="panel-heading"><h2>Atividades disponíveis</h2></div>
+
+        <% if (!event.activities || !event.activities.length) { %>
+            <p class="muted">Nenhuma atividade cadastrada para este evento.</p>
+        <% } else { %>
+            <div class="activity-list">
+                <% for (const activity of event.activities) {
+                     const minimumAge = activity.rules?.find(r => r.type == 'minimumAge')?.age; %>
+                    <div class="activity-card">
+                        <h3><%= activity.name %></h3>
+                        <% if (activity.description) { %>
+                            <p class="muted"><%= activity.description %></p>
+                        <% } %>
+
+                        <div class="activity-meta">
+                            <% if (activity.startsAt) { %><span>⏰ Início: <%= activity.startsAt.replace('T', ' ') %></span><% } %>
+                            <% if (activity.location) { %><span>📍 <%= activity.location %></span><% } %>
+                            <span>👥 Vagas: <%= activity.capacity %></span>
+                            <span>💵 Valor: <strong><%= activity.price > 0 ? `R$ ${activity.price.toFixed(2)}` : 'Gratuito' %></strong></span>
+                            <% if (minimumAge) { %><span>🔞 Idade mínima: <%= minimumAge %> anos</span><% } %>
+                        </div>
+
+                        <% if (locals.user) { %>
+                            <form method="post" action="/activities/<%= activity.id %>/registrations">
+                                <input type="hidden" name="eventId" value="<%= event.id %>">
+                                <button type="submit" class="btn-primary">Inscrever-se</button>
+                            </form>
+                        <% } else { %>
+                            <a href="/auth/login?next=/events/<%= event.id %>" class="btn-secondary">Entre para se inscrever</a>
+                        <% } %>
+                    </div>
+                <% } %>
+            </div>
+        <% } %>
+    </div>
+</div>

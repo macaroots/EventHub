@@ -1,17 +1,20 @@
-<p><a href="/registrations/<%= registration.id %>">← Inscrição</a></p>
-<section>
-    <h2>Pagamento</h2>
-    <p>
+<div class="page-container page-narrow">
+<p class="breadcrumb"><a href="/registrations/<%= registration.id %>">Inscrição</a> <span>›</span> Pagamento</p>
+<section class="data-panel form-panel">
+    <span class="eyebrow">PAGAMENTO</span>
+    <h1>Pagamento</h1>
+    <p class="payment-summary">
         <%= registration.event?.name ?? '' %> / <%= registration.activity?.name ?? '' %>.
         <%= payment.description %>: R$ <%= payment.amount.toFixed(2) %>.
     </p>
 <% if (payment.status == 'pending') { %>
-    <form method="post" action="/payments/<%= payment.id %>">
-        <label><span>Comprovante:</span><input name="receipt" required></label>
-        <button>Pagar</button>
+    <form method="post" action="/payments/<%= payment.id %>" class="hub-form">
+        <div class="hub-form-group"><label for="receipt">Comprovante</label><input id="receipt" class="hub-form-input" name="receipt" required></div>
+        <button class="btn-primary">Enviar pagamento</button>
     </form>
     <p><small>Gateway simulado: o comprovante <code>deny</code> é recusado.</small></p>
 <% } else { %>
     <p>Pagamento <%= { paid: 'aprovado', denied: 'recusado', canceled: 'cancelado (a reserva expirou ou a inscrição foi cancelada)' }[payment.status] ?? payment.status %>.</p>
 <% } %>
 </section>
+</div>
