@@ -521,3 +521,41 @@ GET /reports/activities/:id
 #### Ouve
 
 EventCreated, ActivityCreated, RegistrationCreated, RegistrationConfirmed, UserCheckedIn
+
+### Extensões implementadas pelo `reports` (:3006)
+
+Rotas (todas exigem JWT de organizador do evento ou admin):
+
+GET /reports/events/:id?format=JSON|CSV|XLSX|PDF&include=activities,participants,payments
+GET /reports/activities/:id?format=JSON|CSV|XLSX|PDF&include=participants
+GET /reports/events/:id/participants?activityId=&status=pending,confirmed,canceled&checkedIn=true|false&page=&limit=&format=
+GET /health
+
+    JSON do evento/atividade mantém os três totais exigidos acima e acrescenta
+    totals (capacidade, ocupação, presença, ausência), activities, participants
+    e payments conforme `include`.
+
+    totalRegistrations = inscrições ativas (pending + confirmed); canceladas
+    aparecem em registrations.canceled.
+    totalRegistrationsConfirmed = inscrições confirmed.
+    totalAttendances = presenças distintas por (activityId, userId).
+
+    Participantes em JSON: { items, page, limit, total, dataUpdatedAt }; page
+    padrão 1, limit padrão 100 (máximo 1000). Em CSV/XLSX/PDF exporta a lista
+    filtrada completa.
+
+    Exports: CSV (UTF-8 com BOM), XLSX (abas Resumo/Atividades/Participantes/
+    Pagamentos) e PDF (A4 paisagem). Teto de 10.000 linhas → 413.
+    Todas as respostas de relatório levam Cache-Control: no-store e
+    X-Report-Updated-At. Erros: { error, reasons? }.
+
+#### Ouve (projeções)
+
+EventCreated, EventUpdated, EventPublished, EventCanceled, EventDeleted,
+ActivityCreated, ActivityUpdated, ActivityDeleted,
+RegistrationCreated, RegistrationConfirmed, RegistrationCanceled,
+PaymentRequested, PaymentApproved|PaymentConfirmed, PaymentDenied,
+UserCheckedIn, UserCreated, UserUpdated (opcionais, para nome/e-mail).
+
+O `reports` é um read model: consome a fila `reports`, mantém projeções
+idempotentes em SQLite e não lê o banco nem chama por HTTP os outros serviços.
