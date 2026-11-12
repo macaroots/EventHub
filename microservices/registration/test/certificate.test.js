@@ -44,7 +44,7 @@ test("ended event requests one certificate per participant with the attended act
   await checkIns.checkInManually(a1.id, organizer);
   certificates.endEvent({ eventId: "e1" });
   assert.deepEqual(requested, [{
-    type: "CertificateRequested", requestId: "e1:u1", eventId: "e1", userId: "u1", participantName: "ana", eventName: "Congresso",
+    type: "CertificateRequested", requestId: "e1:u1", eventId: "e1", participantId: "u1", participantName: "ana", eventName: "Congresso", eventDate: "2026-12-01",
     activities: [{ activityId: "a1", name: "Workshop", workload: 3.5, date: "2026-12-01" }], totalWorkload: 3.5,
   }]);
   assert.equal(registrations.getRegistration(a1.id, { id: "u1" }).event.status, "ended");

@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://event-hub.local/contracts/messages/CertificateIssued.schema.json",
+  "title": "CertificateIssued",
+  "description": "certificate → (ninguém ainda). Publicado uma vez por certificado criado; reentrega de CertificateRequested não republica.",
+  "allOf": [
+    {
+      "$ref": "envelope.schema.json"
+    }
+  ],
+  "type": "object",
+  "properties": {
+    "type": {
+      "const": "CertificateIssued"
+    },
+    "source": {
+      "const": "certificate"
+    },
+    "data": {
+      "type": "object",
+      "required": [
+        "certificateId",
+        "participantId",
+        "eventId",
+        "verificationToken",
+        "issuedAt"
+      ],
+      "properties": {
+        "certificateId": {
+          "$ref": "envelope.schema.json#/$defs/uuid"
+        },
+        "participantId": {
+          "$ref": "envelope.schema.json#/$defs/uuid"
+        },
+        "eventId": {
+          "$ref": "envelope.schema.json#/$defs/uuid"
+        },
+        "verificationToken": {
+          "$ref": "envelope.schema.json#/$defs/nonEmpty",
+          "description": "Token da validação pública (GET /certificates/validate/{token})."
+        },
+        "issuedAt": {
+          "$ref": "envelope.schema.json#/$defs/dateTime"
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "id": "7e1d2c3b-4a5f-4e6d-8c7b-9a0f1e2d3c4b",
+      "type": "CertificateIssued",
+      "source": "certificate",
+      "time": "2026-11-06T13:00:01.000Z",
+      "data": {
+        "certificateId": "5f4e3d2c-1b0a-4987-8654-3210fedcba98",
+        "participantId": "6a1f0c2e-1b2c-4d3e-8f40-5a6b7c8d9e01",
+        "eventId": "3c2b1a00-0000-4000-8000-00000000e001",
+        "verificationToken": "Qm9hcyB2aW5kYXMgYW8gZXZlbnQtaHVi",
+        "issuedAt": "2026-11-06T13:00:01.000Z"
+      }
+    }
+  ]
+}

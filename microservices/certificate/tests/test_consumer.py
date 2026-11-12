@@ -6,7 +6,7 @@ import json
 from app.application.certificate_service import CertificateService
 from app.infrastructure.consumer import CertificateRequestedConsumer
 from app.infrastructure.database import CertificateRepository
-from tests.support import RecordingPublisher, certificate_requested
+from tests.support import RecordingPublisher, certificate_requested, envelope
 
 
 class FakeMessage:
@@ -52,6 +52,26 @@ def test_valid_event_is_acked_and_creates_certificate() -> None:
     assert message.nacks == []
     assert len(repository.list_by_user("user-1")) == 1
     assert len(publisher.events) == 1
+
+
+def test_envelope_is_unwrapped() -> None:
+    consumer, repository, publisher = make_consumer()
+
+    message = handle(consumer, envelope(certificate_requested()))
+
+    assert message.acks == 1
+    assert message.nacks == []
+    assert len(repository.list_by_user("user-1")) == 1
+    assert len(publisher.events) == 1
+
+
+def test_envelope_with_another_type_is_discarded() -> None:
+    consumer, repository, _ = make_consumer()
+
+    message = handle(consumer, envelope(certificate_requested(), "CertificateIssued"))
+
+    assert message.nacks == [False]
+    assert repository.list_by_user("user-1") == []
 
 
 def test_redelivery_is_acked_without_duplicating() -> None:

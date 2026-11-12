@@ -24,22 +24,30 @@ A emissão acontece quando o `CertificateRequested` chega.
 
 ## Evento consumido
 
-Fila `certificate`, exchange `loja` (topic), routing key `CertificateRequested`,
-`prefetch(1)`, mensagens persistentes.
+Fila `certificate`, exchange `event-hub` (topic), routing key `CertificateRequested`,
+`prefetch(1)`, mensagens persistentes. O corpo é o envelope do outbox
+(`{id, type, source, time, data}`); contrato em
+[CertificateRequested.schema.json](../contracts/messages/CertificateRequested.schema.json).
 
 ```json
 {
-  "type": "CertificateRequested",
-  "participantId": "user-1",
-  "participantName": "Maria Silva",
-  "eventId": "event-1",
-  "eventName": "Congresso X",
-  "eventDate": "2026-11-07",
-  "activities": [{ "name": "Minicurso A" }, { "name": "Palestra B" }]
+  "id": "…", "type": "CertificateRequested", "source": "registration", "time": "…",
+  "data": {
+    "requestId": "event-1:user-1",
+    "participantId": "user-1",
+    "participantName": "Maria Silva",
+    "eventId": "event-1",
+    "eventName": "Congresso X",
+    "eventDate": "2026-11-07",
+    "activities": [{ "activityId": "…", "name": "Minicurso A", "workload": 3, "date": "2026-11-07" }],
+    "totalWorkload": 3
+  }
 }
 ```
 
 - `participantId` vira `user_id` do certificado.
+- `eventDate` é a data da primeira atividade com presença (a cópia do evento no registration não tem datas).
+- Dos itens de `activities` só o `name` é usado; `workload`, `totalWorkload` e `requestId` são ignorados.
 - `eventDate` precisa ser `YYYY-MM-DD`; data com hora é rejeitada.
 - `activities` precisa ter pelo menos um item com `name`.
 - `verificationToken`, `issuedAt` e o `id` são gerados aqui.
@@ -48,7 +56,9 @@ Fila `certificate`, exchange `loja` (topic), routing key `CertificateRequested`,
 - Payload inválido vai para `nack(requeue=False)`; erro transitório para
   `nack(requeue=True)`.
 
-Depois de criar, o serviço publica `CertificateIssued` (best-effort, opcional).
+Depois de criar, o serviço publica `CertificateIssued` (best-effort, opcional) no mesmo
+padrão: envelope com `source: certificate` e `messageId`/`type`/`appId` nas propriedades AMQP.
+Contrato em [CertificateIssued.schema.json](../contracts/messages/CertificateIssued.schema.json).
 
 ## Configuração
 

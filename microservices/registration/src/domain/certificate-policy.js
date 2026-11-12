@@ -22,9 +22,10 @@ export class CertificatePolicy {
                 type: 'CertificateRequested',
                 requestId: `${event.id}:${userId}`, // um por participante no evento: chave de idempotência para o serviço de certificados
                 eventId: event.id,
-                userId,
+                participantId: userId,
                 participantName: participants.get(userId)?.name ?? null,
                 eventName: event.name,
+                eventDate: items[0].date, // a cópia do evento não tem datas: usa a primeira atividade com presença
                 activities: items,
                 totalWorkload: Math.round(items.reduce((sum, a) => sum + (a.workload ?? 0), 0) * 10) / 10,
             };

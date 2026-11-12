@@ -12,7 +12,7 @@
 | Routing key | o nome da mensagem (`type`), ex.: `PaymentRequested` |
 | Propriedades AMQP | `persistent: true`, `contentType: application/json`; `messageId`, `type` e `appId` iguais a `id`, `type` e `source` do envelope |
 | Corpo | JSON em UTF-8: o envelope, com o conteúdo da mensagem em `data` |
-| Fila do consumidor | uma fila durável por serviço, com o nome do serviço (`identity`, `payment`, `registration`, `secretariat`), ligada (bind) à exchange com uma routing key por tipo que ele ouve |
+| Fila do consumidor | uma fila durável por serviço, com o nome do serviço (`certificate`, `identity`, `payment`, `registration`, `secretariat`), ligada (bind) à exchange com uma routing key por tipo que ele ouve |
 | Retry | se o handler falha, a mensagem vai para `<fila>.retry` (TTL `MESSAGE_RETRY_DELAY_MS`, padrão 5000 ms), que a devolve para `<fila>`. Header `x-attempt` (começa em 1) e `x-error` |
 | DLQ | depois de `MESSAGE_MAX_ATTEMPTS` (padrão 5) tentativas, vai para `<fila>.dlq` |
 | Consumo | `prefetch 1`, `ack` só depois de tratar |
@@ -70,7 +70,8 @@ Obrigações de quem implementa um serviço:
 | [RegistrationPromoted](messages/RegistrationPromoted.schema.json) | registration → (ninguém ainda) | futuro: notificações | — |
 | [RegistrationConfirmed](messages/RegistrationConfirmed.schema.json) | registration → (ninguém ainda) | futuro: notificações | — |
 | [AttendanceRegistered](messages/AttendanceRegistered.schema.json) | registration → (ninguém ainda) | futuro: relatórios | — |
-| [CertificateRequested](messages/CertificateRequested.schema.json) | registration → certificate (futuro, ADR 003) | emitir o certificado | por `requestId` (`<eventId>:<userId>`) |
+| [CertificateRequested](messages/CertificateRequested.schema.json) | registration → certificate (ADR 003) | emitir o certificado | por `(participantId, eventId)`; `requestId` = `<eventId>:<participantId>` |
+| [CertificateIssued](messages/CertificateIssued.schema.json) | certificate → (ninguém ainda) | futuro: notificações | publicado só na primeira emissão |
 
 Consequências para quem implementa:
 
@@ -88,7 +89,7 @@ sequenceDiagram
     participant S as secretariat
     participant R as registration
     participant P as payment
-    participant C as certificate (futuro)
+    participant C as certificate
 
     I->>R: UserRegistered / UserUpdated
     S->>R: EventPublished
@@ -109,6 +110,7 @@ sequenceDiagram
     R-->>R: AttendanceRegistered
     S->>R: EventEnded
     R->>C: CertificateRequested (um por participante)
+    C-->>C: CertificateIssued
     S->>R: EventCanceled
     R->>P: RegistrationCanceled (uma por inscrição)
 ```
@@ -130,6 +132,7 @@ Autenticação: JWT HS256 com o `JWT_SECRET` compartilhado, enviado em `Authoriz
 ## Limitações e alternativas
 
 - Os schemas foram escritos à mão a partir do código. O teste garante que o código atual os segue, mas só nos cenários que ele cobre.
+- O certificate (Python) não entra em `test/messages.test.js`: o envelope do `CertificateIssued` é conferido em `certificate/tests/test_event_publisher.py`. O certificate ainda não tem retry/DLQ nem inbox como o bus Node: inválida → `nack` sem requeue; erro transitório → `nack` com requeue.
 - Os campos de data do secretariat (`startDate`, `endDate`, `startsAt`, `endsAt`) aceitam qualquer ISO 8601 (data ou data-hora). Por isso os schemas validam só que são `string`.
 - Os consumidores não validam as mensagens contra os schemas em tempo de execução. Seria possível fazer isso no bus, com o custo de um validador em cada serviço.
 - Alternativas: AsyncAPI (descreve canais, filas e bindings AMQP e pode referenciar estes mesmos schemas); um schema registry (Confluent/Apicurio) para versionar os contratos; ou Pact (testes de contrato dirigidos pelo consumidor), quando houver outro time consumindo.

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://event-hub.local/contracts/messages/CertificateRequested.schema.json",
   "title": "CertificateRequested",
-  "description": "registration → certificate (futuro, ADR 003). Um por participante com presença em ao menos uma atividade, ao receber EventEnded. Traz todos os dados do certificado.",
+  "description": "registration → certificate (ADR 003). Um por participante com presença em ao menos uma atividade, ao receber EventEnded. Traz todos os dados do certificado.",
   "allOf": [
     {
       "$ref": "envelope.schema.json"
@@ -21,9 +21,10 @@
       "required": [
         "requestId",
         "eventId",
-        "userId",
+        "participantId",
         "participantName",
         "eventName",
+        "eventDate",
         "activities",
         "totalWorkload"
       ],
@@ -31,23 +32,26 @@
         "requestId": {
           "type": "string",
           "pattern": "^[^:]+:[^:]+$",
-          "description": "<eventId>:<userId>. Chave de idempotência do serviço de certificados."
+          "description": "<eventId>:<participantId>. Chave de idempotência do serviço de certificados."
         },
         "eventId": {
           "$ref": "envelope.schema.json#/$defs/uuid"
         },
-        "userId": {
-          "$ref": "envelope.schema.json#/$defs/uuid"
+        "participantId": {
+          "$ref": "envelope.schema.json#/$defs/uuid",
+          "description": "userId (identity) do participante."
         },
         "participantName": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "description": "Hoje é o username (identity ainda não tem nome completo)."
+          "$ref": "envelope.schema.json#/$defs/nonEmpty",
+          "description": "Nome do participante (UserRegistered/UserUpdated)."
         },
         "eventName": {
           "$ref": "envelope.schema.json#/$defs/nonEmpty"
+        },
+        "eventDate": {
+          "type": "string",
+          "format": "date",
+          "description": "Data da primeira atividade com presença (YYYY-MM-DD)."
         },
         "activities": {
           "type": "array",
@@ -100,9 +104,10 @@
       "data": {
         "requestId": "3c2b1a00-0000-4000-8000-00000000e001:6a1f0c2e-1b2c-4d3e-8f40-5a6b7c8d9e01",
         "eventId": "3c2b1a00-0000-4000-8000-00000000e001",
-        "userId": "6a1f0c2e-1b2c-4d3e-8f40-5a6b7c8d9e01",
-        "participantName": "ana",
+        "participantId": "6a1f0c2e-1b2c-4d3e-8f40-5a6b7c8d9e01",
+        "participantName": "Ana Souza",
         "eventName": "Semana de TI",
+        "eventDate": "2026-11-10",
         "activities": [
           {
             "activityId": "4d3c2b00-0000-4000-8000-00000000a001",

@@ -57,9 +57,25 @@ def _parse_activities(value: Any) -> tuple[Mapping[str, str], ...]:
     return tuple(activities)
 
 
-def parse_certificate_requested(event: Any) -> CertificateRequested:
-    """Validate and normalize a ``CertificateRequested`` payload."""
+def unwrap(message: Any) -> Any:
+    """Return ``data`` from the envelope ``{id, type, source, time, data}``.
 
+    A message without ``data`` is treated as the bare payload (tests and
+    ``dev/publish_certificate_requested.py --direct``).
+    """
+
+    if isinstance(message, Mapping) and "data" in message:
+        event_type = message.get("type")
+        if event_type is not None and event_type != EVENT_TYPE:
+            raise BadRequestError(f"unexpected event type: {event_type}")
+        return message["data"]
+    return message
+
+
+def parse_certificate_requested(message: Any) -> CertificateRequested:
+    """Validate and normalize a ``CertificateRequested`` (envelope or bare payload)."""
+
+    event = unwrap(message)
     if not isinstance(event, Mapping):
         raise BadRequestError("event payload must be an object")
 
