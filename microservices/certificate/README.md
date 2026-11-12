@@ -25,25 +25,31 @@ A emissão acontece quando o `CertificateRequested` chega.
 ## Evento consumido
 
 Fila `certificate`, exchange `event-hub` (topic), routing key `CertificateRequested`,
-`prefetch(1)`, mensagens persistentes.
+`prefetch(1)`, mensagens persistentes. O corpo é o envelope do outbox
+(`{id, type, source, time, data}`); contrato em
+[CertificateRequested.schema.json](../contracts/messages/CertificateRequested.schema.json).
 
 ```json
 {
-  "type": "CertificateRequested",
-  "participantId": "user-1",
-  "participantName": "Maria Silva",
-  "eventId": "event-1",
-  "eventName": "Congresso X",
-  "eventDate": "2026-11-07",
-  "activities": [{ "name": "Minicurso A" }, { "name": "Palestra B" }]
+  "id": "…", "type": "CertificateRequested", "source": "registration", "time": "…",
+  "data": {
+    "requestId": "event-1:user-1",
+    "participantId": "user-1",
+    "participantName": "Maria Silva",
+    "eventId": "event-1",
+    "eventName": "Congresso X",
+    "eventDate": "2026-11-07",
+    "activities": [{ "activityId": "…", "name": "Minicurso A", "workload": 3, "date": "2026-11-07" }],
+    "totalWorkload": 3
+  }
 }
 ```
 
-- O consumidor aceita o envelope atual `{id, type, source, time, data}` do
-  outbox do registration. Nele, `data.userId` identifica o participante e a
-  data do certificado vem da primeira data das atividades com presença
-  (`data.activities[].date`). O formato plano abaixo continua aceito pelo script de desenvolvimento.
+- Também aceita payload plano (sem envelope) e a forma antiga com `userId` e
+  sem `eventDate` (usa a menor `activities[].date`).
 - `participantId` vira `user_id` do certificado.
+- `eventDate` é a data da primeira atividade com presença (a cópia do evento no registration não tem datas).
+- Dos itens de `activities` só o `name` é usado; `workload`, `totalWorkload` e `requestId` são ignorados.
 - `eventDate` precisa ser `YYYY-MM-DD`; data com hora é rejeitada.
 - `activities` precisa ter pelo menos um item com `name`.
 - `verificationToken`, `issuedAt` e o `id` são gerados aqui.
@@ -53,6 +59,8 @@ Fila `certificate`, exchange `event-hub` (topic), routing key `CertificateReques
   `nack(requeue=True)`.
 
 Depois de criar, o serviço grava `CertificateIssued` no outbox junto ao certificado e tenta publicá-lo novamente caso o RabbitMQ esteja indisponível.
+Envelope com `source: certificate` e `messageId`/`type`/`appId` nas propriedades AMQP.
+Contrato em [CertificateIssued.schema.json](../contracts/messages/CertificateIssued.schema.json).
 
 ## Configuração
 

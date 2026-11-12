@@ -25,7 +25,8 @@ import argparse
 import asyncio
 import json
 import os
-from datetime import date
+from datetime import date, datetime, timezone
+from uuid import uuid4
 
 EXCHANGE = "event-hub"
 QUEUE = "certificate"
@@ -51,14 +52,22 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def build_payload(args: argparse.Namespace) -> dict:
+    """Envelope ``{id, type, source, time, data}``, como o outbox do registration publica."""
+
     return {
+        "id": str(uuid4()),
         "type": ROUTING_KEY,
-        "participantId": args.participant_id,
-        "participantName": args.participant_name,
-        "eventId": args.event_id,
-        "eventName": args.event_name,
-        "eventDate": args.event_date,
-        "activities": [{"name": name} for name in args.activities or ["Minicurso A", "Palestra B"]],
+        "source": "registration",
+        "time": datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z"),
+        "data": {
+            "requestId": f"{args.event_id}:{args.participant_id}",
+            "participantId": args.participant_id,
+            "participantName": args.participant_name,
+            "eventId": args.event_id,
+            "eventName": args.event_name,
+            "eventDate": args.event_date,
+            "activities": [{"name": name} for name in args.activities or ["Minicurso A", "Palestra B"]],
+        },
     }
 
 
@@ -75,6 +84,9 @@ async def publish(payload: dict, args: argparse.Namespace) -> None:
             body=json.dumps(payload).encode("utf-8"),
             content_type="application/json",
             delivery_mode=aio_pika.DeliveryMode.PERSISTENT,
+            message_id=payload["id"],
+            type=payload["type"],
+            app_id=payload["source"],
         )
         for _ in range(max(args.repeat, 1)):
             await exchange.publish(message, routing_key=ROUTING_KEY)

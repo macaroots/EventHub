@@ -77,3 +77,16 @@ def certificate_api(*, event_publisher: RecordingPublisher | None = None):
             yield client, publisher, repository
     finally:
         repository.close()
+
+
+def envelope(data: dict, type_: str = "CertificateRequested") -> dict:
+    """Mensagem como o outbox do registration publica."""
+
+    data = {key: value for key, value in data.items() if key != "type"}
+    return {
+        "id": "0b9c6c1e-3f0a-4d38-9d2e-6f1c2a7b8e01",
+        "type": type_,
+        "source": "registration",
+        "time": "2026-11-06T13:00:00.000Z",
+        "data": data,
+    }

@@ -6,6 +6,7 @@ import logging
 from typing import Any
 
 from ..application.certificate_service import CertificateService
+from ..application.events import unwrap
 from ..domain.errors import BadRequestError
 
 logger = logging.getLogger(__name__)
@@ -18,8 +19,9 @@ ROUTING_KEY = "CertificateRequested"
 class CertificateRequestedConsumer:
     """Consumes ``CertificateRequested`` from RabbitMQ and issues certificates.
 
-    Same conventions as the Node services: topic exchange ``loja``, durable
-    queue named after the service, ``prefetch(1)`` and persistent messages.
+    Same conventions as the Node services: topic exchange ``event-hub``, durable
+    queue named after the service, ``prefetch(1)`` and persistent messages. The
+    body is the envelope ``{id, type, source, time, data}`` (contracts/README.md).
 
     Failure policy:
 
@@ -160,6 +162,10 @@ class CertificateRequestedConsumer:
 
 
 def _field(event: Any, name: str) -> str:
+    try:
+        event = unwrap(event)
+    except BadRequestError:
+        pass
     if isinstance(event, dict):
         data = event.get("data", event)
         value = data.get(name) if isinstance(data, dict) else None

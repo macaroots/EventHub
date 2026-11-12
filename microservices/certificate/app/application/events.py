@@ -57,9 +57,25 @@ def _parse_activities(value: Any) -> tuple[Mapping[str, str], ...]:
     return tuple(activities)
 
 
-def parse_certificate_requested(event: Any) -> CertificateRequested:
-    """Validate and normalize a ``CertificateRequested`` payload."""
+def unwrap(message: Any) -> Any:
+    """Return ``data`` from the envelope ``{id, type, source, time, data}``.
 
+    A message without ``data`` is treated as the bare payload (tests and
+    ``dev/publish_certificate_requested.py --direct``).
+    """
+
+    if isinstance(message, Mapping) and "data" in message:
+        event_type = message.get("type")
+        if event_type is not None and event_type != EVENT_TYPE:
+            raise BadRequestError(f"unexpected event type: {event_type}")
+        return message["data"]
+    return message
+
+
+def parse_certificate_requested(message: Any) -> CertificateRequested:
+    """Validate and normalize a ``CertificateRequested`` (envelope or bare payload)."""
+
+    event = unwrap(message)
     if not isinstance(event, Mapping):
         raise BadRequestError("event payload must be an object")
 
@@ -67,36 +83,24 @@ def parse_certificate_requested(event: Any) -> CertificateRequested:
     if event_type is not None and event_type != EVENT_TYPE:
         raise BadRequestError(f"unexpected event type: {event_type}")
 
-    # Contrato atual do outbox: {id, type, source, time, data}.
-    # Continua aceitando o payload plano usado pelo publisher de desenvolvimento.
-    if "data" in event:
-        data = event["data"]
-        if not isinstance(data, Mapping):
-            raise BadRequestError("event.data must be an object")
-        participant_id = _required(data, "userId")
-        activities = data.get("activities")
-        parsed_activities = _parse_activities(activities)
-        dates = [
-            _parse_event_date(_required(item, "date"))
-            for item in activities
-            if isinstance(item, Mapping)
-        ]
+    activities = event.get("activities")
+    parsed_activities = _parse_activities(activities)
+    # Aceita também a forma antiga do registration: ``userId`` e sem ``eventDate``
+    # (usa a primeira data das atividades com presença).
+    participant_id = _required(event, "participantId" if event.get("participantId") else "userId")
+    if event.get("eventDate"):
+        event_date = _parse_event_date(_required(event, "eventDate"))
+    else:
+        dates = [_parse_event_date(_required(item, "date")) for item in activities if isinstance(item, Mapping)]
         if not dates:
-            raise BadRequestError("activity.date is required")
-        return CertificateRequested(
-            participant_id=participant_id,
-            participant_name=str(data.get("participantName") or participant_id).strip(),
-            event_id=_required(data, "eventId"),
-            event_name=_required(data, "eventName"),
-            event_date=min(dates),
-            activities=parsed_activities,
-        )
+            raise BadRequestError("eventDate is required")
+        event_date = min(dates)
 
     return CertificateRequested(
-        participant_id=_required(event, "participantId"),
+        participant_id=participant_id,
         participant_name=_required(event, "participantName"),
         event_id=_required(event, "eventId"),
         event_name=_required(event, "eventName"),
-        event_date=_parse_event_date(_required(event, "eventDate")),
-        activities=_parse_activities(event.get("activities")),
+        event_date=event_date,
+        activities=parsed_activities,
     )

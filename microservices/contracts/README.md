@@ -12,6 +12,7 @@
 | Routing key | o `type` da mensagem, ex.: `PaymentRequested` |
 | Fila | uma fila durável por serviço, com o nome do serviço |
 | Retry / DLQ | `<fila>.retry` (5 s), até 5 tentativas; depois `<fila>.dlq` |
+| Propriedades AMQP | `persistent`, `application/json`; `messageId`, `type`, `appId` = `id`, `type`, `source` do envelope |
 | Consumo | `prefetch 1`, `ack` só depois de tratar |
 
 ## Envelope
@@ -52,8 +53,8 @@ Toda mensagem tem metadados no envelope e o conteúdo em `data`.
 | [PaymentConfirmed](messages/PaymentConfirmed.schema.json) | payment → registration, notification, reports | ignora se a inscrição não espera esse `paymentId` |
 | [PaymentDenied](messages/PaymentDenied.schema.json) | payment → registration, notification, reports | idem |
 | [AttendanceRegistered](messages/AttendanceRegistered.schema.json) | registration → reports | uma presença por inscrição |
-| [CertificateRequested](messages/CertificateRequested.schema.json) | registration → certificate | por participante e evento |
-| `CertificateIssued` (sem schema) | certificate → notification | publicado só na primeira emissão |
+| [CertificateRequested](messages/CertificateRequested.schema.json) | registration → certificate | `requestId` = `<eventId>:<participantId>` |
+| [CertificateIssued](messages/CertificateIssued.schema.json) | certificate → notification | publicado só na primeira emissão |
 
 - `PaymentRequested` é um comando (destinatário único); as demais são eventos.
 - O `paymentId` é gerado pelo registration: assim uma resposta atrasada de cobrança antiga é ignorada.
@@ -61,3 +62,5 @@ Toda mensagem tem metadados no envelope e o conteúdo em `data`.
 - O prazo de pagamento é um job do registration; o payment só sabe pelo `RegistrationCanceled`.
 
 Limitações: schemas escritos à mão (o teste cobre só os cenários que exercita); os consumidores não validam os schemas em tempo de execução; sem id de correlação (RQ06).
+
+O certificate (Python) não entra em `test/messages.test.js`; o envelope do `CertificateIssued` é conferido em `certificate/tests/test_event_publisher.py`.
