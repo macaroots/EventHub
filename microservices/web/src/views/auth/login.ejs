@@ -1,12 +1,46 @@
-<form action="/auth/login" method="post">
+<div class="auth-form-header">
+    <span class="auth-badge">Bem-vindo de volta</span>
+    <h2 class="auth-title">Entre na sua conta</h2>
+    <p class="auth-subtitle">Acesse eventos, inscrições e certificados.</p>
+</div>
+
+<form action="/auth/login" method="post" class="auth-form">
     <input type="hidden" name="next" value="<%= locals.next ?? '' %>">
-    <label>
-        <span>Username ou e-mail</span>
-        <input name="username">
-    </label>
-    <label>
-        <span>Password</span>
-        <input name="password" type="password">
-    </label>
-    <button>Login</button>
+
+    <div class="form-group">
+        <label for="username" class="form-label">E-mail</label>
+        <input 
+            id="username"
+            name="username" 
+            type="text" 
+            class="form-input" 
+            placeholder="voce@email.com" 
+            required 
+            autocomplete="email"
+        >
+    </div>
+
+    <div class="form-group">
+        <label for="password" class="form-label">Senha</label>
+        <input 
+            id="password"
+            name="password" 
+            type="password" 
+            class="form-input" 
+            placeholder="Mínimo de 8 caracteres" 
+            required 
+            autocomplete="current-password"
+        >
+    </div>
+
+    <div class="form-extra">
+        <a href="#" class="link-muted">Esqueci minha senha</a>
+    </div>
+
+    <button type="submit" class="auth-button">Entrar</button>
 </form>
+
+<div class="auth-form-footer">
+    <span>Ainda não tem uma conta?</span>
+    <a href="/auth/register" class="auth-link">Cadastre-se</a>
+</div>

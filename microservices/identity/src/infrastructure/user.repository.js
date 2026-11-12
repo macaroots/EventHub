@@ -4,30 +4,32 @@ import { pool } from './db.js';
 
 function rowToUser(row) {
   if (!row) return null;
-  return new User({
-    id: row.id,
-    name: row.name,
-    username: row.username,
-    email: row.email,
-    passwordHash: row.password_hash,
-    active: row.active,
-    createdAt: row.created_at,
-  });
+  return new User(
+    row.username,
+    row.password_hash,
+    'user',
+    row.id,
+    row.email
+  );
 }
 
 export class UserRepository {
   async add(user) {
+    const passwordHash = user.password || user.passwordHash;
+    const email = user.email ;
+    const name = user.name || user.username;
     await pool.query(
       `INSERT INTO users (id, name, username, email, password_hash, active, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [user.id, user.name, user.username, user.email, user.passwordHash, user.active, user.createdAt]
+       VALUES ($1, $2, $3, $4, $5, true, now())
+       ON CONFLICT (id) DO NOTHING`,
+      [user.id, name, user.username, email, passwordHash]
     );
   }
 
   async update(user) {
     await pool.query(
-      `UPDATE users SET name=$1, email=$2, password_hash=$3, active=$4 WHERE id=$5`,
-      [user.name, user.email, user.passwordHash, user.active, user.id]
+      `UPDATE users SET username=$1, password_hash=$2 WHERE id=$3`,
+      [user.username, user.password || user.passwordHash, user.id]
     );
   }
 
@@ -38,7 +40,7 @@ export class UserRepository {
 
   async getByUsername(username) {
     const { rows } = await pool.query(
-      'SELECT * FROM users WHERE lower(username)=lower($1)',
+      'SELECT * FROM users WHERE lower(username)=lower($1) OR lower(email)=lower($1)',
       [username]
     );
     return rowToUser(rows[0]);
@@ -52,6 +54,11 @@ export class UserRepository {
     return rowToUser(rows[0]);
   }
 
+  async list() {
+    const { rows } = await pool.query('SELECT * FROM users');
+    return rows.map(rowToUser);
+  }
+
   async findByEmail(email) {
     const { rows } = await pool.query(
       `SELECT * FROM users WHERE lower(email)=lower($1) AND active=true`,
@@ -62,7 +69,6 @@ export class UserRepository {
 
   async findByIds(ids) {
     if (!ids.length) return [];
-    // Build parameterized list: $1, $2, ...
     const placeholders = ids.map((_, i) => `$${i + 1}`).join(',');
     const { rows } = await pool.query(
       `SELECT * FROM users WHERE id IN (${placeholders}) AND active=true`,

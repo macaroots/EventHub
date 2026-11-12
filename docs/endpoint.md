@@ -559,3 +559,116 @@ UserCheckedIn, UserCreated, UserUpdated (opcionais, para nome/e-mail).
 
 O `reports` é um read model: consome a fila `reports`, mantém projeções
 idempotentes em SQLite e não lê o banco nem chama por HTTP os outros serviços.
+## Pagamentos
+
+### Endpoints
+
+POST /payments
+    Cria a cobrança da compra (inicia o pagamento com status 'pending').
+Entrada:
+    {
+        id,
+        registrationId,
+        amount,
+        userId?,
+        expiresAt?
+    }
+Saída:
+    {
+        id,
+        registrationId,
+        amount,
+        userId,
+        status: 'pending',
+        receipt: null,
+        createdAt,
+        expiresAt?
+    }
+
+GET /payments/:id
+Saída:
+    {
+        id,
+        registrationId,
+        userId,
+        amount,
+        status: 'pending' | 'paid' | 'denied' | 'expired',
+        receipt?,
+        createdAt,
+        expiresAt?
+    }
+
+POST /payments/:id/pay
+Entrada:
+    {
+        receipt?,
+        simulateStatus?: 'success' | 'denied'
+    }
+Saída:
+    {
+        id,
+        status: 'paid' | 'denied',
+        receipt?,
+        reason?
+    }
+    Emite (se sucesso):
+        PaymentConfirmed {
+            paymentId,
+            registrationId,
+            receipt
+        }
+    Emite (se recusado):
+        PaymentDenied {
+            paymentId,
+            registrationId,
+            reason: 'payment denied'
+        }
+
+POST /payments/:id/expire
+Saída:
+    {
+        id,
+        status: 'expired'
+    }
+    Emite:
+        PaymentExpired {
+            paymentId,
+            registrationId,
+            reason: 'payment expired'
+        }
+
+GET /payments?registrationId=...&userId=...
+Saída:
+    [{
+        id,
+        registrationId,
+        userId,
+        amount,
+        status: 'pending' | 'paid' | 'denied' | 'expired',
+        createdAt
+    }]
+
+### Eventos
+
+#### Ouve
+PaymentRequested { paymentId, registrationId, userId, amount, description }
+    charge()
+        cria cobrança com status: 'pending'
+
+#### Emite
+PaymentConfirmed { paymentId, registrationId, receipt, userId }
+PaymentDenied { paymentId, registrationId, reason, userId }
+PaymentExpired { paymentId, registrationId, reason, userId }
+
+### Entidades
+
+Payment {
+    id,
+    registrationId,
+    userId,
+    amount,
+    status: 'pending' | 'paid' | 'denied' | 'expired',
+    receipt?,
+    createdAt,
+    expiresAt?
+}

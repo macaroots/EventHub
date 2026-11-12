@@ -64,6 +64,10 @@ services:
   payment:
     <<: *service
     build: { context: ., dockerfile: payment/Dockerfile }
+    environment:
+      <<: *env
+      DB_PATH: /app/payment/data/payments.db
+      PAYMENT_TIMEOUT_MINUTES: 30
     volumes:
       - payment-data:/app/payment/data
 

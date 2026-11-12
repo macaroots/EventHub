@@ -7,8 +7,10 @@ export const dateTime = (iso) => new Date(iso).toLocaleString('pt-BR', { timeZon
 
 export const layout = (req, res, next) => {
     res.locals.error = req.query.error;
+    res.locals.success = req.query.success;
     res.locals.dateTime = dateTime;
     res.locals.user = currentUser(req);
+    res.locals.currentPath = req.path;
     res.layout = (view, data = {}, layout = 'layout') =>
         res.render(view, data, (err, body) =>
             err ? next(err) : res.render(layout, { ...data, body }));
