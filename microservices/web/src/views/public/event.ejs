@@ -9,8 +9,20 @@
     <div class="data-panel event-summary">
         
         <div class="summary-grid">
-            <span>📅 <strong>Período:</strong> <%= event.startDate?.slice(0, 10) ?? 'A definir' %><% if (event.endDate) { %> a <%= event.endDate.slice(0, 10) %><% } %></span>
-            <span>📍 <strong>Local:</strong> Presencial / Online</span>
+            <span style="display: flex; align-items: center; gap: 0.5rem;">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                            <rect x="3" y="4" width="18" height="18" rx="2"/>
+                                            <line x1="16" y1="2" x2="16" y2="6"/>
+                                            <line x1="8" y1="2" x2="8" y2="6"/>
+                                            <line x1="3" y1="10" x2="21" y2="10"/>
+                                        </svg>
+                 <strong>Período:</strong> <%= event.startDate?.slice(0, 10) ?? 'A definir' %><% if (event.endDate) { %> a <%= event.endDate.slice(0, 10) %><% } %></span>
+            <span style="display: flex; align-items: center; gap: 0.5rem;">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9.6 9.6 0 0 1 18 0z"/>
+                    <circle cx="12" cy="10" r="3"/>
+                </svg>
+                <strong>Local:</strong> Presencial / Online</span>
         </div>
 
         <% if (event.information) { %>
@@ -36,11 +48,17 @@
                         <% } %>
 
                         <div class="activity-meta">
-                            <% if (activity.startsAt) { %><span>⏰ Início: <%= activity.startsAt.replace('T', ' ') %></span><% } %>
-                            <% if (activity.location) { %><span>📍 <%= activity.location %></span><% } %>
-                            <span>👥 Vagas: <%= activity.capacity %></span>
-                            <span>💵 Valor: <strong><%= activity.price > 0 ? `R$ ${activity.price.toFixed(2)}` : 'Gratuito' %></strong></span>
-                            <% if (minimumAge) { %><span>🔞 Idade mínima: <%= minimumAge %> anos</span><% } %>
+                            <% if (activity.startsAt) { %><span>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><title>calendar-clock</title><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M16 14v2.2l1.6 1M16 2v3m5 2.338V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h2.338M3 9h5.859M8 2v3"/><circle cx="16" cy="16" r="6"/></g></svg>
+                                Início: <%= activity.startsAt.replace('T', ' ') %></span><% } %>
+                            <% if (activity.location) { %><span> <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><title>map-pin</title><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9.6 9.6 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></g></svg> <%= activity.location %></span><% } %>
+                            <span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><title>users</title><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M16 3.128a4 4 0 0 1 0 7.744M22 21v-2a4 4 0 0 0-3-3.87"/><circle cx="9" cy="7" r="4"/></g></svg>
+                                 Vagas: <%= activity.capacity %></span>
+                            <span>
+                                 Valor: <strong><%= activity.price > 0 ? `R$ ${activity.price.toFixed(2)}` : 'Gratuito' %></strong></span>
+                            <% if (minimumAge) { %><span>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24"><title>ban</title><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M4.929 4.929L19.07 19.071"/></g></svg>
+                                Idade mínima: <%= minimumAge %> anos</span><% } %>
                         </div>
 
                         <% if (locals.user) { %>

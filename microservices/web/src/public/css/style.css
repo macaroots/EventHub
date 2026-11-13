@@ -830,6 +830,354 @@ table.hub-table a:hover {
         position: static;
         width: 100%;
     }
+
+    /* Ajustes finais da área autenticada e dos detalhes da inscrição. */
+    .authenticated-layout + .app-footer {
+        margin-left: 240px;
+        width: calc(100% - 240px);
+    }
+
+    .registration-detail-page {
+        max-width: 920px;
+        padding-top: 2.25rem;
+    }
+
+    .registration-detail-page .page-heading {
+        margin-bottom: 1.25rem;
+    }
+
+    .registration-detail-title {
+        align-items: flex-end;
+        gap: 1.5rem;
+    }
+
+    .registration-detail-title h1 {
+        color: var(--navy-dark);
+        font-size: clamp(2rem, 4vw, 2.8rem);
+        letter-spacing: -.035em;
+        line-height: 1.1;
+    }
+
+    .registration-detail-title .status-pill {
+        margin-bottom: .35rem;
+    }
+
+    .registration-detail-page .page-heading > p.muted {
+        background: transparent;
+        border: 0;
+        font-size: 1rem;
+        padding: 0;
+    }
+
+    .registration-detail-card {
+        background: #fff;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-md);
+        padding: 1.75rem 2rem;
+    }
+
+    .registration-detail-card > p {
+        color: #405675;
+        font-size: 1rem;
+        margin: .85rem 0;
+    }
+
+    .registration-detail-card .notice {
+        margin: 0 0 1.25rem;
+    }
+
+    .registration-detail-card .checkin-form {
+        align-items: flex-end;
+        background: #f8fafc;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        margin: 1.25rem 0;
+        padding: 1rem;
+    }
+
+    .registration-detail-card .checkin-form label {
+        flex: 1;
+    }
+
+    .registration-detail-card .checkin-form input {
+        background: #fff;
+        border: 1px solid #cbd5e1;
+        border-radius: var(--radius-sm);
+        font: inherit;
+        letter-spacing: .12em;
+        margin-top: .35rem;
+        padding: .7rem .8rem;
+        text-transform: uppercase;
+    }
+
+    .registration-detail-card .section-label {
+        border-bottom: 1px solid var(--border-color);
+        margin-top: 1.5rem;
+        padding-bottom: .6rem;
+    }
+
+    .registration-detail-card ul {
+        background: #fffaf0;
+        border: 1px solid #fed7aa;
+        border-radius: var(--radius-sm);
+        color: #9a3412;
+        list-style: none;
+        margin: .75rem 0 1.25rem;
+        padding: .8rem 1rem;
+    }
+
+    .registration-detail-card .btn-danger {
+        margin-top: 1.5rem;
+    }
+
+    @media (max-width: 900px) {
+        .authenticated-layout + .app-footer {
+            margin-left: 0;
+            width: 100%;
+        }
+    }
+
+    @media (max-width: 700px) {
+        .registration-detail-page {
+            padding: 1.5rem 1rem 3rem;
+        }
+
+        .registration-detail-title {
+            align-items: flex-start;
+            flex-direction: column;
+            gap: .75rem;
+        }
+
+        .registration-detail-title .status-pill {
+            margin: 0;
+        }
+
+        .registration-detail-card {
+            padding: 1.25rem;
+        }
+
+        .registration-detail-card .checkin-form {
+            align-items: stretch;
+            flex-direction: column;
+        }
+    }
+
+    /* Inscrições: apresentação responsiva e hierarquia própria da área do participante. */
+    .registration-page {
+        max-width: 1120px;
+    }
+
+    .registration-page-action {
+        font-size: .9rem;
+    }
+
+    .registration-page .data-panel,
+    .organizer-registrations-page .data-panel {
+        overflow: hidden;
+    }
+
+    .registration-empty {
+        padding: 3.25rem 1rem;
+        text-align: center;
+    }
+
+    .registration-empty p {
+        color: var(--text-muted);
+        font-size: 1.05rem;
+        margin-bottom: 1.15rem;
+    }
+
+    .registration-empty-icon {
+        align-items: center;
+        background: #ecfdf5;
+        border: 1px solid #bbf7d0;
+        border-radius: 50%;
+        color: #15803d;
+        display: flex;
+        font-size: 1.2rem;
+        font-weight: 800;
+        height: 3rem;
+        justify-content: center;
+        margin: 0 auto 1rem;
+        width: 3rem;
+    }
+
+    .registration-actions-heading,
+    .registration-actions {
+        text-align: right;
+    }
+
+    .registration-actions .btn-secondary {
+        font-size: .85rem;
+        padding: .4rem .8rem;
+        white-space: nowrap;
+    }
+
+    .registration-detail-title {
+        align-items: flex-start;
+        display: flex;
+        gap: 1rem;
+        justify-content: space-between;
+    }
+
+    .registration-detail-title h1 {
+        margin-top: .35rem;
+    }
+
+    .registration-detail-title .status-pill {
+        margin-top: .65rem;
+    }
+
+    .registration-detail-page .page-heading > p.muted {
+        background: #f8fafc;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-sm);
+        padding: .8rem 1rem;
+    }
+
+    .registration-detail-page .page-heading > p:not(.muted):not(.notice) {
+        color: #405675;
+    }
+
+    .section-label {
+        color: var(--navy-dark);
+        font-weight: 700;
+        margin-top: 1rem;
+    }
+
+    .organizer-registrations-page .page-heading {
+        margin-bottom: 1.25rem;
+    }
+
+    .organizer-registrations-page .stats-line {
+        background: #fff;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-sm);
+        margin-top: 1rem;
+        padding: .9rem 1rem;
+    }
+
+    .status-text {
+        color: var(--navy-dark);
+        font-weight: 700;
+    }
+
+    .registration-filters {
+        align-items: center;
+        background: #fff;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-sm);
+        gap: .35rem;
+        padding: .35rem;
+    }
+
+    .registration-filters a,
+    .registration-filters strong {
+        border-radius: 4px;
+        padding: .45rem .7rem;
+    }
+
+    .registration-filters strong {
+        background: var(--orange-primary);
+        color: #fff;
+    }
+
+    .organizer-registration-table td {
+        vertical-align: top;
+    }
+
+    .attendance-badge {
+        background: #ecfdf5;
+        border-radius: 999px;
+        color: #15803d;
+        display: inline-block;
+        font-size: .72rem;
+        font-weight: 700;
+        margin-left: .4rem;
+        padding: .15rem .45rem;
+        text-transform: uppercase;
+    }
+
+    .organizer-registration-table input[name="reason"] {
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        font: inherit;
+        max-width: 150px;
+        padding: .4rem .5rem;
+    }
+
+    @media (max-width: 700px) {
+        .events-section-header,
+        .registration-detail-title {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+
+        .registration-detail-title .status-pill {
+            margin-top: 0;
+        }
+
+        .registration-page .hub-table,
+        .organizer-registration-table .hub-table {
+            display: block;
+            overflow: visible;
+            white-space: normal;
+        }
+
+        .registration-page .hub-table thead,
+        .organizer-registration-table .hub-table thead {
+            display: none;
+        }
+
+        .registration-page .hub-table tbody,
+        .registration-page .hub-table tr,
+        .organizer-registration-table .hub-table tbody,
+        .organizer-registration-table .hub-table tr {
+            display: block;
+        }
+
+        .registration-page .hub-table tr,
+        .organizer-registration-table .hub-table tr {
+            border-bottom: 1px solid var(--border-color);
+            padding: .8rem 0;
+        }
+
+        .registration-page .hub-table td,
+        .organizer-registration-table .hub-table td {
+            align-items: center;
+            border: 0;
+            display: flex;
+            gap: .75rem;
+            justify-content: space-between;
+            padding: .45rem .2rem;
+            text-align: right;
+        }
+
+        .registration-page .hub-table td::before,
+        .organizer-registration-table .hub-table td::before {
+            color: var(--text-muted);
+            content: attr(data-label);
+            font-size: .75rem;
+            font-weight: 700;
+            text-align: left;
+            text-transform: uppercase;
+        }
+
+        .registration-actions {
+            justify-content: flex-end !important;
+        }
+
+        .registration-filters {
+            align-items: stretch;
+            flex-direction: column;
+        }
+
+        .registration-filters a,
+        .registration-filters strong {
+            text-align: center;
+        }
+    }
 }
 
 /* Componentes compartilhados das telas de operação */
@@ -1605,5 +1953,108 @@ table.hub-table a:hover {
     .filter-select {
         border-left: none;
         border-top: 1px solid var(--border-color);
+    }
+}
+
+/* Área autenticada: o rodapé acompanha o conteúdo, não a sidebar fixa. */
+.authenticated-layout + .app-footer {
+    margin-left: 240px;
+    width: calc(100% - 240px);
+}
+
+.registration-detail-page {
+    max-width: 920px;
+    padding-top: 2.25rem;
+}
+
+.registration-detail-page .page-heading {
+    margin-bottom: 1.25rem;
+}
+
+.registration-detail-title {
+    align-items: flex-end;
+    gap: 1.5rem;
+}
+
+.registration-detail-title h1 {
+    color: var(--navy-dark);
+    font-size: clamp(2rem, 4vw, 2.8rem);
+    letter-spacing: -.035em;
+    line-height: 1.1;
+}
+
+.registration-detail-card {
+    background: #fff;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    padding: 1.75rem 2rem;
+}
+
+.registration-detail-card > p {
+    color: #405675;
+    font-size: 1rem;
+    margin: .85rem 0;
+}
+
+.registration-detail-card .checkin-form {
+    align-items: flex-end;
+    background: #f8fafc;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    margin: 1.25rem 0;
+    padding: 1rem;
+}
+
+.registration-detail-card .checkin-form label {
+    flex: 1;
+}
+
+.registration-detail-card .checkin-form input {
+    background: #fff;
+    border: 1px solid #cbd5e1;
+    border-radius: var(--radius-sm);
+    font: inherit;
+    letter-spacing: .12em;
+    margin-top: .35rem;
+    padding: .7rem .8rem;
+    text-transform: uppercase;
+}
+
+.registration-detail-card ul {
+    background: #fffaf0;
+    border: 1px solid #fed7aa;
+    border-radius: var(--radius-sm);
+    color: #9a3412;
+    list-style: none;
+    margin: .75rem 0 1.25rem;
+    padding: .8rem 1rem;
+}
+
+@media (max-width: 900px) {
+    .authenticated-layout + .app-footer {
+        margin-left: 0;
+        width: 100%;
+    }
+}
+
+@media (max-width: 700px) {
+    .registration-detail-page {
+        padding: 1.5rem 1rem 3rem;
+    }
+
+    .registration-detail-title {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: .75rem;
+    }
+
+    .registration-detail-card {
+        padding: 1.25rem;
+    }
+
+    .registration-detail-card .checkin-form {
+        align-items: stretch;
+        flex-direction: column;
     }
 }

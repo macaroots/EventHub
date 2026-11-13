@@ -1,25 +1,32 @@
 <% const pending = registration.requirements.filter(r => !r.fulfilled); %>
-<div class="page-container page-narrow">
-<p class="breadcrumb"><a href="/registrations">Minhas inscrições</a> <span>›</span> Detalhes</p>
+<div class="page-container page-narrow registration-detail-page">
+<p class="breadcrumb"><a href="/registrations">Minhas inscrições</a> <span>›</span> Detalhes da inscrição</p>
 <section class="page-heading">
-    <span class="eyebrow">MINHA INSCRIÇÃO</span>
-    <h1>Inscrição <span class="status-pill status-<%= registration.status %>"><%- include('status', { status: registration.status }) %></span></h1>
+    <div class="registration-detail-title">
+        <div>
+            <span class="eyebrow">MINHA INSCRIÇÃO</span>
+            <h1>Detalhes da inscrição</h1>
+        </div>
+        <span class="status-pill status-<%= registration.status %>"><%- include('status', { status: registration.status }) %></span>
+    </div>
     <p class="muted">
         <% if (registration.event) { %>Evento: <a href="/events/<%= registration.event.id %>"><%= registration.event.name %></a>.<% } %>
         Atividade: <%= registration.activity?.name ?? registration.activityId %>.
     </p>
+</section>
+<section class="registration-detail-card">
 <% const ended = registration.event?.status == 'ended'; %>
 <% if (ended) { %>
     <p class="notice notice-info"><%= registration.attendance ? 'Evento encerrado. Certificado do evento solicitado, com esta atividade.' : 'Evento encerrado. Sem presença nesta atividade: ela não entra no certificado.' %></p>
 <% } %>
 <% if (registration.status == 'confirmed') { %>
-    <p class="notice notice-success">Inscrição confirmada!</p>
+    <p class="notice notice-success"><strong>Inscrição confirmada!</strong> Sua participação está garantida.</p>
 <% if (registration.attendance) { %>
     <p>Presença registrada em <%= dateTime(registration.attendance.checkedInAt) %>.</p>
 <% } else if (!ended) { %>
     <form class="checkin-form" method="post" action="/activities/<%= registration.activityId %>/checkin">
         <input type="hidden" name="registrationId" value="<%= registration.id %>">
-        <label><span>Check-in: código mostrado na sala</span><input name="code" required autocomplete="off" autocapitalize="characters" size="8"></label>
+        <label><span>Código de presença</span><input name="code" required autocomplete="off" autocapitalize="characters" size="8"></label>
         <button class="btn-primary">Registrar presença</button>
     </form>
 <% } %>
@@ -43,14 +50,14 @@
     <p>Vaga reservada. <a href="/payments/<%= registration.payment.id %>">Pagar R$ <%= registration.payment.amount.toFixed(2) %></a> para confirmar.</p>
 <% } %>
 <% if (pending.length) { %>
-    <p>Pendências:</p>
+    <p class="section-label">Pendências</p>
     <ul>
 <% for (const r of pending) { %>
         <li><%- include('requirement', { requirement: r }) %>: aguardando a organização</li>
 <% } %>
     </ul>
 <% } %>
-    <p><a class="btn-secondary" href="">Atualizar</a></p>
+    <p><a class="btn-secondary" href="">Atualizar situação</a></p>
 <% } %>
 <% if (registration.status != 'canceled' && !ended) { %>
     <form method="post" action="/registrations/<%= registration.id %>/cancel" onsubmit="return confirm('Cancelar a inscrição?')">
