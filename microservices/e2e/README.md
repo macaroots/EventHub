@@ -1,6 +1,12 @@
 # E2E (Playwright)
 
-Testa as telas do `web` num navegador real: organizador cria e publica um evento pago; participante se cadastra, se inscreve e paga ([tests/fluxo.spec.js](tests/fluxo.spec.js)).
+Testa as telas do `web` num navegador real:
+
+- [tests/fluxo.spec.js](tests/fluxo.spec.js): organizador cria e publica um evento pago; participante se cadastra, se inscreve e paga.
+- [tests/falha-dependencia.spec.js](tests/falha-dependencia.spec.js): falha de dependência. O teste roda `docker compose stop payment`, faz a inscrição (que funciona, pois a cobrança vai por mensagem), confere que a tela de pagamento mostra erro controlado e o resto do site segue no ar, roda `docker compose start payment` e conclui a compra quando o `PaymentRequested` retido na fila durável é consumido.
+  - Precisa do `docker` local controlando o compose de `microservices/` (não roda contra um `BASE_URL` remoto).
+  - O `start` fica num `finally`: o payment volta mesmo se o teste falhar no meio. Se o processo for interrompido (Ctrl+C), rode `docker compose start payment`.
+  - Só o teste de fluxo: `npx playwright test fluxo`; só o de falha: `npx playwright test falha`.
 
 ```sh
 cd microservices && docker compose up -d --build   # app em http://localhost:3000
