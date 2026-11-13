@@ -1,11 +1,13 @@
 <% const base = `/organizers/activities/${activity.id}/registrations`;
    const filters = [['', 'Todas'], ['pending', 'Pendentes'], ['awaiting_payment', 'Aguardando pagamento'], ['waitlisted', 'Fila de espera'], ['confirmed', 'Confirmadas'], ['canceled', 'Canceladas']]; %>
-<div class="page-container">
+<div class="page-container organizer-registrations-page">
 <p class="breadcrumb"><a href="/organizers/activities/<%= activity.id %>">Atividade</a><% if (event) { %> <span>›</span> <a href="/organizers/events/<%= event.id %>">Evento</a><% } %></p>
 <section class="page-heading">
     <span class="eyebrow">GESTÃO</span>
     <h1>Inscrições: <%= activity.name %></h1>
-    <% if (event) { %><p class="muted">Evento: <%= event.name %> · <%= event.status %></p><% } %>
+    <% if (event) {
+        const eventStatus = { draft: 'rascunho', published: 'publicado', ended: 'encerrado', canceled: 'cancelado' }[event.status] ?? event.status;
+    %><p class="muted">Evento: <%= event.name %> · <span class="status-text"><%= eventStatus %></span></p><% } %>
     <p class="stats-line">
         Ocupação: <%= activity.occupation %>/<%= activity.capacity %> vagas
         (<%= activity.confirmedOccupation %> confirmadas, <%= counts.pending %> pendentes, <%= counts.awaiting_payment %> aguardando pagamento;
@@ -19,17 +21,18 @@
 <% } %>
     </div>
  </section>
- <section class="data-panel">
+ <section class="data-panel organizer-registration-table">
 <% if (!registrations.length) { %>
     <p class="empty-state">Nenhuma inscrição.</p>
 <% } else { %>
     <table class="hub-table">
-        <tr><th>Participante</th><th>Status</th><th>Pendências / motivo</th><th>Ações</th></tr>
+        <thead><tr><th>Participante</th><th>Status</th><th>Pendências / motivo</th><th>Ações</th></tr></thead>
+        <tbody>
 <% for (const r of registrations) { const pending = r.requirements.filter(q => !q.fulfilled); %>
         <tr>
-            <td><%= r.participant?.name ?? r.userId %></td>
-            <td><%- include('../registrations/status', { status: r.status }) %><% if (r.attendance) { %>, presente<% } %></td>
-            <td>
+            <td data-label="Participante"><strong><%= r.participant?.name ?? r.userId %></strong></td>
+            <td data-label="Status"><span class="status-pill status-<%= r.status %>"><%- include('../registrations/status', { status: r.status }) %></span><% if (r.attendance) { %><span class="attendance-badge">Presente</span><% } %></td>
+            <td data-label="Pendências / motivo">
 <% if (r.status == 'canceled') { %>
                 <%= r.reasons.join('; ') %>
 <% } else { if (r.status == 'awaiting_payment') { %>
@@ -40,23 +43,24 @@
 <% if (q.type == 'age verification') { %>
                     <form method="post" action="/organizers/registrations/<%= r.id %>/requirements/<%= q.id %>/fulfill" style="display:inline">
                         <input type="hidden" name="activityId" value="<%= activity.id %>">
-                        <button class="btn-secondary">aprovar</button>
+                        <button class="btn-secondary">Aprovar pendência</button>
                     </form>
 <% } %>
                 </div>
 <% } } %>
             </td>
-            <td>
+            <td data-label="Ações" class="registration-actions">
 <% if (r.status != 'canceled') { %>
                 <form method="post" action="/organizers/registrations/<%= r.id %>/cancel" onsubmit="return confirm('Cancelar a inscrição?')">
                     <input type="hidden" name="activityId" value="<%= activity.id %>">
+                    <button class="btn-link-danger">Cancelar inscrição</button>
                     <input name="reason" placeholder="Motivo">
-                    <button class="btn-link-danger">cancelar</button>
                 </form>
 <% } %>
             </td>
         </tr>
 <% } %>
+        </tbody>
     </table>
 <% } %>
 </section>
