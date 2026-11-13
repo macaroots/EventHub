@@ -63,6 +63,18 @@ body {
     color: #fff;
 }
 
+.header-logo-image {
+    display: block;
+    height: 52px;
+    max-width: 250px;
+    object-fit: contain;
+    width: auto;
+}
+
+.brand-icon {
+    display: none;
+}
+
 .brand-icon {
     display: inline-flex;
     align-items: center;

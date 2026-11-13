@@ -36,7 +36,11 @@ router.get('/events/:id', async (req, res) => {
         }
     }
     const byId = Object.fromEntries(users.map(u => [u.id, u]));
-    const organizers = organizerIds.map(id => ({ id, name: byId[id]?.name ?? byId[id]?.username ?? id, email: byId[id]?.email }));
+    const organizers = organizerIds.map(id => ({
+        id,
+        name: byId[id]?.name || byId[id]?.username || byId[id]?.email || (id == req.user?.sub ? req.user.username : null) || 'Organizador',
+        email: byId[id]?.email,
+    }));
     res.layout('organizers/event', { event, organizers });
 });
 router.post('/events/:id', action(

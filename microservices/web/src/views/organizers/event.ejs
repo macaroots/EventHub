@@ -116,8 +116,8 @@
         <% for (const organizer of organizers) { %>
             <li>
                 <div class="organizer-identity">
-                    <span class="organizer-avatar"><%= (organizer.name || organizer.id).slice(0, 1).toUpperCase() %></span>
-                    <span><strong><%= organizer.name %></strong><small><%= organizer.email ?? 'E-mail não informado' %></small></span>
+                    <span class="organizer-avatar"><%= (organizer.name || 'O').slice(0, 1).toUpperCase() %></span>
+                    <span><strong><%= organizer.name || 'Organizador' %></strong><small><%= organizer.email ?? 'E-mail não informado' %></small></span>
                 </div>
                 <% if (organizer.id == event.createdBy) { %><span class="creator-badge">Criador</span><% } else if (!canceled) { %>
                 <form method="post" action="<%= base %>/organizers/<%= organizer.id %>/delete"><button class="btn-link-danger" type="submit">Remover</button></form>
