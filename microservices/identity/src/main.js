@@ -25,10 +25,10 @@ const userRepository = new UserRepository(database);
 const hasher = new BcryptHasher();
 const userService = new UserAppService(userRepository, messageBus, hasher);
 
-app.get('/users', authenticate(), (req, res) => {
+app.get('/users', authenticate(), async (req, res) => {
     const { username } = req.query;
-    if (username == null) return res.json(userRepository.list());
-    const user = userRepository.getByUsername(username);
+    if (username == null) return res.json(await userRepository.list());
+    const user = await userRepository.getByUsername(username);
     if (!user) return res.status(404).json(`User ${username} not found`);
     res.json(user);
 });

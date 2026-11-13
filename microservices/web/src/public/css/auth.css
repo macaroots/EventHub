@@ -65,6 +65,14 @@ html, body.auth-body {
     gap: 0.75rem;
 }
 
+.brand-logo-image {
+    display: block;
+    height: 385px;
+    max-width: 210px;
+    object-fit: contain;
+    width: auto;
+}
+
 .logo-box {
     display: inline-flex;
     align-items: center;
