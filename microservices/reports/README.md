@@ -113,6 +113,21 @@ Para testar sem broker, popule o SQLite direto:
 python dev/seed_report.py --event-id event-1 --organizer org-1
 ```
 
+Para visualizar exemplos na aba Relatórios do frontend com o Docker Compose em execução,
+rode a partir da raiz do repositório (use IDs de usuários já cadastrados):
+
+```sh
+python microservices/reports/dev/seed_frontend.py --organizer USER_ID --co-organizer OTHER_USER_ID
+```
+
+O segundo organizador é opcional. O script cria o evento `[DEMO Reports] Congresso de
+Tecnologia 2026` e duas atividades pela API da secretaria, adiciona 36 inscrições,
+pagamentos e presenças fictícios somente à projeção do reports e imprime o link do
+evento. As telas operacionais de inscrições e pagamentos não recebem esses mocks.
+Reexecutar o comando reutiliza o evento e não duplica os dados. O script também
+verifica a página do evento, a segunda página de participantes e o download XLSX
+pelas rotas do web, sem imprimir tokens nem alterar senhas de usuários.
+
 Para subir localmente e publicar a sequência de exemplo:
 
 ```sh

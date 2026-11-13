@@ -1179,6 +1179,24 @@ table.hub-table a:hover {
     }
 
     /* Gestão do evento: estilos isolados para a navegação por abas. */
+    .event-management .report-metrics {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 1rem;
+        margin: 1.5rem 0;
+    }
+    .event-management .report-metrics > div {
+        padding: 1rem;
+        border: 1px solid var(--border-color);
+        border-radius: .65rem;
+        background: #f8fafc;
+    }
+    .event-management .report-metrics dt { color: #64748b; font-size: .85rem; }
+    .event-management .report-metrics dd { margin: .5rem 0 0; font-size: 1.3rem; font-weight: 700; }
+    .event-management .report-pagination { display: flex; align-items: center; gap: 1rem; margin-top: 1rem; }
+    .event-management #panel-reports h3 { margin-top: 1.5rem; }
+    .event-management #panel-reports [hidden] { display: none; }
+    .event-management #panel-reports button:disabled { opacity: .55; cursor: wait; }
     .event-management .event-tabs {
         border-bottom: 1px solid var(--border-color);
         display: flex;
