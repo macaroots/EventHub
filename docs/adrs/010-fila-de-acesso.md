@@ -7,7 +7,7 @@ Status: Aceito
 ## Contexto
 A arquitetura previa uma "fila de acesso" (`/queue`, websocket) no Credenciamento. Ela seria uma sala de espera para picos, como milhares de pessoas na abertura das inscrições.
 
-Ela é diferente da fila de espera por vaga ([ADR 008](008-vaga-e-pagamento-como-status.md), [ADR 009](009-posicao-na-fila-de-espera.md)):
+Ela é diferente da fila de espera por vaga ([ADR 008](008-controle-de-vagas-no-credenciamento.md), [ADR 009](009-posicao-na-fila-de-espera.md)):
 
 | | Fila de espera (`waitlisted`) | Fila de acesso |
 |---|---|---|
@@ -42,6 +42,6 @@ Ela é diferente da fila de espera por vaga ([ADR 008](008-vaga-e-pagamento-como
 - Gatilhos para revisar: carga medida na abertura que o rate limit e a escala horizontal não absorvem, ou bots disputando vagas.
 
 ## Referências
-- [008-vaga-e-pagamento-como-status.md](008-vaga-e-pagamento-como-status.md)
+- [008-controle-de-vagas-no-credenciamento.md](008-controle-de-vagas-no-credenciamento.md)
 - [009-posicao-na-fila-de-espera.md](009-posicao-na-fila-de-espera.md)
 - [../arquitetura.md](../arquitetura.md)

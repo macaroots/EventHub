@@ -41,7 +41,7 @@ Cada serviço é dono dos seus dados e não lê o banco de outro. No protótipo,
 
 ### Credenciamento (`registration`)
 - **Capacidade:** garantir a vaga do participante. Inscrição, elegibilidade, capacidade sob concorrência, fila de espera com promoção, reserva com prazo de pagamento e gestão das inscrições pelo organizador e check-in por código da atividade ([ADR 012](adrs/012-forma-do-checkin.md)).
-- **Dados próprios:** `registrations` `{id, userId, activityId, status: pending | waitlisted | awaiting_payment | confirmed | canceled, requirements[], reasons[], payment {id, amount, description, requestedAt, paid}, createdAt}`, mais a `version` da atividade, usada no lock otimista ([ADR 008](adrs/008-vaga-e-pagamento-como-status.md)); `checkins` `{activityId, status: open | closed, code, openedAt}`; `attendances` `{id, registrationId (único), activityId, userId, method: code | manual, checkedInBy, checkedInAt}`.
+- **Dados próprios:** `registrations` `{id, userId, activityId, status: pending | waitlisted | awaiting_payment | confirmed | canceled, requirements[], reasons[], payment {id, amount, description, requestedAt, paid}, createdAt}`, mais a `version` da atividade, usada no lock otimista ([ADR 008](adrs/008-controle-de-vagas-no-credenciamento.md)); `checkins` `{activityId, status: open | closed, code, openedAt}`; `attendances` `{id, registrationId (único), activityId, userId, method: code | manual, checkedInBy, checkedInAt}`.
 - **Projeções:**
   - `activities` `{id, eventId, name, startsAt, endsAt, capacity, price, rules}`: cópia imutável, criada uma vez pelo `EventPublished`;
   - `events` `{id, name, status: published | canceled, organizers[]}`: vem do `EventPublished`, `EventCanceled` e `EventOrganizersChanged`; os organizers autorizam a gestão das inscrições;
@@ -77,8 +77,8 @@ A divisão em serviços segue os contextos, e eles têm perfis de carga diferent
 
 | Serviço | Carga | Gargalo | Como escala | Gatilho |
 |---|---|---|---|---|
-| `web` (BFF) | Todo o tráfego HTML, mais o polling da fila de espera | Requisições por segundo; caches por instância | Na horizontal, porque não tem estado. Página pública sem sessão e cacheável ([ADR 015](adrs/015-cache-do-catalogo-publico.md)) | CPU ou latência alta |
-| `secretariat` | Escrita baixa (organizadores). Leitura pública alta na abertura das inscrições | Uma instância no protótipo (SQLite) | Cache HTTP e micro-cache no BFF; CDN com pico real ([ADR 015](adrs/015-cache-do-catalogo-publico.md)); réplicas depois do Postgres | Pico de leitura que o cache não absorve |
+| `web` (BFF) | Todo o tráfego HTML, mais o polling da fila de espera | Requisições por segundo; caches por instância | Na horizontal, porque não tem estado. Página pública sem sessão e cacheável ([ADR 015](adrs/015-catalogo-publico.md)) | CPU ou latência alta |
+| `secretariat` | Escrita baixa (organizadores). Leitura pública alta na abertura das inscrições | Uma instância no protótipo (SQLite) | Cache HTTP e micro-cache no BFF; CDN com pico real ([ADR 015](adrs/015-catalogo-publico.md)); réplicas depois do Postgres | Pico de leitura que o cache não absorve |
 | `registration` | Escrita concorrente na abertura das inscrições; check-in na abertura das atividades | Uma instância no protótipo (SQLite); lock otimista por atividade; a `Activity` carregada com todas as inscrições | Postgres e réplicas do serviço ([ADR 014](adrs/014-varias-instancias-por-servico.md)); rate limit; processamento serial por atividade e sala de espera na borda ([ADR 010](adrs/010-fila-de-acesso.md)) | Conflitos de lock ou CPU saturada no pico |
 | `identity` | Logins na abertura das inscrições | Uma instância no protótipo; hash de senha (CPU), quando houver | Réplicas, depois do Postgres. Os outros serviços validam o JWT localmente, então o `identity` não está no caminho de cada requisição | Login lento no pico |
 | `payment` | Acompanha as inscrições pagas | Latência do gateway externo | Assíncrono: a fila absorve. Consumidores concorrentes depois do Postgres | Fila `payment` crescendo |
@@ -102,8 +102,8 @@ Um contexto pode virar mais de um deployable quando uma parte tiver carga ou dis
 |---|---|---|---|
 | `registration` | Check-in | Pico do check-in afetando as inscrições, ou operação offline no local | [ADR 012](adrs/012-forma-do-checkin.md) |
 | `registration` | Processamento de inscrições (fila durável e consumidor por atividade) | Disputa pelo lock que o rate limit e as réplicas não resolvem | [ADR 010](adrs/010-fila-de-acesso.md) |
-| `secretariat` | Leitura do catálogo (projeção própria do `EventPublished`) | Pico de leitura que cache e CDN não absorvem | [ADR 015](adrs/015-cache-do-catalogo-publico.md) |
-| `web` | BFF público (cacheável) e BFF autenticado | Perfis de carga e de deploy diferentes | [ADR 015](adrs/015-cache-do-catalogo-publico.md) |
+| `secretariat` | Leitura do catálogo (projeção própria do `EventPublished`) | Pico de leitura que cache e CDN não absorvem | [ADR 015](adrs/015-catalogo-publico.md) |
+| `web` | BFF público (cacheável) e BFF autenticado | Perfis de carga e de deploy diferentes | [ADR 015](adrs/015-catalogo-publico.md) |
 | `identity` | Troca por um IdP (Keycloak, Auth0) | Login social, MFA ou carga de login | — |
 
 ## O que já temos

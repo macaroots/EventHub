@@ -11,7 +11,7 @@ Cada serviço é dono dos seus dados e não lê o banco de outro ([ADR 001](001-
 
 Em produção, as necessidades dos serviços atuais são parecidas:
 - gravar o estado e as mensagens na mesma transação (outbox);
-- garantir invariantes sob concorrência, como a capacidade da atividade ([ADR 008](008-vaga-e-pagamento-como-status.md));
+- garantir invariantes sob concorrência, como a capacidade da atividade ([ADR 008](008-controle-de-vagas-no-credenciamento.md));
 - ter unicidade (username, uma presença por inscrição) e consultas por índice;
 - rodar com várias instâncias por serviço ([ADR 014](014-varias-instancias-por-servico.md)).
 
@@ -23,7 +23,7 @@ Em produção, as necessidades dos serviços atuais são parecidas:
 | Serviço | Persistência esperada | Por quê |
 |---|---|---|
 | `identity` | Postgres | Unicidade de username; ou um IdP externo |
-| `secretariat` | Postgres | Evento e atividades com transação; leitura pública atrás de cache ([ADR 015](015-cache-do-catalogo-publico.md)) |
+| `secretariat` | Postgres | Evento e atividades com transação; leitura pública atrás de cache ([ADR 015](015-catalogo-publico.md)) |
 | `registration` | Postgres | Capacidade sob concorrência, lock otimista, trigger de segurança e outbox |
 | `payment` | Postgres | Estado da cobrança e outbox na mesma transação |
 | `report` (planejado) | Postgres com JSONB; data warehouse se crescer | Log só de inserção, consultas agregadas ([ADR 005](005-relatorios.md)) |
@@ -49,6 +49,6 @@ Em produção, as necessidades dos serviços atuais são parecidas:
 - Em produção, vêm backup, migrações de schema e pool de conexões.
 
 ## Referências
-- [008-vaga-e-pagamento-como-status.md](008-vaga-e-pagamento-como-status.md)
+- [008-controle-de-vagas-no-credenciamento.md](008-controle-de-vagas-no-credenciamento.md)
 - [014-varias-instancias-por-servico.md](014-varias-instancias-por-servico.md)
 - [Documentação do PostgreSQL](https://www.postgresql.org/docs/)

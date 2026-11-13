@@ -20,7 +20,7 @@ Erros: `DomainError` (regra de negócio) → 400; `NotFoundError` 404; `Forbidde
 
 `Activity` (nome, horário, capacidade, preço, regras) e o evento (`status`, `organizers`) são cópias imutáveis criadas uma vez pelo `EventPublished` ([ADR 011](../../docs/adrs/011-evento-imutavel-apos-publicacao.md)); depois, só `EventCanceled` (cancela as inscrições), `EventEnded` (certificados) e `EventOrganizersChanged` os alteram; `Participant {id, name}` é projeção de `UserRegistered`/`UserUpdated` do identity (upsert, idempotente). O domínio só conhece o `userId`; o participante só entra na listagem.
 
-### Regras de inscrição ([ADR 008](../../docs/adrs/008-vaga-e-pagamento-como-status.md))
+### Regras de inscrição ([ADR 008](../../docs/adrs/008-controle-de-vagas-no-credenciamento.md))
 
 - A `Activity` é a única porta de escrita: cria a `Registration` (factory), muda o status e promove a fila. O repositório de `Registration` só lê.
 - Status: `pending` (pendências de elegibilidade) → `awaiting_payment` (vaga reservada, `PaymentRequested`) → `confirmed`; sem vaga → `waitlisted`; `canceled`. `pending`, `awaiting_payment` e `confirmed` ocupam vaga.
