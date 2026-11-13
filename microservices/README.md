@@ -1,130 +1,44 @@
 # Microservices
 
-## Rodando com Docker Compose
+## Portas e rede
 
-```sh
-cd microservices
-docker compose up -d --build   # sobe tudo
-docker compose logs -f <serviço>
-docker compose down            # -v para apagar os bancos
-```
-
-| Serviço      | Host                   | Publicado em |
-|--------------|------------------------|--------------|
-| web          | http://localhost:3000  | sempre |
-| registration | http://localhost:3001  | só no dev |
-| secretariat  | http://localhost:3002  | só no dev |
-| identity     | http://localhost:3003  | só no dev |
-| payment      | http://localhost:3004  | só no dev |
-| certificate  | http://localhost:3005  | sempre |
-| reports      | http://localhost:3006  | sempre |
-| RabbitMQ UI  | http://localhost:15673 (guest/guest) | só no dev |
-
-- Só o `web`, o `certificate` e o `reports` publicam porta no `docker-compose.yml`. Os outros ficam na rede interna ([ADR 007](../docs/adrs/007-entrada-unica-sem-api-gateway.md)) e só publicam no [docker-compose.dev.yml](docker-compose.dev.yml), para depuração e Swagger.
-- Dentro do contêiner, os serviços Node escutam na 3000 (`PORT` no compose): cada contêiner tem IP próprio, então não há conflito, e o número de cada serviço só aparece no mapeamento do dev (`"3001:3000"`). Entre serviços, o endereço é `http://<serviço>:3000`. O `certificate` e o `reports` escutam em 3005 e 3006, respectivamente.
-
-- Cada serviço tem seu próprio `<serviço>/Dockerfile` (permite linguagens diferentes no futuro). O build context é `microservices/` para incluir `shared/`, mantendo os imports relativos (`../../shared/...`).
-- O compose define a porta de cada serviço `PORT`; e o endereço do broker `RABBITMQ_URL=amqp://rabbitmq`.
-- AMQP (5672) não é exposto no host, para não conflitar com outro RabbitMQ local. Para rodar um serviço fora do Docker contra este broker, adicione `"5672:5672"` em `ports` do `rabbitmq`.
-- `payment` e `certificate` usam **Python/FastAPI + Uvicorn**. Pagamentos valida o JWT emitido por identidade e consome `PaymentRequested` na exchange `event-hub`. Certificados consome `CertificateRequested` (fila `certificate`). Os serviços se integram por eventos.
-- Pagamentos mantém a porta interna 3000 da main, com acesso local em 3004 pelo compose de desenvolvimento. Seu volume guarda `/app/payment/data/payments.db` por meio de `DB_PATH`.
-- O `certificate` e o `reports` são os serviços em **Python** (FastAPI + Uvicorn). Ambos usam `JWT_SECRET` para validar o token do usuário e consomem eventos do RabbitMQ em filas próprias (`certificate` e `reports`). Não há chamada HTTP entre eles e os demais serviços. O `reports` mantém projeções locais (CQRS) e gera CSV/XLSX/PDF sob demanda.
-
-## Desenvolvimento (hot reload)
-
-```sh
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
-```
-
-[docker-compose.dev.yml](docker-compose.dev.yml) monta `<serviço>/src` e `shared/` do host e roda `node --watch`: salvar um arquivo reinicia o serviço. O `certificate` e o `reports` montam `app/` e rodam `uvicorn --reload`.
-
-- Mudanças em `package.json` (dependências) exigem `--build`.
-- Se um serviço quebrar com erro de sintaxe, ele espera a próxima alteração; se o arquivo for substituído (ex.: `git checkout`), pode ser preciso `docker compose ... restart <serviço>`.
-- Alternativa não usada: `docker compose watch` (`develop.watch`), que sincroniza arquivos em vez de bind mount.
-- Sem dev override: mudanças de código exigem `docker compose up -d --build`.
+- Só o `web` (3000) e o `certificate` (3005, link público de validação) publicam porta no `docker-compose.yml`. Os outros ficam na rede interna ([ADR 007](../docs/adrs/007-entrada-unica-sem-api-gateway.md)) e só publicam no [docker-compose.dev.yml](docker-compose.dev.yml).
+- Dentro do contêiner, os serviços Node e o payment escutam na 3000 (`PORT`); entre serviços, o endereço é `http://<serviço>:3000`. `certificate` e `reports` escutam em 3005 e 3006.
+- O build context é `microservices/`, para incluir `shared/` com imports relativos (`../../shared/...`).
+- AMQP (5672) não é exposto no host. Para rodar um serviço fora do Docker contra este broker, adicione `"5672:5672"` ao `rabbitmq`.
 
 ## Persistência
 
-Cada serviço (menos o identity, em Postgres) tem seu SQLite (`node:sqlite`) em `<serviço>/data/<serviço>.db`, num volume `<serviço>-data` do compose. O banco é aberto por [shared/infrastructure/sqlite.js](shared/infrastructure/sqlite.js), e os repositórios estendem [SqliteRepository](shared/infrastructure/sqlite.repository.js), que tem `upsert` para as projeções. `MapRepository` (em memória) fica para os testes.
-
-- Um banco por serviço: nenhum serviço lê a tabela de outro. O que vem de fora chega por mensagem e vira projeção local. Capacidade de negócio, dados e projeções de cada serviço: [docs/arquitetura.md](../docs/arquitetura.md#capacidades-de-negócio-dados-e-projeções).
-- Estado e mensagens são gravados na mesma transação (outbox). Ver [Entrega das mensagens](#entrega-das-mensagens).
-
-## Documentação da API (Swagger)
-
-Cada serviço serve o Swagger UI em `/docs` e o contrato em `/openapi.yaml` (ex.: http://localhost:3001/docs). Ambos são públicos. No Swagger UI, "Authorize" recebe o `token` de `POST /auth/login` do identity.
-
-No pagamento Python, o contrato é gerado pelo FastAPI em `/openapi.json`. Para executar fora do Docker, em `microservices/payment`, use `uv run --env-file ../.env uvicorn src.main:app --port 3004 --reload`. Identidade e pagamentos precisam do mesmo `JWT_SECRET`, e o broker deve estar acessível no endereço definido em `RABBITMQ_URL`.
-
-- O contrato é escrito à mão em `<serviço>/src/openapi.yaml` e servido por [shared/application/api-docs.js](shared/application/api-docs.js) (`swagger-ui-express`). Rota nova → documentar no YAML.
-- O teste `test/openapi.test.js` de cada serviço falha se houver rota sem documentação ou documentação sem rota. Ele não confere corpos nem respostas.
-- O web (BFF) não tem API própria: são telas.
-- Alternativas: anotações JSDoc por rota (`swagger-jsdoc`), que espalham YAML nos comentários; geração automática (`swagger-autogen`), que não enxerga as rotas do `CrudController` nem os corpos; ou schemas de validação (zod + `zod-to-openapi`), que geram o contrato e validam a entrada, mas exigem refatorar as rotas.
-- Depois de mudar dependências do `shared`, suba com `--build`.
+- Um banco por serviço: SQLite em `<serviço>/data/` (volume `<serviço>-data`), exceto o identity, em Postgres (`identity-db`, migrações na subida). [ADR 000](../docs/adrs/000-escolha-banco.md).
+- O que vem de outro serviço chega por mensagem e vira projeção local.
+- Mudou o schema de um SQLite? `docker compose down -v` apaga os bancos.
 
 ## Autenticação
 
-Todos os endpoints de secretariat e registration exigem `Authorization: Bearer <token>`. O token vem do identity:
+- `.env` (fora do git, ver [.env.example](.env.example)): `JWT_SECRET`, `INTERNAL_API_TOKEN` e `IDENTITY_DB_PASSWORD`. Sem eles, o identity não inicia.
+- O identity emite JWT HS256 com `{userId, username, email}` (validade `JWT_EXPIRES_IN`, 1h no compose). Os demais validam com o mesmo `JWT_SECRET` ([shared/auth/jwt.js](shared/auth/jwt.js)).
+- Sem papel de admin no token: quem gerencia um evento é quem está nos `organizers` dele.
+- Trade-off: com HS256, quem verifica tokens também consegue emiti-los. Alternativa: RS256.
 
-```sh
-curl -X POST localhost:3003/auth/register -H 'Content-Type: application/json' -d '{"name":"Ana","username":"ana","email":"ana@ex.com","password":"12345678"}'
-curl -X POST localhost:3003/auth/login -H 'Content-Type: application/json' -d '{"username":"ana","password":"12345678"}'  # -> {token, expiresIn}
-```
+## API (Swagger)
 
-- JWT HS256 com payload `{userId, name}`, validade `JWT_EXPIRES_IN` (compose: 1h). O identity assina; os demais validam com [shared/auth/jwt.js](shared/auth/jwt.js) (`req.user = {id, name}`). Todos usam o mesmo `JWT_SECRET`.
-- O nome no token evita chamar `GET /me` só para exibir. Trade-off: depois de `PATCH /me`, o nome antigo fica no token até ele expirar. O e-mail ficou fora: o JWT é legível por quem o tem e o e-mail muda; quem precisar usa `/internal`.
-- `.env` (em `microservices/`, fora do git): `JWT_SECRET`, `INTERNAL_API_TOKEN` (rotas `/internal` do identity) e `IDENTITY_DB_PASSWORD`. Sem eles, o compose sobe com valores vazios e o identity não inicia.
-- O identity usa Postgres (`identity-db`, volume `identity-db-data`) e roda as migrações (`scripts/migrate.js`) na subida. Os demais continuam em SQLite ([ADR 000](../docs/adrs/000-escolha-banco.md)).
-- Sem papel de admin: o token não tem role. Quem gerencia um evento é quem está em `organizers` (o código `isAdmin` ficou, mas nunca é verdadeiro).
-- Trade-off: com HS256, qualquer serviço que verifica tokens também consegue emiti-los. Alternativa: RS256 (identity assina com chave privada; os demais têm só a pública).
-- Limitações: payment ainda sem auth; o seed `002_seed.sql` cria 3 usuários com hash placeholder (não fazem login nem chegam ao registration).
+- Serviços Node: contrato escrito à mão em `<serviço>/src/openapi.yaml`, servido em `/openapi.yaml` e `/docs`. O `test/openapi.test.js` de cada um falha se houver rota sem documentação ou vice-versa.
+- Serviços Python: contrato gerado pelo FastAPI em `/openapi.json` e `/docs`.
+- No Swagger, "Authorize" recebe o `token` de `POST /auth/login` do identity.
+
+## Entrega das mensagens
+
+Contrato de cada mensagem, quem produz e quem consome: [contracts/README.md](contracts/README.md).
+
+Nos serviços Node, [OutboxMessageBus](shared/messaging/outbox-message-bus.js) fica na frente do [RabbitMqMessageBus](shared/messaging/rabbitmq-message-bus.js):
+
+- **Outbox:** `messageBus.transaction(() => { repo.update(x); messageBus.publish(m); })` grava estado e mensagem juntos. Um relay envia depois do commit (a cada 1 s) e só apaga quando o broker confirma. Com o broker fora do ar, as mensagens esperam no banco, na ordem.
+- **Envelope:** `{id, type, source, time, data}`. Os handlers recebem `(data, envelope)`.
+- **Inbox:** o consumidor guarda o `id` tratado e ignora repetidas (entrega *pelo menos uma vez*; handlers idempotentes).
+- **Retry e DLQ:** falha no handler → `<fila>.retry` (`MESSAGE_RETRY_DELAY_MS`, padrão 5000), até `MESSAGE_MAX_ATTEMPTS` (padrão 5); depois `<fila>.dlq`. Para reprocessar, mova as mensagens da DLQ para a fila na UI do RabbitMQ.
+- **Logs:** cada mensagem gera uma linha `[<fila>] <type> id=… attempt=n/MAX` (ex.: `docker compose logs payment | grep falhou`).
+- Limitações: mensagem em retry perde a ordem; `transaction()` exige função síncrona (node:sqlite com uma conexão).
 
 ## Web (BFF)
 
-`web` renderiza as páginas no servidor (Express + EJS) e é o BFF: chama os serviços pela rede interna do docker, repassando o JWT do cookie `token` (httpOnly) como `Authorization: Bearer`.
-
-```
-web/src/
-  main.js        # só monta o app
-  middleware/    # authenticate (sem token → /auth/login), layout (res.layout)
-  clients/       # um arquivo por serviço; http.js é o cliente genérico
-  routes/        # express.Router por feature
-  views/
-```
-
-- URLs dos serviços: `IDENTITY_URL`, `SECRETARIAT_URL`, `REGISTRATION_URL`, `PAYMENT_URL` (definidas no compose).
-- Não há API Gateway: com SSR, o browser só fala com o `web`. Se surgir uma SPA, um app mobile ou terceiros, coloque um gateway de infra (Traefik/Nginx), que roteia por configuração e não precisa de código por endpoint.
-- Os clients expõem só o que as telas usam. Se virar repasse puro, uma alternativa é usar um proxy (`http-proxy-middleware`).
-- Telas: ver [web/README.md](web/README.md).
-- Testes das telas no navegador (Playwright): ver [e2e/README.md](e2e/README.md).
-
-## Entidades de domínio
-
-- Estado em campos privados (`#name`), validado por setters privados (`#setName`). Invariantes que envolvem mais de um campo (ex.: período) ficam em um único setter.
-- `X.create(props)` cria uma entidade nova (gera o id e define o estado inicial); `new X(props)` reconstitui a partir do banco. Os dois recebem um objeto desestruturado.
-- `update(changes)` faz PATCH (só altera campos definidos e ignora `id`). `null` limpa um campo opcional, ex.: `{ "endDate": null }`. `Event.endDate` e `Activity.endsAt` são opcionais; para publicar um evento, só o `startDate` é exigido. O id vem separado, na camada de aplicação: `service.update(id, changes)`.
-- `toJSON()` lista os campos explicitamente e é usado para persistência e mensagens.
-- Limitação: se um setter falha no meio do `update`, a instância fica parcialmente alterada em memória. Isso é inofensivo porque o repositório não salva quando há exceção.
-
-## Mensagens
-
-Contrato completo (transporte, envelope, cada mensagem com JSON Schema, quem produz e quem consome, fluxos): [contracts/README.md](contracts/README.md).
-
-Pagar: `POST localhost:3004/payments/:id/pay {"receipt": "..."}`; consultar: `GET /payments/:id`. O gateway é uma porta (`verify(payment, receipt)`); o adaptador atual é fake e recusa o comprovante `deny`.
-
-### Entrega das mensagens
-
-[OutboxMessageBus](shared/messaging/outbox-message-bus.js) fica na frente do [RabbitMqMessageBus](shared/messaging/rabbitmq-message-bus.js), em cada serviço.
-
-- **Outbox:** `messageBus.transaction(() => { repo.update(x); messageBus.publish(m); })` grava o estado e a mensagem (tabela `outbox`) juntos. Um relay envia ao broker depois do COMMIT (logo em seguida e a cada 1 s) e apaga a linha só quando o broker confirma (confirm channel). Se o broker estiver fora do ar, as mensagens esperam no banco, na ordem.
-- **Envelope:** o outbox embrulha a mensagem do domínio em `{id, type, source, time, data}` ([contracts](contracts/README.md#envelope)). `source` vem de `new OutboxMessageBus(db, broker, { source: '<serviço>' })` (obrigatório). Os handlers recebem `(data, envelope)`.
-- **Migração:** mensagens no formato antigo (sem `data`) que tenham ficado no outbox ou nas filas vão para a DLQ. Em dev, `docker compose down -v`.
-- **Idempotência:** o consumidor guarda o `id` na tabela `inbox` depois de tratar e ignora repetidas. Entradas com mais de 30 dias são apagadas na subida.
-- **Retry e DLQ:** se o handler falha, a mensagem vai para `<fila>.retry`, volta depois de `MESSAGE_RETRY_DELAY_MS` (padrão 5000) e é tentada até `MESSAGE_MAX_ATTEMPTS` (padrão 5) vezes. Depois vai para `<fila>.dlq`, com os headers `x-attempt` e `x-error`. Para reprocessar, use "Move messages" da DLQ para a fila na UI do RabbitMQ (requer o plugin shovel).
-- **Logs do consumo:** cada mensagem recebida, repetida ou com falha gera uma linha `[<fila>] <type> id=… source=… attempt=n/MAX`. Ex.: `docker compose logs payment | grep 'falhou'`.
-- **Trade-offs:**
-  - A entrega é *pelo menos uma vez*. A inbox é gravada depois do handler, fora da transação dele (os handlers são assíncronos). Se o serviço cair entre as duas coisas, a mensagem é tratada de novo, então os handlers continuam idempotentes.
-  - Uma mensagem em retry perde a ordem em relação às seguintes.
-  - `transaction()` exige uma função síncrona (node:sqlite com uma conexão só: um `await` deixaria outras requisições escreverem dentro da transação).
-  - Com várias instâncias no mesmo banco, dois relays podem enviar a mesma linha. A inbox do consumidor descarta a repetida.
-- Alternativas: CDC (Debezium) lendo o log do banco, em vez do relay por polling; ou atraso exponencial com o plugin `rabbitmq-delayed-message-exchange`, em vez da fila de retry com TTL fixo.
+`web` renderiza as telas no servidor (Express + EJS) e repassa o JWT do cookie `token` (httpOnly) como `Authorization: Bearer`. Um client por serviço em `web/src/clients/`, um router por feature em `web/src/routes/`. Telas: [web/README.md](web/README.md).

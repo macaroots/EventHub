@@ -1,25 +1,22 @@
 # Contratos entre serviços (RQ05)
 
-- Mensagens: JSON Schema (draft 2020-12), um arquivo por mensagem em [messages/](messages/). Os campos comuns ficam em [envelope.schema.json](messages/envelope.schema.json).
-- HTTP: o `openapi.yaml` de cada serviço (ver [HTTP](#http-síncrono)).
-- Teste: `cd contracts && npm i && npm test` valida os exemplos dos schemas e as mensagens que os domínios atuais geram ([test/messages.test.js](test/messages.test.js)). Se mudar uma mensagem, mude o schema junto.
+- Mensagens: um JSON Schema por mensagem em [messages/](messages/), com os campos comuns em [envelope.schema.json](messages/envelope.schema.json).
+- HTTP: o `openapi.yaml` de cada serviço Node e o OpenAPI gerado pelo FastAPI nos serviços Python. Só o `web` chama os serviços por HTTP.
+- Teste: `npm i && npm test` valida os exemplos dos schemas e as mensagens que os domínios geram ([test/messages.test.js](test/messages.test.js)). Mudou uma mensagem, mude o schema junto.
 
 ## Transporte (RabbitMQ)
 
 | Item | Valor |
 |------|-------|
-| Exchange | `event-hub`, tipo `topic`, durável |
-| Routing key | o nome da mensagem (`type`), ex.: `PaymentRequested` |
-| Propriedades AMQP | `persistent: true`, `contentType: application/json`; `messageId`, `type` e `appId` iguais a `id`, `type` e `source` do envelope |
-| Corpo | JSON em UTF-8: o envelope, com o conteúdo da mensagem em `data` |
-| Fila do consumidor | uma fila durável por serviço, com o nome do serviço (`identity`, `payment`, `registration`, `secretariat`), ligada (bind) à exchange com uma routing key por tipo que ele ouve |
-| Retry | se o handler falha, a mensagem vai para `<fila>.retry` (TTL `MESSAGE_RETRY_DELAY_MS`, padrão 5000 ms), que a devolve para `<fila>`. Header `x-attempt` (começa em 1) e `x-error` |
-| DLQ | depois de `MESSAGE_MAX_ATTEMPTS` (padrão 5) tentativas, vai para `<fila>.dlq` |
+| Exchange | `event-hub`, `topic`, durável |
+| Routing key | o `type` da mensagem, ex.: `PaymentRequested` |
+| Fila | uma fila durável por serviço, com o nome do serviço |
+| Retry / DLQ | `<fila>.retry` (5 s), até 5 tentativas; depois `<fila>.dlq` |
 | Consumo | `prefetch 1`, `ack` só depois de tratar |
 
-### Envelope
+## Envelope
 
-Toda mensagem tem metadados no envelope e o conteúdo em `data` ([envelope.schema.json](messages/envelope.schema.json)):
+Toda mensagem tem metadados no envelope e o conteúdo em `data`.
 
 ```json
 {
@@ -31,106 +28,36 @@ Toda mensagem tem metadados no envelope e o conteúdo em `data` ([envelope.schem
 }
 ```
 
-| Campo | Para quê |
-|-------|----------|
-| `id` | UUID novo por mensagem: idempotência (inbox) |
-| `type` | nome da mensagem: roteamento e escolha do schema |
-| `source` | serviço que publicou: rastreio e logs. Cada tipo tem um único `source` |
-| `time` | quando o fato aconteceu (gravação no outbox) |
-| `data` | conteúdo; o schema de cada tipo o define |
-
-- Os nomes são um subconjunto do [CloudEvents](https://cloudevents.io) 1.0 (modo estruturado). Para ficar conforme, basta acrescentar `specversion: "1.0"`. Ficaram de fora, por enquanto, `specversion`, `datacontenttype`, `dataschema` e `subject`.
-- Separar `data` evita colisão de nomes entre o envelope e o domínio (ex.: o `id` da inscrição em `RegistrationCreated`) e deixa o envelope igual para todas as mensagens.
-- Os handlers recebem `(data, envelope)` ([rabbitmq-message-bus.js](../shared/messaging/rabbitmq-message-bus.js)). Mensagem sem `data` falha e vai para a DLQ.
-
-Obrigações de quem implementa um serviço:
-
-- **Produtor:** grava a mensagem na mesma transação do estado (outbox) e só a apaga quando o broker confirmar (publisher confirms). Gera um `id` novo (UUID) por mensagem.
-- **Consumidor:** a entrega é *pelo menos uma vez*. Guarde os `id` já tratados e ignore os repetidos (inbox), e mantenha os handlers idempotentes (ver a coluna "Idempotência" abaixo).
-- **Tolerant reader:** ignore campos desconhecidos. Os schemas não usam `additionalProperties: false`. Campo novo e opcional não quebra o contrato. Remover ou renomear um campo, ou torná-lo obrigatório, quebra: nesse caso, crie um tipo novo (ex.: `EventPublishedV2`).
-- Mensagem inválida: lance erro no handler para que ela vá para a DLQ. Não faça `ack` em silêncio.
-- Correlação (RQ06): ainda não há. Quando houver, entra como campo do envelope (ex.: `correlationid`, extensão do CloudEvents), não em `data`.
+- Subconjunto do [CloudEvents](https://cloudevents.io) 1.0. `id` serve à idempotência (inbox); cada `type` tem um único `source`.
+- **Produtor:** grava a mensagem na mesma transação do estado (outbox) e só apaga quando o broker confirma.
+- **Consumidor:** entrega *pelo menos uma vez*: ignore `id` repetido e mantenha o handler idempotente. Ignore campos desconhecidos (tolerant reader). Mensagem inválida deve falhar e ir para a DLQ.
+- **Evolução:** campo novo opcional não quebra. Remover, renomear ou tornar obrigatório quebra: crie um tipo novo (ex.: `EventPublishedV2`).
 
 ## Mensagens
 
-| Mensagem | Produtor → consumidor | O consumidor deve | Idempotência |
-|----------|-----------------------|-------------------|--------------|
-| [UserRegistered](messages/UserRegistered.schema.json) | identity → registration | criar o participante (`userId`, `name`, `email`) | upsert |
-| [UserUpdated](messages/UserUpdated.schema.json) | identity → registration | atualizar o participante | upsert |
-| [UserDeactivated](messages/UserDeactivated.schema.json) | identity → (ninguém ainda) | futuro: secretaria deixa a conta só com leitura | — |
-| [EventPublished](messages/EventPublished.schema.json) | secretariat → registration | criar a cópia imutável do evento e das atividades e abrir as inscrições | ignora evento/atividade que já existe |
-| [EventOrganizersChanged](messages/EventOrganizersChanged.schema.json) | secretariat → registration | substituir a lista de organizadores (lista completa, não delta) | sobrescreve |
-| [EventCanceled](messages/EventCanceled.schema.json) | secretariat → registration | cancelar todas as inscrições, emitindo `RegistrationCanceled` para cada uma | ignora evento desconhecido ou já cancelado |
-| [EventEnded](messages/EventEnded.schema.json) | secretariat → registration | encerrar o evento, bloquear o check-in e emitir `CertificateRequested` | só age se o evento estiver `published` |
-| [PaymentRequested](messages/PaymentRequested.schema.json) | registration → payment | criar a cobrança pendente com o `paymentId` recebido | ignora `paymentId` existente |
-| [RegistrationCanceled](messages/RegistrationCanceled.schema.json) | registration → payment | cancelar as cobranças pendentes da inscrição | cancelar o que já foi cancelado não muda nada |
-| [PaymentConfirmed](messages/PaymentConfirmed.schema.json) | payment → registration | confirmar a inscrição se ela ainda espera esse `paymentId` | ignora se não espera mais |
-| [PaymentDenied](messages/PaymentDenied.schema.json) | payment → registration | cancelar a inscrição se ela ainda espera esse `paymentId`. A vaga passa para o próximo da fila | ignora se não espera mais |
-| [RegistrationCreated](messages/RegistrationCreated.schema.json) | registration → (ninguém ainda) | futuro: notificações e relatórios | — |
-| [RegistrationPromoted](messages/RegistrationPromoted.schema.json) | registration → (ninguém ainda) | futuro: notificações | — |
-| [RegistrationConfirmed](messages/RegistrationConfirmed.schema.json) | registration → (ninguém ainda) | futuro: notificações | — |
-| [AttendanceRegistered](messages/AttendanceRegistered.schema.json) | registration → (ninguém ainda) | futuro: relatórios | — |
-| [CertificateRequested](messages/CertificateRequested.schema.json) | registration → certificate (ADR 008) | emitir o certificado | por `(participantId, eventId)`; `requestId` = `<eventId>:<participantId>` |
-| [CertificateIssued](messages/CertificateIssued.schema.json) | certificate → (ninguém ainda) | futuro: notificações | publicado só na primeira emissão |
+| Mensagem | Produtor → consumidores | Idempotência |
+|----------|-------------------------|--------------|
+| [UserRegistered](messages/UserRegistered.schema.json) | identity → registration, notification, reports | upsert |
+| [UserUpdated](messages/UserUpdated.schema.json) | identity (não publica hoje) → registration, notification, reports | upsert |
+| [UserDeactivated](messages/UserDeactivated.schema.json) | identity (não publica hoje) → notification | — |
+| [EventPublished](messages/EventPublished.schema.json) | secretariat → registration, reports | ignora o que já existe |
+| [EventOrganizersChanged](messages/EventOrganizersChanged.schema.json) | secretariat → registration, reports | lista completa, sobrescreve |
+| [EventCanceled](messages/EventCanceled.schema.json) | secretariat → registration, reports | ignora evento já cancelado |
+| [EventEnded](messages/EventEnded.schema.json) | secretariat → registration, reports | só age em evento `published` |
+| [PaymentRequested](messages/PaymentRequested.schema.json) | registration → payment, notification, reports | ignora `paymentId` existente |
+| [RegistrationCreated](messages/RegistrationCreated.schema.json) | registration → notification, reports | upsert |
+| [RegistrationPromoted](messages/RegistrationPromoted.schema.json) | registration → reports | upsert |
+| [RegistrationConfirmed](messages/RegistrationConfirmed.schema.json) | registration → notification, reports | upsert |
+| [RegistrationCanceled](messages/RegistrationCanceled.schema.json) | registration → payment, notification, reports | cancelar de novo não muda nada |
+| [PaymentConfirmed](messages/PaymentConfirmed.schema.json) | payment → registration, notification, reports | ignora se a inscrição não espera esse `paymentId` |
+| [PaymentDenied](messages/PaymentDenied.schema.json) | payment → registration, notification, reports | idem |
+| [AttendanceRegistered](messages/AttendanceRegistered.schema.json) | registration → reports | uma presença por inscrição |
+| [CertificateRequested](messages/CertificateRequested.schema.json) | registration → certificate | por participante e evento |
+| `CertificateIssued` (sem schema) | certificate → notification | publicado só na primeira emissão |
 
-Consequências para quem implementa:
+- `PaymentRequested` é um comando (destinatário único); as demais são eventos.
+- O `paymentId` é gerado pelo registration: assim uma resposta atrasada de cobrança antiga é ignorada.
+- Em `RegistrationCreated`, o id da inscrição vem em `data.id`, não em `data.registrationId`.
+- O prazo de pagamento é um job do registration; o payment só sabe pelo `RegistrationCanceled`.
 
-- O **secretariat** não ouve nada e o **identity** também não. As filas deles existem, mas ficam sem bind.
-- Comandos e eventos usam o mesmo transporte. `PaymentRequested` é um comando com um único destinatário, o payment. As demais mensagens são eventos.
-- O `paymentId` é gerado pelo registration, e não pelo payment. Assim o registration sabe qual pagamento espera, e uma resposta atrasada de uma cobrança antiga é ignorada.
-- Em `RegistrationCreated`, o id da inscrição vem em `data.id`, e não em `data.registrationId` (é o `toJSON()` da entidade). Corrigir isso quebra o contrato.
-- O prazo para pagar (`awaiting_payment` → `canceled`, motivo `Payment expired`) é um job interno do registration. Não há mensagem do payment para isso: o payment só fica sabendo por `RegistrationCanceled`.
-
-## Fluxos
-
-```mermaid
-sequenceDiagram
-    participant I as identity
-    participant S as secretariat
-    participant R as registration
-    participant P as payment
-    participant C as certificate (futuro)
-
-    I->>R: UserRegistered / UserUpdated
-    S->>R: EventPublished
-    S->>R: EventOrganizersChanged
-    Note over R: POST /registrations (web)
-    R-->>R: RegistrationCreated (status awaiting_payment)
-    R->>P: PaymentRequested
-    Note over P: POST /payments/:id/pay (web)
-    alt aprovado
-        P->>R: PaymentConfirmed
-        R-->>R: RegistrationConfirmed
-    else recusado
-        P->>R: PaymentDenied
-        R->>P: RegistrationCanceled
-        R-->>R: RegistrationPromoted (próximo da fila) → PaymentRequested...
-    end
-    Note over R: check-in
-    R-->>R: AttendanceRegistered
-    S->>R: EventEnded
-    R->>C: CertificateRequested (um por participante)
-    S->>R: EventCanceled
-    R->>P: RegistrationCanceled (uma por inscrição)
-```
-
-Linhas tracejadas: mensagem publicada sem consumidor por enquanto.
-
-## HTTP (síncrono)
-
-Os serviços não se chamam por HTTP: só o `web` (BFF) chama os serviços. As rotas `/internal` do identity são para isso (BFF ou outro serviço) e exigem `X-Internal-Token` (`INTERNAL_API_TOKEN`). O contrato de cada um é o seu `openapi.yaml`, servido também em `/openapi.yaml` e `/docs`.
-
-| Serviço | Contrato | Rotas usadas pelo web ([web/src/clients](../web/src/clients/)) |
-|---------|----------|--------------------------------|
-| identity | (sem openapi.yaml) [docs/endpoint.md](../../docs/endpoint.md#identidade) | `POST /auth/register`, `POST /auth/login`, `GET /me`; internas (`X-Internal-Token`): `GET /internal/users?email=`, `POST /internal/users/batch {ids}` |
-| payment | [openapi.yaml](../payment/src/openapi.yaml) | `GET /payments/:id`, `POST /payments/:id/pay {receipt}` |
-| registration | [openapi.yaml](../registration/src/openapi.yaml) | inscrições, fila de espera, gestão, check-in ([registration.js](../web/src/clients/registration.js)) |
-
-Autenticação: JWT HS256 com o `JWT_SECRET` compartilhado, enviado em `Authorization: Bearer`, com payload `{userId, name}` (sem role) e validade `JWT_EXPIRES_IN` (compose: 1h). O identity emite o token e os demais o validam. Ver [README](../README.md#autenticação).
-
-## Limitações e alternativas
-
-- Os schemas foram escritos à mão a partir do código. O teste garante que o código atual os segue, mas só nos cenários que ele cobre.
-- Os campos de data do secretariat (`startDate`, `endDate`, `startsAt`, `endsAt`) aceitam qualquer ISO 8601 (data ou data-hora). Por isso os schemas validam só que são `string`.
-- Os consumidores não validam as mensagens contra os schemas em tempo de execução. Seria possível fazer isso no bus, com o custo de um validador em cada serviço.
-- Alternativas: AsyncAPI (descreve canais, filas e bindings AMQP e pode referenciar estes mesmos schemas); um schema registry (Confluent/Apicurio) para versionar os contratos; ou Pact (testes de contrato dirigidos pelo consumidor), quando houver outro time consumindo.
+Limitações: schemas escritos à mão (o teste cobre só os cenários que exercita); os consumidores não validam os schemas em tempo de execução; sem id de correlação (RQ06).
