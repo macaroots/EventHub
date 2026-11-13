@@ -42,4 +42,4 @@ Uma proposta anterior resolvia isso movendo a oferta (`capacity`, `price`, `rule
 - Textos descritivos (descrição, local) não vão para o Credenciamento. Se notificações ou crachás precisarem deles, entram no `EventPublished`.
 
 ## Referências
-- [008-vaga-e-pagamento-como-status.md](008-vaga-e-pagamento-como-status.md)
+- [008-controle-de-vagas-no-credenciamento.md](008-controle-de-vagas-no-credenciamento.md)

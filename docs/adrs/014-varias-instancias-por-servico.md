@@ -13,7 +13,7 @@ No protótipo, cada serviço guarda os dados num SQLite num volume local ([ADR 0
 O [ADR 000](000-escolha-banco.md) define o Postgres para produção. Trocar o banco, porém, não basta.
 
 **O que já aceita várias instâncias:**
-- lock otimista (`version` da `Activity`) e trigger de capacidade no banco ([ADR 008](008-vaga-e-pagamento-como-status.md));
+- lock otimista (`version` da `Activity`) e trigger de capacidade no banco ([ADR 008](008-controle-de-vagas-no-credenciamento.md));
 - inbox com o `id` da mensagem: uma mensagem repetida entre instâncias é ignorada;
 - o RabbitMQ distribui uma fila entre consumidores concorrentes.
 
@@ -37,7 +37,7 @@ Ao migrar um serviço para o Postgres ([ADR 000](000-escolha-banco.md)), ele pas
 ## Justificativa
 - Advisory locks dão eleição de líder sem infraestrutura nova (ZooKeeper, etcd): o próprio banco do serviço decide quem roda o relay e as tarefas.
 - Manter um relay só preserva a ordem das mensagens por serviço, que hoje já é garantida e da qual os consumidores dependem (por exemplo, `EventPublished` antes de `EventCanceled`).
-- O domínio e as invariantes do [ADR 008](008-vaga-e-pagamento-como-status.md) não mudam: só a infraestrutura.
+- O domínio e as invariantes do [ADR 008](008-controle-de-vagas-no-credenciamento.md) não mudam: só a infraestrutura.
 
 ## Alternativas Consideradas
 - **Relay em todas as instâncias com `SELECT ... FOR UPDATE SKIP LOCKED`:** dá mais vazão, mas perde a ordem entre as linhas enviadas em paralelo.
@@ -53,7 +53,7 @@ Ao migrar um serviço para o Postgres ([ADR 000](000-escolha-banco.md)), ele pas
 
 ## Referências
 - [000-escolha-banco.md](000-escolha-banco.md)
-- [008-vaga-e-pagamento-como-status.md](008-vaga-e-pagamento-como-status.md)
+- [008-controle-de-vagas-no-credenciamento.md](008-controle-de-vagas-no-credenciamento.md)
 - [009-posicao-na-fila-de-espera.md](009-posicao-na-fila-de-espera.md)
 - [010-fila-de-acesso.md](010-fila-de-acesso.md)
 - [../../microservices/README.md](../../microservices/README.md#entrega-das-mensagens)

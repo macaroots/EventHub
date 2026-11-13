@@ -5,7 +5,7 @@ Responsável: Renato
 Status: Aceito
 
 ## Contexto
-Com o [ADR 008](008-vaga-e-pagamento-como-status.md), quem se inscreve sem vaga fica `waitlisted` e é promovido quando uma vaga abre. O participante quer ver sua posição na fila. A página precisa se atualizar conforme a fila anda e, quando ele sair da fila, redirecionar:
+Com o [ADR 008](008-controle-de-vagas-no-credenciamento.md), quem se inscreve sem vaga fica `waitlisted` e é promovido quando uma vaga abre. O participante quer ver sua posição na fila. A página precisa se atualizar conforme a fila anda e, quando ele sair da fila, redirecionar:
 - para `/payments/:id`, se ficar `awaiting_payment`;
 - para a página da inscrição, se ficar `confirmed` ou `canceled`.
 
@@ -82,6 +82,6 @@ Começar pela **opção 2 (polling com cache por atividade no BFF)**, desacoplad
 - A migração para a opção 3 fica restrita ao `WaitlistSource` e ao `watchRegistration`.
 
 ## Referências
-- [008-vaga-e-pagamento-como-status.md](008-vaga-e-pagamento-como-status.md)
+- [008-controle-de-vagas-no-credenciamento.md](008-controle-de-vagas-no-credenciamento.md)
 - [001-comunicacao-assincrona.md](001-comunicacao-assincrona.md)
 - [004-notificacoes.md](004-notificacoes.md)

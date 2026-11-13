@@ -2,7 +2,7 @@
 
 Cada serviço tem host/porta próprio. Rotas `/public/...` não exigem login.
 
-Fronteiras: [ADR 011](adrs/011-evento-imutavel-apos-publicacao.md) e [ADR 015](adrs/015-cache-do-catalogo-publico.md). O catálogo público fica na Secretaria.
+Fronteiras: [ADR 011](adrs/011-evento-imutavel-apos-publicacao.md) e [ADR 015](adrs/015-catalogo-publico.md). O catálogo público fica na Secretaria.
 
 Autenticação: `Authorization: Bearer <JWT>` emitido pelo identity (`{ userId, name }`) → `req.user = { id, name }`.
 "Organizador" não é role: é estar em `event.organizers`. Não há admin.
