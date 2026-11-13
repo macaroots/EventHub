@@ -21,7 +21,7 @@ def test_health_is_public(api) -> None:
     assert body["status"] == "ok"
     assert body["database"] == "ok"
     assert body["consumer"]["queue"] == "reports"
-    assert body["consumer"]["exchange"] == "loja"
+    assert body["consumer"]["exchange"] == "event-hub"
     assert body["consumer"]["connected"] is False
     assert body["consumer"]["lastEventAt"]
     assert body["consumer"]["lastMessageType"] == "EventPublished"
