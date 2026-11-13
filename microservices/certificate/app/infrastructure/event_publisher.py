@@ -6,7 +6,7 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-_EXCHANGE = "loja"
+_EXCHANGE = "event-hub"
 
 
 class EventPublisher:
