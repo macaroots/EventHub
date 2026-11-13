@@ -9,6 +9,7 @@ import { router as registration } from './routes/registration.js';
 import { router as organizerRegistrations } from './routes/organizer-registrations.js';
 import { router as payment } from './routes/payment.js';
 import { router as reports } from './routes/reports.js';
+import { router as certificates } from './routes/certificates.js';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -26,6 +27,7 @@ app.use('/auth', auth);
 app.use('/organizers', events, activities, organizerRegistrations, reports);
 app.use(registration);
 app.use(payment);
+app.use(certificates);
 
 // Erro de serviço (ex.: 403/404 do secretariat) ou exceção: página de erro no layout.
 app.use((err, req, res, next) => {

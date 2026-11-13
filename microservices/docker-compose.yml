@@ -21,7 +21,7 @@ services:
   web:
     <<: *service
     build: { context: ., dockerfile: web/Dockerfile }
-    environment: { <<: *env, IDENTITY_URL: http://identity:3000, SECRETARIAT_URL: http://secretariat:3000, REGISTRATION_URL: http://registration:3000, PAYMENT_URL: http://payment:3000, REPORTS_URL: http://reports:3006 }
+    environment: { <<: *env, IDENTITY_URL: http://identity:3000, SECRETARIAT_URL: http://secretariat:3000, REGISTRATION_URL: http://registration:3000, PAYMENT_URL: http://payment:3000, REPORTS_URL: http://reports:3006, CERTIFICATE_URL: http://certificate:3005 }
     ports: ["3000:3000"] # única entrada publicada (ADR 017)
 
   registration:

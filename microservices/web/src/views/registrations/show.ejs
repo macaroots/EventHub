@@ -57,5 +57,15 @@
         <button class="btn-danger">Cancelar inscrição</button>
     </form>
 <% } %>
+<% if (registration.userId == user.sub && registration.event?.id) { %>
+    <section class="data-panel" aria-labelledby="registration-certificate-title">
+        <h2 id="registration-certificate-title">Certificado do evento</h2>
+        <p class="muted">O certificado reúne as atividades em que você registrou presença e fica disponível após o encerramento do evento.</p>
+        <form method="post" action="/registrations/<%= encodeURIComponent(registration.id) %>/certificate">
+            <button class="btn-primary" type="submit">Gerar certificado</button>
+        </form>
+        <p><a href="/certificates">Ver todos os meus certificados</a></p>
+    </section>
+<% } %>
 </section>
 </div>

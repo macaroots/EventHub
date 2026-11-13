@@ -67,6 +67,31 @@ def parse_certificate_requested(event: Any) -> CertificateRequested:
     if event_type is not None and event_type != EVENT_TYPE:
         raise BadRequestError(f"unexpected event type: {event_type}")
 
+    # Contrato atual do outbox: {id, type, source, time, data}.
+    # Continua aceitando o payload plano usado pelo publisher de desenvolvimento.
+    if "data" in event:
+        data = event["data"]
+        if not isinstance(data, Mapping):
+            raise BadRequestError("event.data must be an object")
+        participant_id = _required(data, "userId")
+        activities = data.get("activities")
+        parsed_activities = _parse_activities(activities)
+        dates = [
+            _parse_event_date(_required(item, "date"))
+            for item in activities
+            if isinstance(item, Mapping)
+        ]
+        if not dates:
+            raise BadRequestError("activity.date is required")
+        return CertificateRequested(
+            participant_id=participant_id,
+            participant_name=str(data.get("participantName") or participant_id).strip(),
+            event_id=_required(data, "eventId"),
+            event_name=_required(data, "eventName"),
+            event_date=min(dates),
+            activities=parsed_activities,
+        )
+
     return CertificateRequested(
         participant_id=_required(event, "participantId"),
         participant_name=_required(event, "participantName"),
