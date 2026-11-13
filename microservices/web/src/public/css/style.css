@@ -1539,6 +1539,10 @@ table.hub-table a:hover {
     }
 
     /* Gestão do evento: estilos isolados para a navegação por abas. */
+    .event-management #panel-activities button:disabled {
+        opacity: .6;
+        cursor: not-allowed;
+    }
     .event-management .report-metrics {
         display: grid;
         grid-template-columns: repeat(5, minmax(0, 1fr));
