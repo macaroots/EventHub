@@ -23,7 +23,7 @@ router.get('/events/:eventId/activities/new', (req, res) => {
 });
 router.post('/events/:eventId/activities', action(
     (req) => secretariat.createActivity(req, { ...activityForm(req.body), eventId: req.params.eventId }),
-    (req) => eventPage(req.params.eventId),
+    (req) => `${eventPage(req.params.eventId)}?tab=activities`,
     (req) => `${eventPage(req.params.eventId)}/activities/new`));
 
 router.get('/activities/:id', async (req, res) => {
