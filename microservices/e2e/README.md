@@ -1,28 +1,18 @@
 # E2E (Playwright)
 
-Testa as telas do `web` num navegador real:
+Testa as telas do `web` num navegador real, com o compose rodando:
 
 - [tests/fluxo.spec.js](tests/fluxo.spec.js): organizador cria e publica um evento pago; participante se cadastra, se inscreve e paga.
-- [tests/falha-dependencia.spec.js](tests/falha-dependencia.spec.js): falha de dependência. O teste roda `docker compose stop payment`, faz a inscrição (que funciona, pois a cobrança vai por mensagem), confere que a tela de pagamento mostra erro controlado e o resto do site segue no ar, roda `docker compose start payment` e conclui a compra quando o `PaymentRequested` retido na fila durável é consumido.
-  - Precisa do `docker` local controlando o compose de `microservices/` (não roda contra um `BASE_URL` remoto).
-  - O `start` fica num `finally`: o payment volta mesmo se o teste falhar no meio. Se o processo for interrompido (Ctrl+C), rode `docker compose start payment`.
-  - Só o teste de fluxo: `npx playwright test fluxo`; só o de falha: `npx playwright test falha`.
+- [tests/falha-dependencia.spec.js](tests/falha-dependencia.spec.js): `docker compose stop payment`; a inscrição continua funcionando e a tela de pagamento mostra erro controlado; `docker compose start payment` e a compra é concluída com o `PaymentRequested` que esperou na fila. Precisa do `docker` local (não roda contra um `BASE_URL` remoto). Se interromper o teste no meio, rode `docker compose start payment`.
 
 ```sh
-cd microservices && docker compose up -d --build   # app em http://localhost:3000
-cd e2e && npm i && npx playwright install chromium  # 1ª vez
-npm run watch   # abre o navegador e mostra cliques e preenchimentos
-npm run debug   # Inspector: avança uma ação por vez (Step over / F10)
-npm run ui      # modo UI: revê cada ação depois, com snapshot
-npm test        # sem janela (headless)
-npm run report  # relatório HTML com trace de cada teste
+npm i && npx playwright install chromium  # 1ª vez
+npm test                 # headless; npx playwright test falha (só um arquivo)
+npm run watch            # abre o navegador
+npm run debug            # Inspector, uma ação por vez
+npm run report           # relatório HTML com trace
 ```
 
-- `SLOWMO=800 npm run watch`: atraso por ação em ms (padrão 400; `0` para rodar rápido).
-- `BASE_URL=http://host:porta`: outro endereço do web (padrão `http://localhost:3000`).
-- Cada clique aparece como um círculo vermelho na página (script em [tests/fixtures.js](tests/fixtures.js)).
-- Trace sempre gravado (`npx playwright show-trace test-results/.../trace.zip`); vídeo só em falha.
-- Cada execução cria usuários e um evento novos (sufixo por timestamp); não há limpeza. `docker compose down -v` zera os bancos.
-- Esperas: `toPass` repete a inscrição e recarrega a página enquanto as mensagens assíncronas (`UserRegistered`, `PaymentRequested`, `PaymentConfirmed`) não chegam.
-- Para parar num ponto específico, ponha `await page.pause()` no teste e rode com `npm run watch`; o Inspector abre ali e você continua de lá.
-- Para gravar um fluxo novo clicando no navegador: `npx playwright codegen localhost:3000`.
+- `SLOWMO=800`: atraso por ação em ms (padrão 400; `0` para rodar rápido). `BASE_URL`: outro endereço do web.
+- Cada execução cria usuários e eventos novos; `docker compose down -v` zera os bancos.
+- `toPass` repete passos enquanto as mensagens assíncronas não chegam.

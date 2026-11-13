@@ -1,9 +1,5 @@
 # EventHub: relatório arquitetural
 
-UECE | Arquitetura de Software | Wave 4: *Designing and Implementing a Microservices-Based System*
-
-Equipe: Caio Guerreiro, Gabriel Marques Araujo, Igor Ramsés Temóteo dos Santos, Renato Lenz Costalima, Rubens Abraão da Silva Sousa, Suyane Carvalho.
-
 ## 1. Resumo
 
 O EventHub é uma plataforma de gestão de eventos acadêmicos e profissionais usada por várias organizações. Este relatório responde à pergunta orientadora do trabalho: *quais capacidades de negócio devem virar serviços implantáveis de forma independente, e por quê?*
