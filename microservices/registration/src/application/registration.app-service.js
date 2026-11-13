@@ -53,8 +53,12 @@ export class RegistrationAppService {
         this.participantRepository.upsert(new Participant({ id: userId, name }));
     }
 
-    async register({ activityId }, userId) {
-        if (!this.participantRepository.getById(userId)) throw new NotFoundError('user');
+    async register({ activityId }, userId, participantName = userId) {
+        // A projeção de participantes pode chegar depois do login; a inscrição
+        // deve depender do usuário autenticado, não da sincronização do evento.
+        if (!this.participantRepository.getById(userId)) {
+            this.upsertParticipant({ userId, name: participantName || userId });
+        }
         const registration = await this.#change(activityId, activity => {
             if (this.eventRepository.getById(activity.eventId)?.status != 'published') throw new DomainError('Event is not open for registration');
             return activity.register(userId);

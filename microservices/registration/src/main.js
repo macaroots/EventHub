@@ -52,6 +52,11 @@ messageBus.listen('PaymentDenied', e => registrationService.denyPayment(e));
 messageBus.listen('PaymentExpired', e => registrationService.denyPayment(e));
 messageBus.listen('UserRegistered', e => registrationService.upsertParticipant(e));
 messageBus.listen('UserUpdated', e => registrationService.upsertParticipant(e));
+// Compatibilidade com mensagens UserCreated emitidas por versões anteriores do identity.
+messageBus.listen('UserCreated', e => registrationService.upsertParticipant({
+    userId: e.userId,
+    name: e.name ?? e.username ?? e.userId,
+}));
 
 // Erros de domínio → 4xx; os demais são falha interna → 500 (sem vazar a mensagem).
 const errorStatus = e => e instanceof NotFoundError ? 404 : e instanceof ForbiddenError ? 403
@@ -80,7 +85,7 @@ app.post('/activities/:id/checkin/open', handle(req => checkInService.open(req.p
 app.post('/activities/:id/checkin/close', handle(req => checkInService.close(req.params.id, req.user)));
 app.post('/activities/:id/checkin', handle(req => checkInService.checkIn({ activityId: req.params.id, code: req.body.code }, req.user)));
 app.post('/registrations/:id/checkin', handle(req => checkInService.checkInManually(req.params.id, req.user)));
-app.post('/registrations', handle(req => registrationService.register(req.body, req.user.id), 201));
+app.post('/registrations', handle(req => registrationService.register(req.body, req.user.id, req.user.username), 201));
 
 await messageBus.consume("registration");
 
@@ -91,4 +96,3 @@ app.listen(port, () => {
         .map(l => `${Object.keys(l.route.methods)} - http://localhost:${port}${l.route.path}`)
         .forEach(r => console.log(r))
 })
-

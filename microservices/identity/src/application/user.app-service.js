@@ -12,7 +12,7 @@ export class UserAppService {
     }
 
     // Cadastro público cria só 'user'; admin vem de seedAdmin.
-    async signin({ username, password, email }, role = 'user') {
+    async signin({ username, password, email } = {}, role = 'user') {
         const loginName = (username || '').trim().toLowerCase();
         const normalizedEmail = (email || '').trim().toLowerCase();
         if (role == 'user' && !normalizedEmail) {
@@ -27,7 +27,12 @@ export class UserAppService {
         const user = new User(loginName, passwordHash, role, undefined, normalizedEmail);
         await this.userRepository.add(user);
         if (this.messageBus?.publish) {
-            this.messageBus.publish({ type: 'UserCreated', userId: user.id, username: user.username });
+            this.messageBus.publish({
+                type: 'UserRegistered',
+                userId: user.id,
+                name: user.username,
+                email: user.email,
+            });
         }
         return user.id;
     }
@@ -39,7 +44,9 @@ export class UserAppService {
         await this.signin({ username, password }, 'admin');
     }
 
-    async authenticate({ username, password, email }) {
+    async authenticate({ username, password, email } = {}) {
+        if (!username && !email) throw new NotFoundError('username or password');
+        if (!password) throw new NotFoundError('username or password');
         const loginName = username || email;
         const user = await this.userRepository.getByUsername(loginName);
         if (!user) {
