@@ -18,6 +18,8 @@ const setup = async () => {
   const db = new DatabaseSync(":memory:");
   const messageBus = new InMemoryMessageBus();
   const requested = [];
+  const denied = [];
+  messageBus.listen("CertificateDenied", m => denied.push(m));
   messageBus.listen("CertificateRequested", m => requested.push(m));
   const registrationRepository = new RegistrationSqliteRepository(db);
   const activityRepository = new ActivitySqliteRepository(db, registrationRepository);
@@ -33,11 +35,11 @@ const setup = async () => {
     { activityId: "a2", name: "Palestra", capacity: 5, price: 0 },
   ] });
   for (const [userId, name] of [["u1", "ana"], ["u2", "bia"]]) registrations.upsertParticipant({ userId, name });
-  return { registrations, checkIns, certificates, requested };
+  return { registrations, checkIns, certificates, requested, denied };
 };
 
 test("ended event requests one certificate per participant with the attended activities", async () => {
-  const { registrations, checkIns, certificates, requested } = await setup();
+  const { registrations, checkIns, certificates, requested, denied } = await setup();
   const a1 = await registrations.register({ activityId: "a1" }, "u1");
   await registrations.register({ activityId: "a2" }, "u1"); // inscrita, sem presença: fora da lista
   await registrations.register({ activityId: "a1" }, "u2"); // sem presença: sem certificado
@@ -47,6 +49,7 @@ test("ended event requests one certificate per participant with the attended act
     type: "CertificateRequested", requestId: "e1:u1", eventId: "e1", userId: "u1", participantName: "ana", eventName: "Congresso",
     activities: [{ activityId: "a1", name: "Workshop", workload: 3.5, date: "2026-12-01" }], totalWorkload: 3.5,
   }]);
+  assert.deepEqual(denied, [{ type: 'CertificateDenied', userId: 'u2', eventId: 'e1', eventName: 'Congresso', activities: [{ name: 'Workshop' }], reason: 'Nenhuma presença registrada nas atividades do evento.' }]);
   assert.equal(registrations.getRegistration(a1.id, { id: "u1" }).event.status, "ended");
 });
 

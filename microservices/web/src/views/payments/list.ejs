@@ -1,0 +1,13 @@
+<div class="container" style="max-width:1000px">
+    <div class="events-section-header"><div><h1 class="section-title">Meus pagamentos</h1><p class="section-subtitle">Acompanhe as cobranças das suas inscrições.</p></div><a href="/registrations" class="btn-secondary">Minhas inscrições</a></div>
+    <% const statuses = {pending:'Pendente', paid:'Aprovado', denied:'Recusado', expired:'Expirado', canceled:'Cancelado'}; %>
+    <div class="data-panel">
+        <% if (paymentsError) { %><p><%= paymentsError %></p><% } else if (!payments.length) { %><p>Você ainda não possui pagamentos.</p><% } else { %>
+        <div style="overflow-x:auto"><table class="hub-table"><thead><tr><th>Evento</th><th>Atividade</th><th>Valor</th><th>Situação</th><th>Detalhes</th></tr></thead><tbody>
+        <% for (const item of payments) { %><tr>
+            <td><strong><%= item.registration.event?.name || 'Evento' %></strong></td><td><%= item.registration.activity?.name || 'Atividade' %></td>
+            <td><%= item.amount.toLocaleString('pt-BR', {style:'currency',currency:'BRL'}) %></td><td><%= statuses[item.status] || item.status %></td>
+            <td><a class="btn-secondary" href="/payments/<%= encodeURIComponent(item.id) %>"><%= item.status === 'pending' && item.registration.status === 'awaiting_payment' ? 'Continuar compra' : 'Ver' %></a></td>
+        </tr><% } %></tbody></table></div><% } %>
+    </div>
+</div>

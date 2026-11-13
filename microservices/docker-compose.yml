@@ -21,17 +21,25 @@ services:
   web:
     <<: *service
     build: { context: ., dockerfile: web/Dockerfile }
-    environment: { <<: *env, IDENTITY_URL: http://identity:3000, SECRETARIAT_URL: http://secretariat:3000, REGISTRATION_URL: http://registration:3000, PAYMENT_URL: http://payment:3000, REPORTS_URL: http://reports:3006, CERTIFICATE_URL: http://certificate:3005 }
+    environment: { <<: *env, IDENTITY_URL: http://identity:3000, SECRETARIAT_URL: http://secretariat:3000, REGISTRATION_URL: http://registration:3000, PAYMENT_URL: http://payment:3000, REPORTS_URL: http://reports:3006, CERTIFICATE_URL: http://certificate:3005, NOTIFICATION_URL: http://notification:3006 }
+    depends_on:
+      notification-worker: { condition: service_healthy }
     ports: ["3000:3000"] # única entrada publicada (ADR 017)
 
   registration:
     <<: *service
+    environment: { <<: *env, PAYMENT_WINDOW_MINUTES: 2 }
+    depends_on:
+      notification-worker: { condition: service_healthy }
+      reports: { condition: service_healthy }
     build: { context: ., dockerfile: registration/Dockerfile }
     volumes:
       - registration-data:/app/registration/data
 
   secretariat:
     <<: *service
+    depends_on:
+      reports: { condition: service_healthy }
     build: { context: ., dockerfile: secretariat/Dockerfile }
     volumes:
       - secretariat-data:/app/secretariat/data
@@ -68,12 +76,54 @@ services:
     environment:
       <<: *env
       DB_PATH: /app/payment/data/payments.db
-      PAYMENT_TIMEOUT_MINUTES: 30
+      PAYMENT_TIMEOUT_MINUTES: 2
+    depends_on:
+      notification-worker: { condition: service_healthy }
+      reports: { condition: service_healthy }
     volumes:
       - payment-data:/app/payment/data
 
+  notification:
+    build: { context: ./notification }
+    environment: &notification-env
+      JWT_SECRET: ${JWT_SECRET}
+      RABBITMQ_URL: amqp://rabbitmq
+      NOTIFICATION_DB_PATH: /app/data/notifications.db
+      EMAIL_MODE: ${NOTIFICATION_EMAIL_MODE:-smtp}
+      SMTP_HOST: ${NOTIFICATION_SMTP_HOST:-mailpit}
+      SMTP_PORT: ${NOTIFICATION_SMTP_PORT:-1025}
+      SMTP_FROM: ${NOTIFICATION_SMTP_FROM:-no-reply@eventhub.test}
+      SMTP_USERNAME: ${NOTIFICATION_SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${NOTIFICATION_SMTP_PASSWORD:-}
+      SMTP_STARTTLS: ${NOTIFICATION_SMTP_STARTTLS:-false}
+      SMTP_SSL: ${NOTIFICATION_SMTP_SSL:-false}
+    volumes: ["notification-data:/app/data"]
+    depends_on:
+      rabbitmq: { condition: service_healthy }
+
+  notification-worker:
+    build: { context: ./notification }
+    command: ["uv", "run", "--no-sync", "python", "-m", "src.worker"]
+    environment: *notification-env
+    volumes: ["notification-data:/app/data"]
+    depends_on:
+      rabbitmq: { condition: service_healthy }
+      mailpit: { condition: service_started }
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sqlite3,time,sys; db=sqlite3.connect('/app/data/notifications.db'); row=db.execute('select heartbeat from worker_health where id=1').fetchone(); sys.exit(0 if row and time.time()-row[0]<45 else 1)"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports: ["127.0.0.1:8026:8025"]
+
   certificate:
     <<: *service
+    depends_on:
+      notification-worker: { condition: service_healthy }
     build: { context: ., dockerfile: certificate/Dockerfile }
     environment:
       <<: *env
@@ -89,10 +139,22 @@ services:
     environment:
       <<: *env
       PORT: 3006
+      REPORTS_BOOTSTRAP_EVENTS_DB: /snapshots/secretariat/secretariat.db
+      REPORTS_BOOTSTRAP_REGISTRATION_DB: /snapshots/registration/registration.db
+      REPORTS_BOOTSTRAP_PAYMENT_DB: /snapshots/payment/payments.db
     volumes:
       - reports-data:/app/data
+      - secretariat-data:/snapshots/secretariat:ro
+      - registration-data:/snapshots/registration:ro
+      - payment-data:/snapshots/payment:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import json,urllib.request,sys; r=json.load(urllib.request.urlopen('http://localhost:3006/health',timeout=3)); sys.exit(0 if r['status']=='ok' else 1)"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
 volumes:
+  notification-data:
   reports-data:
   secretariat-data:
   certificate-data:

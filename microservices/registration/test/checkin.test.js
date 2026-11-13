@@ -20,6 +20,8 @@ const setup = async ({ price = 0 } = {}) => {
   const db = new DatabaseSync(":memory:");
   const messageBus = new InMemoryMessageBus();
   const published = [];
+  const checkInMessages = [];
+  messageBus.listen("CheckInOpened", m => checkInMessages.push(m));
   messageBus.listen("AttendanceRegistered", m => published.push(m));
   const registrationRepository = new RegistrationSqliteRepository(db);
   const activityRepository = new ActivitySqliteRepository(db, registrationRepository);
@@ -32,7 +34,7 @@ const setup = async ({ price = 0 } = {}) => {
   registrations.publishEvent({ eventId: "e1", name: "E", organizers: ["org"], activities: [{ activityId: "a1", name: "A", capacity: 5, price }] });
   for (const [userId, name] of [["u1", "ana"], ["u2", "bia"]]) registrations.upsertParticipant({ userId, name });
   const registration = await registrations.register({ activityId: "a1" }, "u1");
-  return { registrations, checkIns, registration, published };
+  return { registrations, checkIns, registration, published, checkInMessages };
 };
 
 test("participant checks in with the code; second time is not duplicated", async () => {
@@ -90,4 +92,22 @@ test("canceled event closes check-in", async () => {
   await registrations.cancelEvent({ eventId: "e1", reason: "chuva" });
   await assert.rejects(checkIns.checkIn({ activityId: "a1", code }, ana), /not published/);
   assert.throws(() => checkIns.open("a1", organizer), /not published/);
+});
+
+
+test("opening check-in publishes the code only for confirmed participants", async () => {
+  const { registrations, checkIns, registration, checkInMessages } = await setup();
+  const canceled = await registrations.register({ activityId: "a1" }, "u2");
+  await registrations.cancelRegistration(canceled.id, {}, bia);
+  const { checkIn } = checkIns.open("a1", organizer);
+  assert.equal(checkInMessages.length, 1);
+  assert.equal(checkInMessages[0].userId, "u1");
+  assert.equal(checkInMessages[0].registrationId, registration.id);
+  assert.equal(checkInMessages[0].code, checkIn.code);
+});
+
+test("opening check-in does not notify a pending registration", async () => {
+  const { checkIns, checkInMessages } = await setup({price: 10});
+  checkIns.open("a1", organizer);
+  assert.equal(checkInMessages.length, 0);
 });

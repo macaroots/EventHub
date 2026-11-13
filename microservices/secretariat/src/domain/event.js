@@ -10,6 +10,7 @@ export class Event {
     #id;
     #name;
     #information;
+    #location;
     #startDate;
     #endDate;
     #status; // draft | published | ended | canceled
@@ -18,12 +19,13 @@ export class Event {
     #organizers;
 
     // Reconstituição (banco). Para um evento novo, use Event.create().
-    constructor({ id, name, information, startDate, endDate, status, cancelReason, createdBy, organizers }) {
+    constructor({ id, name, information, location, startDate, endDate, status, cancelReason, createdBy, organizers }) {
         if (!id) throw new BlankError('id');
         if (!createdBy) throw new BlankError('createdBy');
         this.#id = id;
         this.#setName(name);
         this.#information = information;
+        this.#location = location ?? null;
         this.#setPeriod(startDate, endDate);
         this.#status = status;
         this.#cancelReason = cancelReason;
@@ -31,18 +33,19 @@ export class Event {
         this.#organizers = [...organizers];
     }
     // Nasce em draft; o criador é o primeiro organizer.
-    static create({ name, information, startDate, endDate, createdBy }) {
-        return new Event({ id: crypto.randomUUID(), name, information, startDate, endDate, status: 'draft', createdBy, organizers: [createdBy] });
+    static create({ name, information, location, startDate, endDate, createdBy }) {
+        return new Event({ id: crypto.randomUUID(), name, information, location, startDate, endDate, status: 'draft', createdBy, organizers: [createdBy] });
     }
 
     get id() { return this.#id; }
     get status() { return this.#status; }
 
     // PATCH: altera só os campos enviados; status, organizers e createdBy só mudam pelos métodos de domínio.
-    update({ name, information, startDate, endDate }) {
+    update({ name, information, location, startDate, endDate }) {
         this.assertEditable();
         if (name !== undefined) this.#setName(name);
         if (information !== undefined) this.#information = information;
+        if (location !== undefined) this.#location = location;
         if (startDate !== undefined || endDate !== undefined) this.#setPeriod(startDate === undefined ? this.#startDate : startDate, endDate === undefined ? this.#endDate : endDate);
     }
 
@@ -113,6 +116,7 @@ export class Event {
             id: this.#id,
             name: this.#name,
             information: this.#information,
+            location: this.#location,
             startDate: this.#startDate,
             endDate: this.#endDate,
             status: this.#status,

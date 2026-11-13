@@ -4,16 +4,16 @@ import { Event, isAdmin } from "../domain/event.js";
 // Integration events. Só o que é publicado sai daqui: rascunho é assunto interno da secretaria.
 // EventPublished leva o retrato imutável do evento e das atividades (capacidade, preço, regras).
 const publishedMessage = (event, activities) => {
-    const { id, name, startDate, endDate, organizers } = event.toJSON();
+    const { id, name, location, startDate, endDate, organizers } = event.toJSON();
     return {
-        type: 'EventPublished', eventId: id, name, startDate, endDate, organizers,
+        type: 'EventPublished', eventId: id, name, location, startDate, endDate, organizers,
         activities: activities.map(({ id, name, startsAt, endsAt, capacity, price, rules }) =>
             ({ activityId: id, name, startsAt, endsAt, capacity, price, rules })),
     };
 };
 
-const toPublic = ({ id, name, information, startDate, endDate, status }) =>
-    ({ id, name, information, startDate, endDate, status });
+const toPublic = ({ id, name, information, location, startDate, endDate, status }) =>
+    ({ id, name, information, location, startDate, endDate, status });
 
 export class EventAppService {
     constructor(eventRepository, activityRepository, messageBus) {

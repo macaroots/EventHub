@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { isHiddenTestEvent } from '../events/test-events.js';
 import { authenticate } from '../middleware/authenticate.js';
 import * as secretariat from '../clients/secretariat.js';
 import * as registration from '../clients/registration.js';
@@ -15,11 +16,12 @@ const registrationPage = (id) => `/registrations/${encodeURIComponent(id)}`;
 
 router.get('/', async (req, res) => {
     const events = await json(await secretariat.listPublicEvents());
-    res.layout('index', { events });
+    res.layout('index', { events: events.filter(event => !isHiddenTestEvent(event.id)) });
 });
 
 // Público. Só eventos publicados (404 nos demais).
 router.get('/events/:id', async (req, res) => {
+    if (isHiddenTestEvent(req.params.id)) return res.status(404).layout('error', { error: 'Evento não encontrado.' });
     const event = await json(await secretariat.getPublicEvent(req.params.id));
     res.layout('public/event', { event });
 });
@@ -31,7 +33,8 @@ router.post('/activities/:id/registrations', authenticate, action(
 
 router.get('/registrations', authenticate, async (req, res) => {
     const registrations = await json(await registration.listRegistrations(req));
-    res.layout('registrations/list', { registrations: registrations.filter(r => r.userId == req.user.sub) });
+    const checkInOnly = req.query.checkin === '1';
+    res.layout('registrations/list', { checkInOnly, registrations: registrations.filter(r => r.userId == req.user.sub && (!checkInOnly || (r.status === 'confirmed' && (r.attendance || r.event?.status === 'published')))) });
 });
 router.get('/registrations/:id', authenticate, async (req, res) => {
     const item = await json(await registration.getRegistration(req, req.params.id));

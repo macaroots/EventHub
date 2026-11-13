@@ -279,6 +279,7 @@ components:
       properties:
         name: { type: string }
         information: { type: string, nullable: true }
+        location: { type: string, nullable: true }
         startDate: { type: string, format: date, nullable: true }
         endDate: { type: string, format: date, nullable: true }
     Event:
@@ -287,6 +288,7 @@ components:
         id: { type: string }
         name: { type: string }
         information: { type: string, nullable: true }
+        location: { type: string, nullable: true }
         startDate: { type: string, nullable: true }
         endDate: { type: string, nullable: true }
         status: { $ref: '#/components/schemas/EventStatus' }
@@ -299,6 +301,7 @@ components:
         id: { type: string }
         name: { type: string }
         information: { type: string, nullable: true }
+        location: { type: string, nullable: true }
         startDate: { type: string, nullable: true }
         endDate: { type: string, nullable: true }
         status: { $ref: '#/components/schemas/EventStatus' }

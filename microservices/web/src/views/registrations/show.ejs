@@ -22,11 +22,14 @@
 <% if (registration.status == 'confirmed') { %>
     <p class="notice notice-success"><strong>Inscrição confirmada!</strong> Sua participação está garantida.</p>
 <% if (registration.attendance) { %>
-    <p>Presença registrada em <%= dateTime(registration.attendance.checkedInAt) %>.</p>
+    <div class="attendance-confirmation">
+        <span class="attendance-confirmation-icon" aria-hidden="true">✓</span>
+        <div><strong>Presença registrada</strong><span>Confirmada em <%= dateTime(registration.attendance.checkedInAt) %></span></div>
+    </div>
 <% } else if (!ended) { %>
-    <form class="checkin-form" method="post" action="/activities/<%= registration.activityId %>/checkin">
+    <form id="registrar-presenca" class="checkin-form" method="post" action="/activities/<%= registration.activityId %>/checkin">
         <input type="hidden" name="registrationId" value="<%= registration.id %>">
-        <label><span>Código de presença</span><input name="code" required autocomplete="off" autocapitalize="characters" size="8"></label>
+        <label for="attendance-code"><span>Código de presença</span><input id="attendance-code" name="code" required autocomplete="off" autocapitalize="characters" size="8" placeholder="Digite o código"></label>
         <button class="btn-primary">Registrar presença</button>
     </form>
 <% } %>
@@ -47,7 +50,10 @@
     </script>
 <% } %>
 <% if (registration.status == 'awaiting_payment') { %>
-    <p>Vaga reservada. <a href="/payments/<%= registration.payment.id %>">Pagar R$ <%= registration.payment.amount.toFixed(2) %></a> para confirmar.</p>
+    <div class="registration-purchase">
+        <div><strong>Sua vaga está reservada</strong><p>Continue para o pagamento de <%= registration.payment.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) %> para confirmar a inscrição.</p></div>
+        <a class="btn-primary" href="/payments/<%= encodeURIComponent(registration.payment.id) %>">Continuar compra <span aria-hidden="true">→</span></a>
+    </div>
 <% } %>
 <% if (pending.length) { %>
     <p class="section-label">Pendências</p>
@@ -57,7 +63,7 @@
 <% } %>
     </ul>
 <% } %>
-    <p><a class="btn-secondary" href="">Atualizar situação</a></p>
+    <% if (registration.status != 'awaiting_payment') { %><p><a class="btn-secondary" href="">Atualizar situação</a></p><% } %>
 <% } %>
 <% if (registration.status != 'canceled' && !ended) { %>
     <form method="post" action="/registrations/<%= registration.id %>/cancel" onsubmit="return confirm('Cancelar a inscrição?')">
@@ -65,13 +71,15 @@
     </form>
 <% } %>
 <% if (registration.userId == user.sub && registration.event?.id) { %>
-    <section class="data-panel" aria-labelledby="registration-certificate-title">
+    <section class="data-panel registration-certificate" aria-labelledby="registration-certificate-title">
         <h2 id="registration-certificate-title">Certificado do evento</h2>
         <p class="muted">O certificado reúne as atividades em que você registrou presença e fica disponível após o encerramento do evento.</p>
-        <form method="post" action="/registrations/<%= encodeURIComponent(registration.id) %>/certificate">
-            <button class="btn-primary" type="submit">Gerar certificado</button>
-        </form>
-        <p><a href="/certificates">Ver todos os meus certificados</a></p>
+        <div class="registration-certificate-actions">
+            <form method="post" action="/registrations/<%= encodeURIComponent(registration.id) %>/certificate">
+                <button class="btn-primary" type="submit">Gerar certificado</button>
+            </form>
+            <a href="/certificates">Ver todos os meus certificados <span aria-hidden="true">→</span></a>
+        </div>
     </section>
 <% } %>
 </section>

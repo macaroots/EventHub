@@ -1,0 +1,25 @@
+/* Ajustes de navegação e tabelas para telas menores, mantendo o estilo atual. */
+@media (max-width: 900px) {
+    .app-header { position: relative; padding: .85rem 1rem; }
+    .header-container { flex-wrap: wrap; gap: .75rem; }
+    .header-nav { flex-wrap: wrap; gap: .75rem 1rem; }
+    .authenticated-layout .dashboard-sidebar { position: static; padding: .7rem 1rem; }
+    .sidebar-heading { margin-bottom: .4rem; }
+    .sidebar-menu { display: flex; flex-wrap: wrap; gap: .3rem; }
+    .sidebar-item { flex: 0 0 auto; }
+    .authenticated-layout .main-content { min-width: 0; margin-left: 0; }
+    .container { padding: 1.5rem 1rem; }
+    .data-panel { max-width: 100%; }
+    .events-section-header { flex-wrap: wrap; gap: .75rem; }
+    table.hub-table { display: block; overflow-x: auto; max-width: 100%; }
+}
+@media (max-width: 600px) {
+    .header-nav { width:100%; }
+    .user-profile-pill { max-width:100%; }
+    .user-info { min-width:0; overflow-wrap:anywhere; }
+    .page-container { width:100%; padding-left:1rem; padding-right:1rem; }
+    .summary-grid { display:grid; grid-template-columns:1fr; gap:.75rem; }
+    .checkin-form { display:flex; flex-wrap:wrap; gap:.75rem; }
+    .checkin-form label { max-width:100%; }
+    .checkout-dialog, .cancel-dialog { width:calc(100vw - 2rem); }
+}

@@ -37,7 +37,20 @@ class PaymentService:
         """Handler para RegistrationCanceled do RabbitMQ."""
         registration_id = data.get("registrationId")
         if registration_id:
-            self.cancel_by_registration(registration_id)
+            if 'expir' in str(data.get('reason', '')).lower():
+                for payment in self.repository.list_by_registration(registration_id):
+                    if payment.status == 'pending':
+                        await self.expire(payment.id)
+            else:
+                self.cancel_by_registration(registration_id)
+
+    async def expire_overdue(self):
+        for payment in self.repository.list_all(status='pending'):
+            if payment.is_expired():
+                try:
+                    await self.expire(payment.id)
+                except InvalidStateError:
+                    pass
 
     def cancel_by_registration(self, registration_id: str) -> None:
         payments = self.repository.list_by_registration(registration_id)
@@ -99,7 +112,7 @@ class PaymentService:
 
         # Simulação de recusa caso solicitado explicitamente ou receipt seja 'deny'
         if simulate_status == "denied" or receipt == "deny":
-            payment.deny(reason="Cartão recusado pelo provedor de pagamento")
+            payment.deny(reason="Saldo insuficiente")
         else:
             final_receipt = receipt or f"REC-{uuid.uuid4().hex[:8].upper()}"
             payment.pay(final_receipt)

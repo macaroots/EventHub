@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { isHiddenTestEvent } from '../events/test-events.js';
 import { authenticate } from '../middleware/authenticate.js';
 import * as secretariat from '../clients/secretariat.js';
 import * as identity from '../clients/identity.js';
@@ -7,15 +8,19 @@ import { action, json, orNull } from './helpers.js';
 export const router = Router();
 router.use(authenticate);
 
-const eventForm = ({ name, information, startDate, endDate }) =>
-    ({ name, information, startDate: orNull(startDate), endDate: orNull(endDate) });
+const eventForm = ({ name, information, location, startDate, endDate }) =>
+    ({ name, information, location: orNull(location?.trim()), startDate: orNull(startDate), endDate: orNull(endDate) });
 const list = () => '/organizers/events';
 const show = (req) => `/organizers/events/${encodeURIComponent(req.params.id)}`;
 const successShow = (req, message) => `${show(req)}?success=${encodeURIComponent(message)}`;
 
+router.get('/reports', async (req, res) => {
+    const events = await json(await secretariat.listEvents(req));
+    res.layout('organizers/reports-list', { events: events.filter(event => !isHiddenTestEvent(event.id)) });
+});
 router.get('/events', async (req, res) => {
     const events = await json(await secretariat.listEvents(req));
-    res.layout('organizers/events', { events });
+    res.layout('organizers/events', { events: events.filter(event => !isHiddenTestEvent(event.id)) });
 });
 router.post('/events', action(
     (req) => secretariat.createEvent(req, eventForm(req.body)),

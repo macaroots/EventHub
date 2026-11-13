@@ -11,14 +11,14 @@ from ..domain.errors import BadRequestError
 
 logger = logging.getLogger(__name__)
 
-EXCHANGE = "loja"
+EXCHANGE = "event-hub"
 QUEUE = "reports"
 
 
 class ReportsConsumer:
     """Consumes the domain events that feed the reports read model.
 
-    Same conventions as the other EventHub consumers: topic exchange ``loja``,
+    Same conventions as the other EventHub consumers: topic exchange ``event-hub``,
     durable queue named after the service, ``prefetch(1)`` and persistent
     messages.
 

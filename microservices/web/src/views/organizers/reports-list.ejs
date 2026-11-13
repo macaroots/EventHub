@@ -1,0 +1,9 @@
+<div class="page-container">
+    <section class="page-heading"><span class="eyebrow">GESTÃO DE EVENTOS</span><h1>Relatórios</h1><p class="muted">Selecione um evento para consultar e baixar seu relatório.</p></section>
+    <section class="data-panel">
+        <% if (!events.length) { %><p>Você ainda não possui eventos para consultar.</p><a class="btn-secondary" href="/organizers/events">Ver eventos</a><% } else { %>
+        <div class="table-scroll"><table class="hub-table"><thead><tr><th>Evento</th><th>Status</th><th>Relatório</th></tr></thead><tbody>
+        <% for (const event of events) { %><tr><td><strong><%= event.name %></strong></td><td><%= ({draft:'Rascunho',published:'Publicado',ended:'Encerrado',canceled:'Cancelado'})[event.status] || event.status %></td><td><a href="/organizers/events/<%= encodeURIComponent(event.id) %>?tab=reports">Abrir relatório</a></td></tr><% } %>
+        </tbody></table></div><% } %>
+    </section>
+</div>

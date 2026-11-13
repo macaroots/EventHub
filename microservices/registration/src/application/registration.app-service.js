@@ -12,8 +12,9 @@ const RETRIES = 20;
 export class RegistrationAppService {
     // paymentWindowMinutes: quanto tempo a vaga fica reservada esperando o pagamento.
     // attendanceRepository: presença (check-in, ADR 012) mostrada junto com a inscrição.
-    constructor(activityRepository, registrationRepository, participantRepository, eventRepository, messageBus, { paymentWindowMinutes = 30, attendanceRepository } = {}) {
+    constructor(activityRepository, registrationRepository, participantRepository, eventRepository, messageBus, { paymentWindowMinutes = 2, attendanceRepository, checkInRepository } = {}) {
         this.attendanceRepository = attendanceRepository;
+        this.checkInRepository = checkInRepository;
         this.activityRepository = activityRepository;
         this.registrationRepository = registrationRepository;
         this.participantRepository = participantRepository;
@@ -151,8 +152,15 @@ export class RegistrationAppService {
             const result = fn(activity);
             try {
                 this.messageBus.transaction(() => {
+                    for (const r of activity.registrations) if (r.payment?.requestedAt && !r.payment.expiresAt) r.payment.expiresAt = new Date(Date.parse(r.payment.requestedAt) + this.paymentWindowMs).toISOString();
                     this.activityRepository.update(activity);
-                    for (const r of activity.registrations) for (const m of r.pullMessages()) this.messageBus.publish(m);
+                    for (const r of activity.registrations) for (const m of r.pullMessages()) {
+                        this.messageBus.publish(m.type === 'PaymentRequested' ? { ...m, expiresAt: r.payment.expiresAt } : m);
+                        if (m.type === 'RegistrationConfirmed') {
+                            const checkIn = this.checkInRepository?.getById(activity.id);
+                            if (checkIn?.status === 'open') this.messageBus.publish({ type: 'CheckInOpened', registrationId: r.id, userId: r.userId, activityId: activity.id, activityName: activity.name, code: checkIn.code, openedAt: checkIn.openedAt });
+                        }
+                    }
                 });
             } catch (e) {
                 if (!(e instanceof ConcurrencyError) || attempt == RETRIES) throw e;

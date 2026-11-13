@@ -723,6 +723,13 @@ table.hub-table a:hover {
     text-decoration: underline;
 }
 
+/* O botão de download deve manter contraste dentro da tabela. */
+table.certificate-table a.btn-primary,
+table.certificate-table a.btn-primary:hover {
+    color: #fff;
+    text-decoration: none;
+}
+
 /* Badges de Status */
 .status-pill {
     display: inline-block;
@@ -2069,4 +2076,65 @@ table.hub-table a:hover {
         align-items: stretch;
         flex-direction: column;
     }
+}
+
+/* Presença confirmada e certificado na inscrição. */
+.registration-detail-card .notice { line-height: 1.55; }
+.registration-detail-card .attendance-confirmation { display: flex; align-items: center; gap: .9rem; margin: 1.25rem 0; padding: 1rem 1.1rem; border: 1px solid #dcebe3; border-radius: 9px; background: #f7fcf9; }
+.attendance-confirmation-icon { flex: 0 0 38px; display: grid; place-items: center; height: 38px; border-radius: 50%; background: #dcf5e6; color: #16804c; font-weight: 800; }
+.attendance-confirmation div { display: grid; gap: .15rem; }
+.attendance-confirmation strong { color: #154d36; font-size: .95rem; }
+.attendance-confirmation div span { color: #58766a; font-size: .85rem; }
+.registration-detail-card .registration-certificate { margin-top: 1.35rem; padding: 1.5rem; border-color: #dce5ee; box-shadow: none; }
+.registration-certificate h2 { margin: 0 0 .5rem; font-size: 1.2rem; }
+.registration-certificate > p { max-width: 620px; line-height: 1.6; }
+.registration-certificate-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .85rem 1.25rem; margin-top: 1.15rem; }
+.registration-certificate-actions form { margin: 0; }
+.registration-certificate-actions a { color: #b84900; font-size: .9rem; font-weight: 600; text-decoration: none; }
+.registration-certificate-actions a:hover { text-decoration: underline; }
+/* Área de relatórios, mantendo o desenho e os componentes do evento. */
+.event-management #panel-reports .report-panel { padding: 1.75rem; }
+.event-management #panel-reports .report-panel-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; margin-bottom: 1.25rem; }
+.event-management #panel-reports .report-panel-heading h2 { margin: .35rem 0; }
+.event-management #panel-reports .report-panel-heading p { color: #607895; line-height: 1.5; }
+.event-management #panel-reports .report-update-note { margin: 0 0 .5rem; font-size: .88rem; line-height: 1.6; }
+.event-management #report-content > .muted { display: block; margin: .5rem 0 1.25rem; color: #7186a0; font-size: .82rem; line-height: 1.5; }
+.event-management #panel-reports .report-metrics { gap: .75rem; margin: 1.25rem 0 1.75rem; }
+.event-management #panel-reports .report-metrics > div { border-radius: 9px; background: #f8fafc; }
+.event-management #panel-reports .report-metrics dt { line-height: 1.4; }
+.event-management #panel-reports .report-metrics dd { color: #102a49; }
+.event-management #panel-reports .table-scroll { border: 1px solid #e3eaf2; border-radius: 9px; }
+.event-management #panel-reports .report-participants-section { margin-top: 1.75rem; padding-top: .25rem; border-top: 1px solid #e8edf3; }
+.event-management #panel-reports .report-pagination { flex-wrap: wrap; gap: .75rem; }
+@media (max-width: 700px) {
+    .registration-detail-card .registration-certificate, .event-management #panel-reports .report-panel { padding: 1.15rem; }
+    .registration-certificate-actions { align-items: stretch; flex-direction: column; }
+    .registration-certificate-actions .btn-primary { width: 100%; text-align: center; }
+    .event-management #panel-reports .report-panel-heading { align-items: stretch; flex-direction: column; }
+    .event-management #panel-reports .report-panel-heading .btn-primary { width: 100%; }
+}
+
+.registration-detail-card .registration-purchase { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem; margin:1.2rem 0; padding:1.2rem; border:1px solid #f7dfcc; border-radius:9px; background:#fff9f3; }
+.registration-purchase strong { color:#173451; }
+.registration-purchase p { margin:.3rem 0 0; color:#607895; line-height:1.5; }
+.registration-purchase .btn-primary { flex:none; text-decoration:none; }
+@media (max-width:700px) { .registration-purchase .btn-primary { width:100%; text-align:center; } }
+
+/* Confirmações das ações do evento. */
+.event-management .event-action-dialog { position: fixed; inset: 0; margin: auto; width: min(460px, calc(100vw - 2rem)); max-height: calc(100dvh - 2rem); overflow-y: auto; padding: 1.75rem; border: 1px solid #e2e8f0; border-radius: 14px; background: #fff; color: #102a49; box-shadow: 0 20px 60px rgba(4, 20, 40, .25); }
+.event-action-dialog::backdrop { background: rgba(4, 20, 40, .6); }
+.event-dialog-icon { display: grid; place-items: center; width: 42px; height: 42px; margin-bottom: 1rem; border-radius: 12px; background: #fff2e6; color: #ca5800; font-size: 1.2rem; font-weight: 800; }
+.event-dialog-icon--danger { background: #fff0ee; color: #bf3333; }
+.event-management .event-action-dialog h2 { margin: 0 0 .6rem; font-size: 1.35rem; }
+.event-action-dialog p { margin: 0 0 1.2rem; color: #607895; line-height: 1.6; }
+.event-dialog-label { display: block; margin-bottom: .4rem; color: #183657; font-size: .88rem; font-weight: 700; }
+.event-action-dialog input { width: 100%; }
+.event-dialog-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: .7rem; margin-top: 1.4rem; }
+.registration-detail-card .checkin-form { gap: 1rem; }
+.registration-detail-card .checkin-form label { display: flex; flex-direction: column; align-items: flex-start; gap: .45rem; font-weight: 600; }
+.registration-detail-card .checkin-form input { width: min(100%, 250px); min-width: 0; }
+@media (max-width: 700px) {
+    .event-management .event-action-dialog { padding: 1.25rem; }
+    .event-dialog-actions { flex-direction: column-reverse; }
+    .event-dialog-actions button, .registration-detail-card .checkin-form input { width: 100%; }
 }

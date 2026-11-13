@@ -43,12 +43,23 @@ async def lifespan(app: FastAPI):
             await asyncio.sleep(1)
 
     task = asyncio.create_task(relay())
+    async def expiration_loop():
+        while True:
+            try:
+                await payment_service.expire_overdue()
+            except Exception:
+                logger.exception('Falha ao expirar pagamentos')
+            await asyncio.sleep(1)
+    expiration_task = asyncio.create_task(expiration_loop())
     try:
         yield
     finally:
         task.cancel()
+        expiration_task.cancel()
         with suppress(asyncio.CancelledError):
             await task
+        with suppress(asyncio.CancelledError):
+            await expiration_task
         await message_bus.close()
 
 app = FastAPI(
