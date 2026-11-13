@@ -1,5 +1,5 @@
 # Título: Monitoramento com ferramentas padrão, não por eventos de domínio
-Número do ADR: 006
+Número do ADR: 010
 Data: 2026-11-03
 Responsável: Renato
 Status: Proposto
@@ -30,5 +30,4 @@ Usar ferramentas padrão em vez de um serviço próprio:
 - Pode ser adotado aos poucos: health e DLQ primeiro, depois logs, métricas e rastreamento.
 
 ## Referências
-- [005-relatorios.md](005-relatorios.md)
 - [../../microservices/shared/messaging/rabbitmq-message-bus.js](../../microservices/shared/messaging/rabbitmq-message-bus.js)

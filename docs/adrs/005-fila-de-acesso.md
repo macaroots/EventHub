@@ -1,5 +1,5 @@
 # Título: Fila de acesso (sala de espera de tráfego)
-Número do ADR: 010
+Número do ADR: 005
 Data: 2026-11-05
 Responsável: Renato
 Status: Aceito
@@ -7,7 +7,7 @@ Status: Aceito
 ## Contexto
 A arquitetura previa uma "fila de acesso" (`/queue`, websocket) no Credenciamento. Ela seria uma sala de espera para picos, como milhares de pessoas na abertura das inscrições.
 
-Ela é diferente da fila de espera por vaga ([ADR 008](008-controle-de-vagas-no-credenciamento.md), [ADR 009](009-posicao-na-fila-de-espera.md)):
+Ela é diferente da fila de espera por vaga ([ADR 003](003-controle-de-vagas-no-credenciamento.md), [ADR 004](004-atualizacao-posicao-na-fila.md)):
 
 | | Fila de espera (`waitlisted`) | Fila de acesso |
 |---|---|---|
@@ -42,6 +42,6 @@ Ela é diferente da fila de espera por vaga ([ADR 008](008-controle-de-vagas-no-
 - Gatilhos para revisar: carga medida na abertura que o rate limit e a escala horizontal não absorvem, ou bots disputando vagas.
 
 ## Referências
-- [008-controle-de-vagas-no-credenciamento.md](008-controle-de-vagas-no-credenciamento.md)
-- [009-posicao-na-fila-de-espera.md](009-posicao-na-fila-de-espera.md)
+- [003-controle-de-vagas-no-credenciamento.md](003-controle-de-vagas-no-credenciamento.md)
+- [004-atualizacao-posicao-na-fila.md](004-atualizacao-posicao-na-fila.md)
 - [../arquitetura.md](../arquitetura.md)

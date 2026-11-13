@@ -2,7 +2,7 @@
 
 Cada serviço tem host/porta próprio. Rotas `/public/...` não exigem login.
 
-Fronteiras: [ADR 011](adrs/011-evento-imutavel-apos-publicacao.md) e [ADR 015](adrs/015-catalogo-publico.md). O catálogo público fica na Secretaria.
+Fronteiras: [ADR 002](adrs/002-catalogo-publico.md). O catálogo público fica na Secretaria.
 
 Autenticação: `Authorization: Bearer <JWT>` emitido pelo identity (`{ userId, name }`) → `req.user = { id, name }`.
 "Organizador" não é role: é estar em `event.organizers`. Não há admin.
@@ -265,7 +265,7 @@ POST /events/:id/cancel
     204
 
 POST /events/:id/organizers
-    { userId } // o web converte e-mail → id em GET /internal/users?email= (ADR 016)
+    { userId } // o web converte e-mail → id em GET /internal/users?email=
     204
 
 DELETE /events/:id/organizers/:userId
@@ -419,7 +419,7 @@ RegistrationCanceled { registrationId, userId, reason }
 PaymentRequested { paymentId, registrationId, userId, amount, description }
 ActivityOfferUpdated { activityId, eventId, capacity, price, rules }
 
-## CheckIn como parte do Credenciamento ([ADR 012](adrs/012-forma-do-checkin.md))
+## CheckIn como parte do Credenciamento ([ADR 006](adrs/006-forma-do-checkin.md))
 ### Organizador
 GET /activities/:id/checkin
     { activity, event, checkIn: { status: open | closed, code, openedAt }, confirmed, present, attendees: [{ registrationId, participant, status, attendance }] }
@@ -476,7 +476,7 @@ GET /certificates/validate/:tokenVerificacao *Validação pública, sem JWT*
 
 
 ## Portaria dentro do Credenciamento
-(Rascunho substituído pelo [ADR 012](adrs/012-forma-do-checkin.md).)
+(Rascunho substituído pelo [ADR 006](adrs/006-forma-do-checkin.md).)
 Attendance {
     activityId
     userId

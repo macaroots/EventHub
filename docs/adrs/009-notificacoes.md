@@ -1,5 +1,5 @@
 # Título: Notificações em microsserviço próprio
-Número do ADR: 004
+Número do ADR: 009
 Data: 2026-11-03
 Responsável: Renato
 Status: Proposto

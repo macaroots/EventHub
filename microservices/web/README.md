@@ -8,7 +8,7 @@ Telas do organizador (`/organizers/...`):
 - `activities/:id/checkin`: abre e fecha o check-in, gera um código novo, mostra presentes/confirmados e marca a presença na mão. `?display=1` mostra só o código em letras grandes, para o projetor, e recarrega a cada 10 s. A página de inscrições mostra o comparecimento e quem está presente.
 - Forms HTML só fazem GET/POST: as ações usam `POST .../delete` em vez de `DELETE` (alternativa: `method-override`).
 - Post/Redirect/Get: depois de cada ação, redireciona. Em erro, volta para a página com `?error=` (mostrado pelo layout). Limitação: o form perde o que foi digitado.
-- Organizadores: o formulário pede o e-mail, e o BFF busca o id em `identity GET /internal/users?email=`, porque a secretaria guarda só ids. A listagem traduz ids em nomes com `POST /internal/users/batch`. As duas chamadas usam `X-Internal-Token` (`INTERNAL_API_TOKEN`), não o JWT ([ADR 016](../../docs/adrs/016-organizador-por-email.md)).
+- Organizadores: o formulário pede o e-mail, e o BFF busca o id em `identity GET /internal/users?email=`, porque a secretaria guarda só ids. A listagem traduz ids em nomes com `POST /internal/users/batch`. As duas chamadas usam `X-Internal-Token` (`INTERNAL_API_TOKEN`), não o JWT.
   - Usuário desativado some da listagem (aparece o id).
 
 Fluxo do participante:
@@ -16,13 +16,13 @@ Fluxo do participante:
 - Conexão com certificados: `CERTIFICATE_URL` (padrão `http://certificate:3005`; fora do Docker, `http://localhost:3005`). O web encaminha o JWT, aplica timeout de 30 segundos às chamadas do certificate e entrega os downloads como `certificado.pdf`, sem cache. A autorização do PDF é feita pelo microserviço.
 - `/` lista os eventos publicados e `/events/:id` mostra o evento e as atividades. As duas são públicas, via `secretariat GET /public/events[/:id]`, que não exige login e não devolve os organizers.
 - "Inscrever-se" faz `POST /activities/:id/registrations` e redireciona para `/registrations/:id`, que mostra o status (pendente, na fila de espera, aguardando pagamento, confirmada, cancelada) e as pendências e permite cancelar. `/registrations` lista as inscrições do usuário.
-- Na fila de espera (`waitlisted`), a página mostra a posição e se atualiza sozinha; quando a inscrição sai da fila, redireciona para o pagamento ou para a própria inscrição ([ADR 009](../../docs/adrs/009-posicao-na-fila-de-espera.md)):
+- Na fila de espera (`waitlisted`), a página mostra a posição e se atualiza sozinha; quando a inscrição sai da fila, redireciona para o pagamento ou para a própria inscrição ([ADR 004](../../docs/adrs/004-atualizacao-posicao-na-fila.md)):
   - o navegador consulta `GET /registrations/:id/status.json` (`{status, waitlistPosition, next}`) a cada 4 s ([watch-registration.js](src/public/js/watch-registration.js)); sem JavaScript, a página recarrega a cada 15 s;
   - o BFF guarda a ordem da fila por atividade por `WAITLIST_CACHE_MS` (padrão 2000), então o registration recebe uma consulta por atividade nesse intervalo, não uma por pessoa ([waitlist/](src/waitlist/));
   - a autorização é do registration, na primeira consulta de cada inscrição + usuário; depois, enquanto a inscrição está na fila, a resposta sai da memória;
   - limitações: a posição pode atrasar até o cache mais o intervalo (cerca de 6 s); cada instância do BFF tem seu cache;
   - para migrar ao push (SSE), troca-se o `PollingWaitlistSource` e o `watchRegistration`; o payload continua o mesmo.
-- Com a inscrição `confirmed`, a página da inscrição pede o código de check-in mostrado na sala; depois, mostra quando a presença foi registrada ([ADR 012](../../docs/adrs/012-forma-do-checkin.md)). Datas no fuso `TIME_ZONE` (padrão `America/Sao_Paulo`).
+- Com a inscrição `confirmed`, a página da inscrição pede o código de check-in mostrado na sala; depois, mostra quando a presença foi registrada ([ADR 006](../../docs/adrs/006-forma-do-checkin.md)). Datas no fuso `TIME_ZONE` (padrão `America/Sao_Paulo`).
 - Evento encerrado: o certificado é por evento (basta presença em uma atividade). A inscrição diz se a atividade entra no certificado, e some o check-in e o cancelamento. `/registrations` tem a coluna Certificado, por evento. O PDF é baixado pelo botão **Gerar certificado** na inscrição ou pela página **Certificados**.
 - Em `awaiting_payment`, o link de pagamento leva a `/payments/:id`, onde se informa o comprovante (o gateway fake recusa `deny`). Pagamento recusado cancela a inscrição; reserva expirada cancela a cobrança.
 - Pagar é assíncrono: o registration só fica sabendo por `PaymentConfirmed/Denied`. Por isso o BFF consulta a inscrição até 10× a cada 200 ms antes de redirecionar. Alternativas: websocket/SSE, ou uma página de "processando" com refresh.

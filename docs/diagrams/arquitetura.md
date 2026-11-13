@@ -15,6 +15,9 @@ flowchart LR
     RF09[RF09: Check-in]
     RF10[RF10: Certificados]
     RF11[RF11: Relatórios]
+    subgraph Web
+        BFF
+    end
     subgraph Identidade
         RF01
     end
@@ -42,6 +45,7 @@ flowchart LR
     end
     %% A --> B: A emite um evento que B consome. Dependências dentro de um mesmo serviço não aparecem.
     %% Linha tracejada: consumidor ainda não implementado (Notificações, Certificados, Relatórios).
+    BFF -- HTTP --> Identidade & Secretaria & Credenciamento & Caixa & Certificados & Relatórios
     RF01 -- UserCreated --> RF05
     RF01 -. "UserCreated (contato)" .-> RF08
     RF02 -- "EventPublished, EventCanceled, EventOrganizersChanged" --> RF05

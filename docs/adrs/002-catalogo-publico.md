@@ -1,5 +1,5 @@
 # Título: Catálogo público na Secretaria, com cache e CDN
-Número do ADR: 015
+Número do ADR: 002
 Data: 2026-11-07
 Responsável: Renato
 Status: Catálogo na Secretaria aceito e implementado; camadas de cache propostas
@@ -12,7 +12,7 @@ Com o catálogo dentro da Secretaria, esse pico precisa de cache. Hoje:
 - o participante vê o catálogo pela página do BFF (`web`), que busca o evento na Secretaria a cada requisição;
 - o layout dessa página mostra o usuário logado, então o HTML muda de pessoa para pessoa e não pode ir para um cache compartilhado.
 
-O conteúdo publicado é ótimo para cache, porque é imutável depois da publicação ([ADR 011](011-evento-imutavel-apos-publicacao.md)). Só mudam o status (`canceled`, `ended`) e os organizers, que não aparecem no catálogo público. As vagas restantes (RF04) mudariam a cada inscrição, mas ainda não são expostas.
+O conteúdo publicado é ótimo para cache, porque é imutável depois da publicação. Só mudam o status (`canceled`, `ended`) e os organizers, que não aparecem no catálogo público. As vagas restantes (RF04) mudariam a cada inscrição, mas ainda não são expostas.
 
 O pico de leitura acontece na abertura das inscrições, quando muita gente abre a mesma página ao mesmo tempo.
 
@@ -24,7 +24,7 @@ Para o pico de leitura, três camadas, ligadas conforme a necessidade:
 2. **BFF (agora):**
    - **micro-cache em memória das respostas `/public`**, por poucos segundos e por instância. Durante o pico, a Secretaria recebe uma consulta por evento a cada intervalo, não uma por pessoa;
    - **a página pública não depende de sessão.** O HTML é o mesmo para todos, com `Cache-Control: public`. O que depende do usuário (cabeçalho com login, "já inscrito") sai do HTML e vem por fragmento ou JS.
-3. **CDN (com pico real):** Cloudflare, CloudFront ou similar na frente das rotas públicas, a mesma borda que hospedaria a sala de espera do [ADR 010](010-fila-de-acesso.md). Os serviços não mudam: a CDN respeita o `Cache-Control`.
+3. **CDN (com pico real):** Cloudflare, CloudFront ou similar na frente das rotas públicas, a mesma borda que hospedaria a sala de espera do [ADR 005](005-fila-de-acesso.md). Os serviços não mudam: a CDN respeita o `Cache-Control`.
 
 **Fica fora do cache longo:**
 - tudo o que é autenticado e todos os `POST`;
@@ -47,10 +47,8 @@ Para o pico de leitura, três camadas, ligadas conforme a necessidade:
 ## Consequências
 - O cancelamento pode levar até cerca de 60 s (mais o `stale-while-revalidate` na CDN) para aparecer no catálogo.
 - O layout do BFF muda: as páginas públicas deixam de receber o usuário no servidor.
-- Com CDN, o painel de cache vira mais uma coisa a monitorar ([ADR 006](006-monitoramento.md)), e o custo é por tráfego.
+- Com CDN, o painel de cache vira mais uma coisa a monitorar ([ADR 010](010-monitoramento.md)), e o custo é por tráfego.
 - As vagas restantes no catálogo exigem um endpoint à parte, com o próprio perfil de carga.
 
 ## Referências
-- [011-evento-imutavel-apos-publicacao.md](011-evento-imutavel-apos-publicacao.md)
-- [010-fila-de-acesso.md](010-fila-de-acesso.md)
-- [014-varias-instancias-por-servico.md](014-varias-instancias-por-servico.md)
+- [005-fila-de-acesso.md](005-fila-de-acesso.md)

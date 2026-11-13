@@ -70,7 +70,8 @@ Obrigações de quem implementa um serviço:
 | [RegistrationPromoted](messages/RegistrationPromoted.schema.json) | registration → (ninguém ainda) | futuro: notificações | — |
 | [RegistrationConfirmed](messages/RegistrationConfirmed.schema.json) | registration → (ninguém ainda) | futuro: notificações | — |
 | [AttendanceRegistered](messages/AttendanceRegistered.schema.json) | registration → (ninguém ainda) | futuro: relatórios | — |
-| [CertificateRequested](messages/CertificateRequested.schema.json) | registration → certificate (futuro, ADR 003) | emitir o certificado | por `requestId` (`<eventId>:<userId>`) |
+| [CertificateRequested](messages/CertificateRequested.schema.json) | registration → certificate (ADR 008) | emitir o certificado | por `(participantId, eventId)`; `requestId` = `<eventId>:<participantId>` |
+| [CertificateIssued](messages/CertificateIssued.schema.json) | certificate → (ninguém ainda) | futuro: notificações | publicado só na primeira emissão |
 
 Consequências para quem implementa:
 

@@ -20,7 +20,7 @@ docker compose down            # -v para apagar os bancos
 | reports      | http://localhost:3006  | sempre |
 | RabbitMQ UI  | http://localhost:15673 (guest/guest) | só no dev |
 
-- Só o `web`, o `certificate` e o `reports` publicam porta no `docker-compose.yml`. Os outros ficam na rede interna ([ADR 017](../docs/adrs/017-entrada-unica-sem-api-gateway.md)) e só publicam no [docker-compose.dev.yml](docker-compose.dev.yml), para depuração e Swagger.
+- Só o `web`, o `certificate` e o `reports` publicam porta no `docker-compose.yml`. Os outros ficam na rede interna ([ADR 007](../docs/adrs/007-entrada-unica-sem-api-gateway.md)) e só publicam no [docker-compose.dev.yml](docker-compose.dev.yml), para depuração e Swagger.
 - Dentro do contêiner, os serviços Node escutam na 3000 (`PORT` no compose): cada contêiner tem IP próprio, então não há conflito, e o número de cada serviço só aparece no mapeamento do dev (`"3001:3000"`). Entre serviços, o endereço é `http://<serviço>:3000`. O `certificate` e o `reports` escutam em 3005 e 3006, respectivamente.
 
 - Cada serviço tem seu próprio `<serviço>/Dockerfile` (permite linguagens diferentes no futuro). O build context é `microservices/` para incluir `shared/`, mantendo os imports relativos (`../../shared/...`).
