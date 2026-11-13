@@ -339,21 +339,19 @@ Sete serviços implementados. Fluxo de ponta a ponta com cinco serviços: consul
 
 ### 11.2 Testes executados em 2026-11-13
 
-// TODO fazer outros testes automáticos
-// TODO avaliar tirar resultados e falha
 | Suíte | Comando | Resultado |
 |---|---|---|
 | `registration` (domínio, API, repositório, concorrência, check-in, certificados) | `cd microservices/registration && npm test` | 39 de 39 |
 | `secretariat` | `cd microservices/secretariat && npm test` | 11 de 11 |
 | `shared` (outbox, retry/DLQ, repositório) | `cd microservices/shared && node --test` | 7 de 7 |
 | `web` (BFF) | `cd microservices/web && npm test` | 18 de 18 |
-| `identity` | `cd microservices/identity && npm test` | 1 de 2: o teste de integração ainda envia o formulário antigo de cadastro |
-| `contracts` (mensagens contra os schemas) | `cd microservices/contracts && npm test` | 5 de 6: o exemplo do `identity` usa senha curta demais para a regra atual |
+| `identity` | `cd microservices/identity && npm test` | 2 de 2 |
+| `contracts` (mensagens contra os schemas) | `cd microservices/contracts && npm test` | 6 de 6 |
 | `payment` (Python) | `cd microservices/payment && uv run pytest` | 9 de 9 |
 | `notification` (Python) | `cd microservices/notification && uv run pytest` | 25 de 25 |
 | `certificate` (Python) | `python -m pytest` | 39 de 39 |
-| `reports` (Python) | `python -m pytest` | 69 de 70: o teste de `/health` espera a exchange `loja`, e a atual é `event-hub` |
-| e2e (Playwright) | `cd microservices/e2e && npm test` | 2 de 2 (fluxo principal e falha de dependência) |
+| `reports` (Python) | `python -m pytest` | 70 de 70 |
+| e2e (fluxo principal e falha de dependência) | `cd microservices/e2e && npm test` | 2 de 2 |
 
 ### 11.3 Itens pedidos na Parte III
 
