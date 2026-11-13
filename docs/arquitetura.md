@@ -1,17 +1,17 @@
 # Arquitetura
 
-Visão geral. Detalhes em [ddd.md](ddd.md), [endpoint.md](endpoint.md), [adrs/](adrs/) e [../microservices/README.md](../microservices/README.md).
+Visão geral. Detalhes em [adrs/](adrs/), [contratos](../microservices/contracts/README.md) e [../microservices/README.md](../microservices/README.md). Diagrama RF → contexto → mensagens: [diagrams/arquitetura.md](diagrams/arquitetura.md).
 
 ## Contextos
 
 | Contexto | Serviço | RF |
-|---|---|---|---|
+|---|---|---|
 | Identidade | `identity` | RF01 |
 | Secretaria | `secretariat` | RF02, RF03, RF04 |
 | Credenciamento | `registration` | RF05, RF06, RF09 |
 | Caixa | `payment` | RF07 |
-| Notificações | — | RF08 |
-| Certificados | — | RF10 |
+| Notificações | `notification` (API + worker) | RF08 |
+| Certificados | `certificate` | RF10 |
 | Relatórios | `reports` | RF11 |
 | Monitoramento | — (infra) | — |
 | Front | `web` | — |
@@ -20,49 +20,67 @@ Não há serviço de catálogo: a programação pública, com preço, vagas e re
 
 ## Capacidades de negócio, dados e projeções
 
-Cada serviço é dono dos seus dados e não lê o banco de outro. No protótipo, cada um usa um SQLite; em produção, um banco relacional (Postgres) por serviço ([ADR 000](adrs/000-escolha-banco.md)). O que vem de fora chega por mensagem e vira projeção local, só com os campos de que ele precisa.
+Cada serviço é dono dos seus dados e não lê o banco de outro (*Database per service*). O que vem de fora chega por mensagem e vira projeção local, só com os campos de que ele precisa. Exceção: o `reports` lê cópias somente leitura dos bancos de outros serviços na subida (ver abaixo).
 
 ### Identidade (`identity`)
 - **Capacidade:** saber quem é o usuário. Cadastro, login e emissão do JWT que os outros serviços validam.
-- **Dados próprios:** `users` `{id, username, password, role}`. O papel é `user` ou `admin`, e o admin é criado na subida.
+- **Dados próprios:** `users` `{id, name, username, email, password_hash, active, created_at}`, em Postgres.
 - **Projeções:** nenhuma.
-- **Publica:** `UserCreated {userId, username}`.
+- **Publica:** `UserRegistered {userId, name, email}`. `UserUpdated` e `UserDeactivated` têm contrato e consumidores, mas não são publicados hoje.
 
 ### Secretaria (`secretariat`)
-- **Capacidade:** planejar e publicar eventos. O organizador monta o evento e a programação, define a oferta de cada atividade (vagas, preço, regras de elegibilidade), publica, cancela e escolhe quem organiza. É a dona de toda a informação do evento.
+- **Capacidade:** planejar e publicar eventos. O organizador monta o evento e a programação, define a oferta de cada atividade (vagas, preço, regras de elegibilidade), publica, encerra, cancela e escolhe quem organiza. É a dona de toda a informação do evento e serve o catálogo público (`/public/events`).
 - **Dados próprios:**
-  - `events` `{id, name, information, startDate, endDate, status: draft | published | ended | canceled, cancelReason, createdBy, organizers[]}`;
+  - `events` `{id, name, information, location, startDate, endDate, status: draft | published | ended | canceled, cancelReason, createdBy, organizers[]}`;
   - `activities` `{id, eventId, name, description, location, startsAt, endsAt, capacity, price, rules[]}`.
 
   O conteúdo só muda em `draft`.
-- **Projeções:** nenhuma. Organizers são ids de usuário, sem validação.
-- **Ciclo:** `draft → published → ended | canceled`. `ended` é manual, pelo organizador, para permitir correções de presença antes dos certificados.
+- **Projeções:** nenhuma. Organizers são ids de usuário; o BFF troca o e-mail pelo id no identity.
+- **Ciclo:** `draft → published → ended`; `draft` ou `published` → `canceled`. `ended` é manual, pelo organizador, para permitir correções de presença antes dos certificados.
 - **Publica:** `EventPublished` (com as atividades), `EventCanceled`, `EventOrganizersChanged` e `EventEnded`.
 
 ### Credenciamento (`registration`)
-- **Capacidade:** garantir a vaga do participante. Inscrição, elegibilidade, capacidade sob concorrência, fila de espera com promoção, reserva com prazo de pagamento e gestão das inscrições pelo organizador e check-in por código da atividade ([ADR 006](adrs/006-forma-do-checkin.md)).
-- **Dados próprios:** `registrations` `{id, userId, activityId, status: pending | waitlisted | awaiting_payment | confirmed | canceled, requirements[], reasons[], payment {id, amount, description, requestedAt, paid}, createdAt}`, mais a `version` da atividade, usada no lock otimista ([ADR 003](adrs/003-controle-de-vagas-no-credenciamento.md)); `checkins` `{activityId, status: open | closed, code, openedAt}`; `attendances` `{id, registrationId (único), activityId, userId, method: code | manual, checkedInBy, checkedInAt}`.
+- **Capacidade:** garantir a vaga do participante ([ADR 003](adrs/003-controle-de-vagas-no-credenciamento.md)). Inscrição, elegibilidade, capacidade sob concorrência, fila de espera com promoção, reserva com prazo de pagamento, gestão das inscrições pelo organizador e check-in por código da atividade ([ADR 006](adrs/006-forma-do-checkin.md)).
+- **Dados próprios:**
+  - `registrations` `{id, userId, activityId, status: pending | waitlisted | awaiting_payment | confirmed | canceled, requirements[], reasons[], payment {id, amount, description, requestedAt, expiresAt}, createdAt}`, mais a `version` da atividade, usada no lock otimista;
+  - `checkins` `{activityId, status: open | closed, code, openedAt}`;
+  - `attendances` `{id, registrationId (único), activityId, userId, method: code | manual, checkedInBy, checkedInAt}`.
 - **Projeções:**
   - `activities` `{id, eventId, name, startsAt, endsAt, capacity, price, rules}`: cópia imutável, criada uma vez pelo `EventPublished`;
-  - `events` `{id, name, status: published | canceled, organizers[]}`: vem do `EventPublished`, `EventCanceled` e `EventOrganizersChanged`; os organizers autorizam a gestão das inscrições;
-  - `participants` `{id, username}`: vem do `UserCreated` (o `UserUpdated` também é ouvido, mas o identity ainda não o publica); só para exibição.
-- **Ouve também:** `PaymentConfirmed`, `PaymentDenied` e `EventEnded` (encerra a cópia e pede os certificados).
-- **Publica:** `RegistrationCreated`, `RegistrationPromoted`, `RegistrationConfirmed`, `RegistrationCanceled`, `PaymentRequested`, `AttendanceRegistered` e `CertificateRequested`.
+  - `events` `{id, name, status: published | ended | canceled, organizers[]}`: vem do `EventPublished`, `EventCanceled`, `EventEnded` e `EventOrganizersChanged`; os organizers autorizam a gestão das inscrições;
+  - `participants` `{id, name}`: vem do `UserRegistered` (também ouve `UserUpdated`); só para exibição.
+- **Ouve também:** `PaymentConfirmed`, `PaymentDenied` e `PaymentExpired`.
+- **Publica:** `RegistrationCreated`, `RegistrationPromoted`, `RegistrationConfirmed`, `RegistrationCanceled`, `PaymentRequested`, `AttendanceRegistered`, `CheckInOpened`, `CheckInClosed`, `CertificateRequested` e `CertificateDenied` (sem presença no evento).
 
 ### Caixa (`payment`)
-- **Capacidade:** cobrar. Cria a cobrança pedida, valida o pagamento no gateway (hoje fake) e informa o resultado.
-- **Dados próprios:** `payments` `{id, amount, description, registrationId, status: pending | paid | denied | canceled, receipt}`. O `id` é o `payment.id` da inscrição.
+- **Capacidade:** cobrar. Cria a cobrança pedida, simula o pagamento (aprovado ou recusado) e informa o resultado. A cobrança vence no prazo da reserva.
+- **Dados próprios:** `payments` `{id, amount, description, registrationId, userId, status: pending | paid | denied | expired | canceled, receipt, expiresAt}`. O `id` é o `payment.id` da inscrição.
 - **Projeções:** nenhuma. Guarda só a referência `registrationId`.
 - **Ouve:** `PaymentRequested` (cria a cobrança) e `RegistrationCanceled` (cancela a cobrança pendente).
-- **Publica:** `PaymentConfirmed`, `PaymentDenied`.
+- **Publica:** `PaymentConfirmed`, `PaymentDenied` e `PaymentExpired`.
+
+### Notificações (`notification`)
+- **Capacidade:** avisar o participante por e-mail (SMTP; Mailpit no ambiente local) e listar os avisos dele (`GET /notifications`).
+- **Dados próprios:** notificações enviadas e tentativas, em SQLite. A API e o worker que consome a fila compartilham o volume.
+- **Projeções:** contatos `{userId, name, email}`, de `UserRegistered`/`UserUpdated`/`UserDeactivated` e de `PUT /contacts/me` (o BFF sincroniza no login).
+- **Ouve:** `PaymentRequested`, `PaymentConfirmed`, `PaymentDenied`, `PaymentExpired`, `RegistrationCreated`, `RegistrationConfirmed`, `RegistrationCanceled`, `CheckInOpened`, `CheckInClosed`, `CertificateIssued` e `CertificateDenied`.
+- **Publica:** nada.
+
+### Certificados (`certificate`)
+- **Capacidade:** emitir, listar, baixar (PDF com QR Code) e validar publicamente certificados.
+- **Dados próprios:** `certificates`, em SQLite. A emissão é idempotente por participante e evento.
+- **Projeções:** nenhuma: o `CertificateRequested` traz tudo o que o certificado precisa.
+- **Ouve:** `CertificateRequested`.
+- **Publica:** `CertificateIssued` (outbox), só na primeira emissão.
 
 ### Relatórios (`reports`)
-- **Capacidade:** monitoramento e relatórios por evento/atividade. É um **read model (CQRS)**: não lê o banco de outro serviço e não faz chamada HTTP para os donos dos dados ([RF11](ddd.md)).
+- **Capacidade:** monitoramento e relatórios por evento/atividade. É um **read model (CQRS)** e não faz chamada HTTP para os donos dos dados ([RF11](ddd.md)).
 - **Dados próprios (projeções):** `events`, `activities`, `registrations`, `attendances`, `payments`, `participants` e `inbox`, num SQLite próprio (`reports.db`).
-- **Ouve:** `Event*`, `Activity*`, `Registration*`, `Payment*`, `UserCheckedIn` e, opcionalmente, `UserCreated`/`UserUpdated`.
+- **Ouve:** `Event*`, `Registration*`, `Payment*`, `AttendanceRegistered` e `User*`.
 - **Publica:** nada.
 - **API:** `GET /reports/events/:id`, `GET /reports/activities/:id` e `GET /reports/events/:id/participants`, em JSON/CSV/XLSX/PDF; acesso restrito a organizador do evento ou admin.
-- **Trade-off:** a projeção é eventualmente consistente e não é reconstruível sem event store; suba o serviço antes dos publishers e use `dev/seed_report.py` em desenvolvimento.
+- **Bootstrap:** na subida, o compose monta os volumes de `secretariat`, `registration` e `payment` somente leitura (`REPORTS_BOOTSTRAP_*_DB`) e o `reports` preenche as projeções a partir deles. Isso quebra o *Database per Service*: acopla o `reports` ao schema dos outros serviços. Alternativa: um replay de eventos pelos produtores ou um event store.
+- **Trade-off:** a projeção é eventualmente consistente; sem o bootstrap, não é reconstruível porque o RabbitMQ não guarda histórico.
 
 ### Front (`web`, BFF)
 - **Capacidade:** telas do participante e do organizador. Compõe as chamadas aos serviços.
@@ -73,18 +91,18 @@ Cada serviço é dono dos seus dados e não lê o banco de outro. No protótipo,
 
 A divisão em serviços segue os contextos, e eles têm perfis de carga diferentes. Cada um pode ganhar mais instâncias sem mexer nos outros, e a fila absorve os picos entre eles.
 
-**No protótipo, porém, todo serviço com dados roda com uma instância só**, porque usa SQLite num volume local. Só o BFF já escala na horizontal. Em produção, cada serviço migra para o Postgres ([ADR 000](adrs/000-escolha-banco.md)) e passa a aceitar várias instâncias.
+**No protótipo, porém, todo serviço com SQLite roda com uma instância só**, porque o banco fica num volume local. Só o BFF já escala na horizontal. Em produção, cada serviço migra para o Postgres ([ADR 000](adrs/000-escolha-banco.md)) e passa a aceitar várias instâncias.
 
 | Serviço | Carga | Gargalo | Como escala | Gatilho |
 |---|---|---|---|---|
 | `web` (BFF) | Todo o tráfego HTML, mais o polling da fila de espera | Requisições por segundo; caches por instância | Na horizontal, porque não tem estado. Página pública sem sessão e cacheável ([ADR 002](adrs/002-catalogo-publico.md)) | CPU ou latência alta |
 | `secretariat` | Escrita baixa (organizadores). Leitura pública alta na abertura das inscrições | Uma instância no protótipo (SQLite) | Cache HTTP e micro-cache no BFF; CDN com pico real ([ADR 002](adrs/002-catalogo-publico.md)); réplicas depois do Postgres | Pico de leitura que o cache não absorve |
 | `registration` | Escrita concorrente na abertura das inscrições; check-in na abertura das atividades | Uma instância no protótipo (SQLite); lock otimista por atividade; a `Activity` carregada com todas as inscrições | Postgres e réplicas do serviço; rate limit; processamento serial por atividade e sala de espera na borda ([ADR 005](adrs/005-fila-de-acesso.md)) | Conflitos de lock ou CPU saturada no pico |
-| `identity` | Logins na abertura das inscrições | Uma instância no protótipo; hash de senha (CPU), quando houver | Réplicas, depois do Postgres. Os outros serviços validam o JWT localmente, então o `identity` não está no caminho de cada requisição | Login lento no pico |
-| `payment` | Acompanha as inscrições pagas | Latência do gateway externo | Assíncrono: a fila absorve. Consumidores concorrentes depois do Postgres | Fila `payment` crescendo |
+| `identity` | Logins na abertura das inscrições | Hash de senha (bcrypt, CPU) | Réplicas (já usa Postgres). Os outros serviços validam o JWT localmente, então o `identity` não está no caminho de cada requisição | Login lento no pico |
+| `payment` | Acompanha as inscrições pagas | Latência do gateway externo (hoje simulado) | Assíncrono: a fila absorve. Consumidores concorrentes depois do Postgres | Fila `payment` crescendo |
 | RabbitMQ | Todas as mensagens | Um nó só | Cluster com quorum queues | Indisponibilidade ou fila acumulando |
-| `notification` (planejado) | Rajadas (cancelamento de evento, promoções) | Limite do provedor de e-mail | Consumidores concorrentes; a fila absorve | Atraso nos avisos |
-| `certificate` (planejado) | Lote no `EventEnded`; validação pública por anos | Geração de PDF (CPU) | Workers em paralelo; validação cacheável | Lote demorado |
+| `notification` | Rajadas (cancelamento de evento, promoções) | Limite do provedor de e-mail | Mais workers; a fila absorve | Atraso nos avisos |
+| `certificate` | Lote no `EventEnded`; validação pública por anos | Geração de PDF (CPU) | Workers em paralelo; validação cacheável | Lote demorado |
 | `reports` | Consulta rara, export sob demanda | Volume das projeções e geração de PDF/XLSX | Consumidor único no protótipo (SQLite); réplicas e Postgres depois; export assíncrono se necessário | Consultas lentas ou fila `reports` crescendo |
 
 **Para ter várias instâncias**:
@@ -96,7 +114,7 @@ O lock otimista, o trigger de capacidade e a inbox já funcionam com várias ins
 
 ### Subdivisões possíveis
 
-Um contexto pode virar mais de um deployable quando uma parte tiver carga ou disponibilidade diferente das outras. O modelo e o banco continuam do contexto. Nenhuma das subdivisões abaixo é necessária hoje:
+Um contexto pode virar mais de um deployable quando uma parte tiver carga ou disponibilidade diferente das outras. O modelo e o banco continuam do contexto. A API e o worker do `notification` já são um exemplo. Nenhuma das subdivisões abaixo é necessária hoje:
 
 | De | Parte | Quando separar | Referência |
 |---|---|---|---|
@@ -108,27 +126,31 @@ Um contexto pode virar mais de um deployable quando uma parte tiver carga ou dis
 
 ## O que já temos
 
-- **Infra:** docker-compose com um serviço por contêiner, hot reload no ambiente de dev e RabbitMQ com exchange `topic` e uma fila durável por serviço.
-- **Comunicação:** coreografia por eventos ([ADR 001](adrs/001-comunicacao-assincrona.md)); cada serviço guarda projeções dos dados de outros contextos.
-- **Auth:** JWT HS256 emitido pelo identity e validado em `shared/auth`; admin criado na subida.
-- **Identity:** cadastro, login e o evento `UserCreated`.
-- **Secretaria:** CRUD de eventos e atividades, publicar/cancelar, organizers, permissões; edição só em rascunho e `EventPublished` com o retrato imutável.
-- **Credenciamento:** inscrição com regras (`minimumAge`), vaga com fila de espera, reserva com pagamento e expiração, projeções de atividade, evento e participante check-in com comparecimento (RF09, RF11) e pedido de certificados ao encerrar o evento (RF10).
-- **Caixa:** recebe `PaymentRequested`, paga por `POST /payments/:id/pay` com gateway fake e publica `PaymentConfirmed` ou `PaymentDenied`.
-- **Testes:** secretariat, registration, payment e shared.
-- **ADRs:** 000 a 017 (002, 007 e 013 foram mesclados no 012, 015 e 016).
+- **Infra:** docker-compose com um serviço por contêiner, hot reload no ambiente de dev e RabbitMQ com exchange `topic` e uma fila durável por serviço. Só o `web` e o `certificate` (validação pública) publicam porta ([ADR 007](adrs/007-entrada-unica-sem-api-gateway.md)).
+- **Comunicação:** coreografia por eventos ([ADR 001](adrs/001-comunicacao-assincrona.md)), com outbox, inbox, retry e DLQ nos serviços Node; cada serviço guarda projeções dos dados de outros contextos.
+- **Auth:** JWT HS256 emitido pelo identity e validado localmente por todos os serviços.
+- **Identity:** cadastro, login e o evento `UserRegistered`.
+- **Secretaria:** CRUD de eventos e atividades, publicar/encerrar/cancelar, organizers, permissões e catálogo público; edição só em rascunho e `EventPublished` com o retrato imutável.
+- **Credenciamento:** inscrição com regras (`minimumAge`), vaga com fila de espera, reserva com pagamento e expiração, check-in com comparecimento (RF09, RF11) e pedido de certificados ao encerrar o evento (RF10).
+- **Caixa:** recebe `PaymentRequested`, simula o pagamento (`POST /payments/:id/pay`), expira cobranças vencidas e publica o resultado.
+- **Notificações, Certificados e Relatórios:** consomem as mensagens dos outros contextos, sem chamada HTTP entre serviços.
+- **Testes:** unidade e integração em todos os serviços, contratos das mensagens contra os schemas e e2e (fluxo principal e falha de dependência).
+- **ADRs:** 000 a 010.
 
 ## O que falta
 
 ### Por contexto
-- **Caixa:** auth, estorno quando a inscrição é cancelada depois de paga e gateway real (adaptador).
+- **Identity:** publicar `UserUpdated` e `UserDeactivated` (já têm consumidores).
+- **Caixa:** estorno quando a inscrição é cancelada depois de paga e gateway real (adaptador).
+- **Relatórios:** trocar o bootstrap pelos bancos dos outros serviços por replay de eventos.
 
 ### Transversal
 - **Persistência:** migrar cada serviço do SQLite para o Postgres antes da produção, com várias instâncias ([ADR 000](adrs/000-escolha-banco.md)).
 - **Mensageria:**
   - id de correlação;
-  - contratos versionados (AsyncAPI).
-- **Monitoramento:** `/health`, logs estruturados, métricas e tracing ([ADR 010](adrs/010-monitoramento.md)).
+  - contratos versionados (AsyncAPI); schema para `CertificateIssued`, `CertificateDenied`, `CheckInOpened`, `CheckInClosed` e `PaymentExpired`;
+  - garantias dos serviços Python iguais às do bus Node (outbox, retry e DLQ em todos).
+- **Monitoramento:** `/health` em todos os serviços (hoje só nos Python), logs estruturados, métricas e tracing ([ADR 010](adrs/010-monitoramento.md)).
 - **Segurança:** RS256 no lugar do segredo compartilhado.
-- **Entrada única:** o `web` é a única entrada, sem API gateway; os serviços deixam de publicar porta e um proxy reverso faz TLS e rate limit ([ADR 007](adrs/007-entrada-unica-sem-api-gateway.md)).
+- **Entrada única:** proxy reverso na frente do `web` para TLS e rate limit ([ADR 007](adrs/007-entrada-unica-sem-api-gateway.md)).
 - **Fila de acesso:** só com pico real, e terceirizada na borda; até lá, rate limit em `POST /registrations` ([ADR 005](adrs/005-fila-de-acesso.md)).

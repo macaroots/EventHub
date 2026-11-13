@@ -1,8 +1,4 @@
 ```mermaid
----
-config:
-  layout: dagre
----
 flowchart LR
     RF01[RF01: Usuários e perfis]
     RF02[RF02: Eventos]
@@ -43,19 +39,23 @@ flowchart LR
     subgraph Notificações
       RF08
     end
-    %% A --> B: A emite um evento que B consome. Dependências dentro de um mesmo serviço não aparecem.
-    %% Linha tracejada: consumidor ainda não implementado (Notificações, Certificados, Relatórios).
-    BFF -- HTTP --> Identidade & Secretaria & Credenciamento & Caixa & Certificados & Relatórios
-    RF01 -- UserCreated --> RF05
-    RF01 -. "UserCreated (contato)" .-> RF08
+    %% A --> B: A emite uma mensagem que B consome. Dependências dentro de um mesmo serviço não aparecem.
+    %% Linha tracejada: leitura direta de banco (bootstrap do reports), fora do padrão.
+    BFF -- HTTP --> Identidade & Secretaria & Credenciamento & Caixa & Certificados & Relatórios & Notificações
+    RF01 -- UserRegistered --> RF05 & RF08 & RF11
     RF02 -- "EventPublished, EventCanceled, EventOrganizersChanged" --> RF05
     RF02 -- EventEnded --> RF09
-    RF02 -. EventCanceled .-> RF08
+    RF02 -- "Event*" --> RF11
     RF05 -- "PaymentRequested, RegistrationCanceled" --> RF07
-    RF07 -- "PaymentConfirmed, PaymentDenied" --> RF05
-    RF05 -. "RegistrationCreated, RegistrationConfirmed, RegistrationCanceled, PaymentRequested" .-> RF08
-    RF06 -. RegistrationPromoted .-> RF08
-    RF09 -. CertificateRequested .-> RF10
-    RF10 -. "certificado emitido" .-> RF08
-    Identidade & Secretaria & Credenciamento & Caixa & Certificados -. "todos (#)" .-> RF11
+    RF07 -- "PaymentConfirmed, PaymentDenied, PaymentExpired" --> RF05
+    RF07 -- "PaymentConfirmed, PaymentDenied, PaymentExpired" --> RF08
+    RF05 -- "RegistrationCreated, RegistrationConfirmed, RegistrationCanceled, PaymentRequested" --> RF08
+    RF09 -- "CheckInOpened, CheckInClosed" --> RF08
+    RF09 -- CertificateRequested --> RF10
+    RF09 -- CertificateDenied --> RF08
+    RF10 -- CertificateIssued --> RF08
+    RF05 & RF06 -- "Registration*, PaymentRequested" --> RF11
+    RF09 -- AttendanceRegistered --> RF11
+    RF07 -- "Payment*" --> RF11
+    Secretaria & Credenciamento & Caixa -. "banco (somente leitura, na subida)" .-> RF11
 ```

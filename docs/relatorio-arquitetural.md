@@ -349,7 +349,7 @@ Sete serviços implementados. Fluxo de ponta a ponta com cinco serviços: consul
 | `reports` (Python) | `python -m pytest` | 70 de 70 |
 | e2e (fluxo principal e falha de dependência) | `cd microservices/e2e && npm test` | 2 de 2 |
 
-### 11.3 Itens pedidos na Parte III
+### 11.3 Fluxo inscrição, concorrência, falhas e integração
 
 | Item | Evidência | Situação |
 |---|---|---|
