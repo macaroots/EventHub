@@ -91,9 +91,13 @@ class RabbitMQBus:
         async def on_message(message: aio_pika.abc.AbstractIncomingMessage):
             async with message.process(requeue=True):
                 try:
+
                     payload = json.loads(message.body.decode("utf-8"))
+                    event_id = payload.get("id")
                     event_type = payload.get("type")
+                    event_source = payload.get("source")
                     event_data = payload.get("data", payload)
+                    logger.info("[%s] %s id=%s source=%s", queue_name, event_type, event_id, event_source)
 
                     callbacks = self.listeners.get(event_type, [])
                     for cb in callbacks:
