@@ -10,7 +10,7 @@ from ..domain.errors import BadRequestError
 
 logger = logging.getLogger(__name__)
 
-EXCHANGE = "loja"
+EXCHANGE = "event-hub"
 QUEUE = "certificate"
 ROUTING_KEY = "CertificateRequested"
 
@@ -161,7 +161,10 @@ class CertificateRequestedConsumer:
 
 def _field(event: Any, name: str) -> str:
     if isinstance(event, dict):
-        value = event.get(name)
+        data = event.get("data", event)
+        value = data.get(name) if isinstance(data, dict) else None
+        if name == "participantId" and isinstance(data, dict):
+            value = value or data.get("userId")
         if value is not None:
             return str(value)
     return "-"

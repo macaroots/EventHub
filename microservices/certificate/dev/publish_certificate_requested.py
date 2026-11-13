@@ -27,7 +27,7 @@ import json
 import os
 from datetime import date
 
-EXCHANGE = "loja"
+EXCHANGE = "event-hub"
 QUEUE = "certificate"
 ROUTING_KEY = "CertificateRequested"
 

@@ -24,7 +24,7 @@ A emissão acontece quando o `CertificateRequested` chega.
 
 ## Evento consumido
 
-Fila `certificate`, exchange `loja` (topic), routing key `CertificateRequested`,
+Fila `certificate`, exchange `event-hub` (topic), routing key `CertificateRequested`,
 `prefetch(1)`, mensagens persistentes.
 
 ```json
@@ -39,6 +39,10 @@ Fila `certificate`, exchange `loja` (topic), routing key `CertificateRequested`,
 }
 ```
 
+- O consumidor aceita o envelope atual `{id, type, source, time, data}` do
+  outbox do registration. Nele, `data.userId` identifica o participante e a
+  data do certificado vem da primeira data das atividades com presença
+  (`data.activities[].date`). O formato plano abaixo continua aceito pelo script de desenvolvimento.
 - `participantId` vira `user_id` do certificado.
 - `eventDate` precisa ser `YYYY-MM-DD`; data com hora é rejeitada.
 - `activities` precisa ter pelo menos um item com `name`.
@@ -113,3 +117,14 @@ docker compose up -d --build certificate
 O compose já injeta `RABBITMQ_URL=amqp://rabbitmq` e mantém a fila `certificate`
 durável. Suba o `certificate` **antes** de o `registration` começar a publicar:
 o exchange é topic e mensagens sem fila ligada são descartadas.
+
+Para recuperar pedidos que não chegaram ao consumidor antes de uma correção,
+com o certificate já conectado ao broker, execute a partir da raiz:
+
+```sh
+python microservices/certificate/dev/replay_requests.py --event-id UUID
+```
+
+O script usa somente as presenças reais de um evento encerrado no registration
+e reenvia os pedidos pelo outbox, sem reabrir o evento. Repetições não duplicam
+certificados, pois a emissão é idempotente por participante/evento.

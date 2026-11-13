@@ -1,0 +1,31 @@
+<div class="page-container">
+    <section class="page-heading">
+        <span class="eyebrow">MINHA PARTICIPAÇÃO</span>
+        <h1>Meus certificados</h1>
+        <p class="muted">Baixe os certificados dos eventos em que você participou.</p>
+    </section>
+    <section class="data-panel">
+        <% if (certificateError) { %>
+            <p class="notice notice-error" role="alert"><%= certificateError %></p>
+            <a class="btn-secondary" href="/certificates">Tentar novamente</a>
+        <% } else if (!certificates.length) { %>
+            <p class="empty-state">Você ainda não tem certificados disponíveis. Eles são emitidos após o encerramento do evento para os participantes com presença registrada.</p>
+            <a class="btn-secondary" href="/registrations">Ver minhas inscrições</a>
+        <% } else { %>
+            <div class="table-scroll">
+                <table class="hub-table">
+                    <thead><tr><th scope="col">Evento</th><th scope="col">Data do evento</th><th scope="col">Certificado</th></tr></thead>
+                    <tbody>
+                        <% for (const item of certificates) { %>
+                            <tr>
+                                <td><strong><%= item.eventName %></strong></td>
+                                <td><%= /^\d{4}-\d{2}-\d{2}$/.test(item.eventDate) ? item.eventDate.split('-').reverse().join('/') : item.eventDate %></td>
+                                <td><a class="btn-primary" type="submit" href="/certificates/<%= encodeURIComponent(item.certificateId) %>/download">Baixar certificado</a></td>
+                            </tr>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+        <% } %>
+    </section>
+</div>
