@@ -84,8 +84,15 @@
     <div class="data-panel">
         <div class="panel-heading">
             <div><span class="eyebrow">PROGRAMAÇÃO</span><h2>Atividades do evento</h2></div>
-            <% if (draft) { %><a class="btn-primary" href="<%= base %>/activities/new">Adicionar atividade</a><% } %>
+            <% if (draft) { %>
+                <a class="btn-primary" href="<%= base %>/activities/new">Adicionar atividade</a>
+            <% } else { %>
+                <button class="btn-primary" type="button" disabled aria-describedby="activity-creation-status">Adicionar atividade</button>
+            <% } %>
         </div>
+        <% if (!draft) { %>
+            <p class="notice notice-info" id="activity-creation-status">Novas atividades só podem ser adicionadas enquanto o evento está em rascunho. Este evento está <%= statusLabel.toLowerCase() %>.</p>
+        <% } %>
         <% if (!activities.length) { %>
             <p class="empty-state">Nenhuma atividade cadastrada para este evento.</p>
         <% } else { %>
@@ -105,6 +112,11 @@
                 </tbody>
             </table>
         </div>
+        <% if (draft) { %>
+        <div class="event-form-actions">
+            <a class="btn-primary" href="<%= base %>/activities/new">Adicionar atividade</a>
+        </div>
+        <% } %>
         <% } %>
     </div>
 </section>
@@ -185,5 +197,8 @@
             activate(tabs[next]);
         });
     });
+    if (new URLSearchParams(location.search).get('tab') === 'activities') {
+        activate(document.getElementById('tab-activities'));
+    }
 })();
 </script>
