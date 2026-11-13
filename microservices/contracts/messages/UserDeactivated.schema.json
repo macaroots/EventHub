@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://event-hub.local/contracts/messages/UserDeactivated.schema.json",
   "title": "UserDeactivated",
-  "description": "identity → (ninguém ainda). Conta desativada; inscrições antigas continuam apontando para o userId.",
+  "description": "identity (não publica hoje) → notification. Conta desativada; inscrições antigas continuam apontando para o userId.",
   "allOf": [
     {
       "$ref": "envelope.schema.json"

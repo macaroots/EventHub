@@ -148,7 +148,7 @@ Um contexto pode virar mais de um deployable quando uma parte tiver carga ou dis
 - **Persistência:** migrar cada serviço do SQLite para o Postgres antes da produção, com várias instâncias ([ADR 000](adrs/000-escolha-banco.md)).
 - **Mensageria:**
   - id de correlação;
-  - contratos versionados (AsyncAPI); schema para `CertificateIssued`, `CertificateDenied`, `CheckInOpened`, `CheckInClosed` e `PaymentExpired`;
+  - contratos versionados (AsyncAPI); schema para `CertificateDenied`, `CheckInOpened`, `CheckInClosed` e `PaymentExpired`;
   - garantias dos serviços Python iguais às do bus Node (outbox, retry e DLQ em todos).
 - **Monitoramento:** `/health` em todos os serviços (hoje só nos Python), logs estruturados, métricas e tracing ([ADR 010](adrs/010-monitoramento.md)).
 - **Segurança:** RS256 no lugar do segredo compartilhado.

@@ -345,7 +345,7 @@ Sete serviços implementados. Fluxo de ponta a ponta com cinco serviços: consul
 | `contracts` (mensagens contra os schemas) | `cd microservices/contracts && npm test` | 6 de 6 |
 | `payment` (Python) | `cd microservices/payment && uv run pytest` | 9 de 9 |
 | `notification` (Python) | `cd microservices/notification && uv run pytest` | 25 de 25 |
-| `certificate` (Python) | `python -m pytest` | 39 de 39 |
+| `certificate` (Python) | `python -m pytest` | 43 de 43 |
 | `reports` (Python) | `python -m pytest` | 70 de 70 |
 | e2e (fluxo principal e falha de dependência) | `cd microservices/e2e && npm test` | 2 de 2 |
 
