@@ -34,7 +34,7 @@ app.get('/users', authenticate(), (req, res) => {
 });
 
 app.post('/users', async (req, res) => {
-    let bean = req.body;
+    let bean = req.body ?? {};
     try {
         const id = await userService.signin(bean);
         res.json({ id });
@@ -45,7 +45,7 @@ app.post('/users', async (req, res) => {
 
 // Suporte para POST /auth e POST /auth/login
 const handleAuth = async (req, res) => {
-    let bean = req.body;
+    let bean = req.body ?? {};
     try {
         const { user, token } = await userService.authenticate(bean);
         res.json({ user, token });
@@ -57,7 +57,7 @@ const handleAuth = async (req, res) => {
 app.post('/auth', handleAuth);
 app.post('/auth/login', handleAuth);
 app.post('/auth/register', async (req, res) => {
-    let bean = req.body;
+    let bean = req.body ?? {};
     try {
         const id = await userService.signin(bean);
         res.json({ id });

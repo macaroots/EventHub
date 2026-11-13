@@ -10,8 +10,9 @@ router.get('/login', (req, res) => res.layout('auth/login', { next: req.query.ne
 const safeNext = (next) => (/^\/(?![/\\])/.test(next ?? '') ? next : '/organizers/events');
 
 router.post('/login', async (req, res) => {
+    const form = req.body ?? {};
     try {
-        const response = await identity.login(req.body);
+        const response = await identity.login(form);
         if (!response.ok) {
             let errorMsg = 'Credenciais inválidas';
             try {
@@ -21,7 +22,7 @@ router.post('/login', async (req, res) => {
                 const text = await response.text();
                 if (text) errorMsg = text;
             }
-            return res.status(400).layout('auth/login', { error: errorMsg, next: req.body.next, isAuthPage: true });
+            return res.status(400).layout('auth/login', { error: errorMsg, next: form.next, isAuthPage: true });
         }
         
         const { token } = await response.json();
@@ -33,18 +34,18 @@ router.post('/login', async (req, res) => {
                 maxAge: 60 * 60 * 1000,
             });
         }
-        return res.redirect(safeNext(req.body.next));
+        return res.redirect(safeNext(form.next));
     } catch (err) {
         return res.status(500).layout('auth/login', { 
             error: 'Não foi possível conectar ao serviço de autenticação. Tente novamente mais tarde.',
-            next: req.body.next,
+            next: form.next,
             isAuthPage: true 
         });
     }
 });
 
 router.post('/register', async (req, res) => {
-    const { username, email, password } = req.body;
+    const { username, email, password } = req.body ?? {};
     const normalizedEmail = (email || '').trim().toLowerCase();
 
     const payload = {
