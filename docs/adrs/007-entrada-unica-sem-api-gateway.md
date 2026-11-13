@@ -1,5 +1,5 @@
 # Título: Entrada única pelo BFF, sem API gateway
-Número do ADR: 017
+Número do ADR: 007
 Data: 2026-11-09
 Responsável: Renato
 Status: Proposto
@@ -7,8 +7,8 @@ Status: Proposto
 ## Contexto
 O item "Entrada única" do [arquitetura.md](../arquitetura.md#transversal) pede um API gateway na frente dos serviços. Hoje:
 - **O único cliente é o navegador**, e ele só fala com o `web` (BFF, HTML renderizado no servidor). Nenhum requisito pede app mobile, CLI ou API para terceiros.    
-- **As composições ficam no BFF:** e-mail → id do organizador e ids → nomes ([ADR 016](016-organizador-por-email.md)), além do status da fila de espera ([ADR 009](009-posicao-na-fila-de-espera.md)). São composições de tela.
-- **Na borda, o que se pede é:** TLS, rate limit em `POST /registrations` ([ADR 010](010-fila-de-acesso.md)), cache e CDN das páginas públicas ([ADR 015](015-catalogo-publico.md)) e balanceamento entre as instâncias do `web`.
+- **As composições ficam no BFF:** e-mail → id do organizador e ids → nomes, além do status da fila de espera ([ADR 004](004-atualizacao-posicao-na-fila.md)). São composições de tela.
+- **Na borda, o que se pede é:** TLS, rate limit em `POST /registrations` ([ADR 005](005-fila-de-acesso.md)), cache e CDN das páginas públicas ([ADR 002](002-catalogo-publico.md)) e balanceamento entre as instâncias do `web`.
 - Cada serviço valida o JWT localmente (`shared/auth`), sem passar pelo identity.
 
 ## Decisão
@@ -16,10 +16,10 @@ O item "Entrada única" do [arquitetura.md](../arquitetura.md#transversal) pede 
 - **Os serviços ficam só na rede interna:**
   - `registration`, `secretariat`, `identity` e `payment` deixam de publicar porta no `docker-compose.yml`;
   - a porta continua no `docker-compose.dev.yml`, para depuração.
-- **Na frente do `web`, um proxy reverso só de configuração** (Traefik, nginx, ou a própria CDN do [ADR 015](015-catalogo-publico.md)). Ele faz TLS, rate limit e balanceamento, e não tem código da aplicação.
+- **Na frente do `web`, um proxy reverso só de configuração** (Traefik, nginx, ou a própria CDN do [ADR 002](002-catalogo-publico.md)). Ele faz TLS, rate limit e balanceamento, e não tem código da aplicação.
 - **Cada serviço continua validando o JWT.** A borda não substitui a autorização dos serviços.
-- **Composição de tela fica no BFF de cada interface.** Uma composição que toda interface repete é sinal de regra de domínio e vai para o serviço dono, por exemplo uma projeção de usuários na secretaria ([ADR 016](016-organizador-por-email.md)).
-- **Instâncias dos serviços** ([ADR 014](014-varias-instancias-por-servico.md)): o BFF chega a elas pelo DNS do orquestrador (Docker, Service do Kubernetes), não por um gateway.
+- **Composição de tela fica no BFF de cada interface.** Uma composição que toda interface repete é sinal de regra de domínio e vai para o serviço dono, por exemplo uma projeção de usuários na secretaria.
+- **Instâncias dos serviços**: o BFF chega a elas pelo DNS do orquestrador (Docker, Service do Kubernetes), não por um gateway.
 
 ## Justificativa
 - Com um cliente só, um gateway duplicaria o papel do BFF. Seria mais um componente para operar, monitorar e escalar no pico, sem nenhum requisito que dependa dele.
@@ -38,13 +38,11 @@ O item "Entrada única" do [arquitetura.md](../arquitetura.md#transversal) pede 
 - Toda tela nova passa pelo BFF, mesmo quando só repassa a chamada. Esse é o custo de uma entrada só, e o helper `action` mantém esse repasse curto.
 - **Gatilhos para revisar:**
   - um cliente fora do navegador (app mobile, CLI, integração de terceiros) chamando as APIs. Nesse caso, entra um gateway que publica só as rotas escolhidas, sem composição, e os serviços continuam validando o JWT;
-  - uma rota pública servida por outro serviço, como a validação de certificados ([ADR 003](003-certificados.md)). Basta uma regra de roteamento no proxy, e um gateway não é necessário.
+  - uma rota pública servida por outro serviço, como a validação de certificados ([ADR 008](008-certificados.md)). Basta uma regra de roteamento no proxy, e um gateway não é necessário.
 
 ## Referências
-- [003-certificados.md](003-certificados.md)
-- [009-posicao-na-fila-de-espera.md](009-posicao-na-fila-de-espera.md)
-- [010-fila-de-acesso.md](010-fila-de-acesso.md)
-- [014-varias-instancias-por-servico.md](014-varias-instancias-por-servico.md)
-- [015-catalogo-publico.md](015-catalogo-publico.md)
-- [016-organizador-por-email.md](016-organizador-por-email.md)
+- [008-certificados.md](008-certificados.md)
+- [004-atualizacao-posicao-na-fila.md](004-atualizacao-posicao-na-fila.md)
+- [005-fila-de-acesso.md](005-fila-de-acesso.md)
+- [002-catalogo-publico.md](002-catalogo-publico.md)
 - [../arquitetura.md](../arquitetura.md)

@@ -1,5 +1,5 @@
 # Título: Controle de vagas como regra do Credenciamento, não como microserviço à parte
-Número do ADR: 008
+Número do ADR: 003
 Data: 2026-11-05
 Responsável: Renato
 Status: Aceito
@@ -27,7 +27,7 @@ A pergunta é onde fica o controle de vagas:
                                     (cancelada) ──> canceled ─┘ libera a vaga e promove o próximo da fila
    ```
 
-   Os status que ocupam vaga somam no máximo `capacity`. As regras de fila e promoção estão no [README do registration](../../microservices/registration/README.md#regras-de-inscrição-adr-008).
+   Os status que ocupam vaga somam no máximo `capacity`. As regras de fila e promoção estão no [README do registration](../../microservices/registration/README.md#regras-de-inscrição-adr-003).
 2. **A `Activity` é a única porta de escrita das inscrições.** O repositório de `Registration` só lê.
 3. **A capacidade é garantida em camadas:**
    - domínio: a `Activity` decide a vaga;
@@ -49,13 +49,12 @@ A pergunta é onde fica o controle de vagas:
 
 ## Consequências
 - O Credenciamento concentra inscrição, elegibilidade, capacidade e fila de espera. Escalar a inscrição escala também o controle de vagas.
-- A capacidade vem da cópia imutável da atividade recebida na publicação ([ADR 011](011-evento-imutavel-apos-publicacao.md)), então a invariante vale sobre dados que não mudam.
+- A capacidade vem da cópia imutável da atividade recebida na publicação, então a invariante vale sobre dados que não mudam.
 - Numa atividade muito disputada, as tentativas repetidas aumentam a latência. O teste `concurrency.test.js` (8 instâncias, 200 inscrições, 30 vagas) não ultrapassa a capacidade.
-- Gatilhos para revisar: disputa numa atividade que o lock otimista não absorve (contador atômico ou processamento serial por atividade, [ADR 010](010-fila-de-acesso.md)), ou outro contexto que precise controlar vagas com regras próprias.
+- Gatilhos para revisar: disputa numa atividade que o lock otimista não absorve (contador atômico ou processamento serial por atividade, [ADR 005](005-fila-de-acesso.md)), ou outro contexto que precise controlar vagas com regras próprias.
 
 ## Referências
 - [001-comunicacao-assincrona.md](001-comunicacao-assincrona.md)
-- [009-posicao-na-fila-de-espera.md](009-posicao-na-fila-de-espera.md)
-- [011-evento-imutavel-apos-publicacao.md](011-evento-imutavel-apos-publicacao.md)
-- [012-forma-do-checkin.md](012-forma-do-checkin.md)
+- [004-atualizacao-posicao-na-fila.md](004-atualizacao-posicao-na-fila.md)
+- [006-forma-do-checkin.md](006-forma-do-checkin.md)
 - [../../microservices/registration/README.md](../../microservices/registration/README.md)

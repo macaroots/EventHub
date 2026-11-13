@@ -1,5 +1,5 @@
 # Título: Check-in no registration, por código da atividade
-Número do ADR: 012
+Número do ADR: 006
 Data: 2026-11-06
 Responsável: Renato
 Status: Aceito
@@ -53,6 +53,6 @@ Check-in aqui não é controle de entrada: ninguém é barrado na porta. O que s
 - Um código repassado durante a abertura ainda permite presença indevida. Mitigação: gerar um código novo ou passar para o código rotativo.
 
 ## Referências
-- [003-certificados.md](003-certificados.md)
+- [008-certificados.md](008-certificados.md)
 - [../ddd.md](../ddd.md)
 - [../../microservices/registration/README.md](../../microservices/registration/README.md)

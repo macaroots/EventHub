@@ -11,9 +11,9 @@ Cada serviço é dono dos seus dados e não lê o banco de outro ([ADR 001](001-
 
 Em produção, as necessidades dos serviços atuais são parecidas:
 - gravar o estado e as mensagens na mesma transação (outbox);
-- garantir invariantes sob concorrência, como a capacidade da atividade ([ADR 008](008-controle-de-vagas-no-credenciamento.md));
+- garantir invariantes sob concorrência, como a capacidade da atividade ([ADR 003](003-controle-de-vagas-no-credenciamento.md));
 - ter unicidade (username, uma presença por inscrição) e consultas por índice;
-- rodar com várias instâncias por serviço ([ADR 014](014-varias-instancias-por-servico.md)).
+- rodar com várias instâncias por serviço.
 
 ## Decisão
 - **Protótipo:** SQLite (`node:sqlite`), um arquivo por serviço, num volume do contêiner. Os repositórios ficam atrás de uma interface (`shared/infrastructure`), e o domínio não conhece o banco.
@@ -23,12 +23,12 @@ Em produção, as necessidades dos serviços atuais são parecidas:
 | Serviço | Persistência esperada | Por quê |
 |---|---|---|
 | `identity` | Postgres | Unicidade de username; ou um IdP externo |
-| `secretariat` | Postgres | Evento e atividades com transação; leitura pública atrás de cache ([ADR 015](015-catalogo-publico.md)) |
+| `secretariat` | Postgres | Evento e atividades com transação; leitura pública atrás de cache ([ADR 002](002-catalogo-publico.md)) |
 | `registration` | Postgres | Capacidade sob concorrência, lock otimista, trigger de segurança e outbox |
 | `payment` | Postgres | Estado da cobrança e outbox na mesma transação |
-| `report` (planejado) | Postgres com JSONB; data warehouse se crescer | Log só de inserção, consultas agregadas ([ADR 005](005-relatorios.md)) |
-| `certificate` (planejado) | Postgres + armazenamento de objetos (S3 ou similar) para os PDFs | Metadados e código de validação no banco, arquivos fora dele ([ADR 003](003-certificados.md)) |
-| `notification` (planejado) | Postgres, ou nenhum | Só o registro de envios, para idempotência ([ADR 004](004-notificacoes.md)) |
+| `report` (planejado) | Postgres com JSONB; data warehouse se crescer | Log só de inserção, consultas agregadas |
+| `certificate` (planejado) | Postgres + armazenamento de objetos (S3 ou similar) para os PDFs | Metadados e código de validação no banco, arquivos fora dele ([ADR 008](008-certificados.md)) |
+| `notification` (planejado) | Postgres, ou nenhum | Só o registro de envios, para idempotência ([ADR 009](009-notificacoes.md)) |
 
 ## Justificativa
 - O SQLite não precisa de servidor, então o `docker compose up` e os testes continuam rápidos e o modelo pode mudar sem custo.
@@ -43,12 +43,11 @@ Em produção, as necessidades dos serviços atuais são parecidas:
 - **NoSQL (MongoDB, DynamoDB):** escala a escrita, mas complica a transação que muda vaga e fila juntas e o outbox na mesma transação.
 
 ## Consequências
-- **Cada serviço com dados vai precisar migrar.** O código usa recursos do SQLite (tabelas `STRICT`, triggers e `transaction()` síncrona), que serão reescritos no adaptador Postgres ([ADR 014](014-varias-instancias-por-servico.md)).
+- **Cada serviço com dados vai precisar migrar.** O código usa recursos do SQLite (tabelas `STRICT`, triggers e `transaction()` síncrona), que serão reescritos no adaptador Postgres.
 - Enquanto estiver no SQLite, cada serviço roda com uma instância só.
 - Os testes de domínio não mudam. Os testes de repositório e de integração passam a rodar contra um Postgres em contêiner.
 - Em produção, vêm backup, migrações de schema e pool de conexões.
 
 ## Referências
-- [008-controle-de-vagas-no-credenciamento.md](008-controle-de-vagas-no-credenciamento.md)
-- [014-varias-instancias-por-servico.md](014-varias-instancias-por-servico.md)
+- [003-controle-de-vagas-no-credenciamento.md](003-controle-de-vagas-no-credenciamento.md)
 - [Documentação do PostgreSQL](https://www.postgresql.org/docs/)

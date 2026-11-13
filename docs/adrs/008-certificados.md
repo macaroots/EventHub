@@ -1,5 +1,5 @@
 # Título: Certificados em microsserviço próprio
-Número do ADR: 003
+Número do ADR: 008
 Data: 2026-11-03
 Responsável: Renato
 Status: Proposto
@@ -32,10 +32,10 @@ Criar um microsserviço `certificate` só para emitir e validar:
 - Mais um serviço para implantar e operar.
 - Persistência: metadados e código de validação no Postgres, e PDFs num armazenamento de objetos ([ADR 000](000-escolha-banco.md)).
 - O registration passa a emitir `CertificateRequested`, um por participante, ao receber `EventEnded` da secretaria. O encerramento é manual, pelo organizador, para permitir correções de presença antes da emissão.
-- O critério de elegibilidade (por atividade ou por evento, presença mínima) ainda precisa de um ADR. Implementado provisoriamente: um certificado por evento, com as atividades em que houve check-in (basta uma) ([registration](../../microservices/registration/README.md#certificados-adr-003)).
+- O critério de elegibilidade (por atividade ou por evento, presença mínima) ainda precisa de um ADR. Implementado provisoriamente: um certificado por evento, com as atividades em que houve check-in (basta uma) ([registration](../../microservices/registration/README.md#certificados-adr-008)).
 - Pré-requisito: o identity ainda não tem nome completo, só `username`.
 - O certificado é uma cópia dos dados no momento da emissão. Mudanças posteriores (nome, carga horária) exigem reemissão.
 
 ## Referências
-- [012-forma-do-checkin.md](012-forma-do-checkin.md)
+- [006-forma-do-checkin.md](006-forma-do-checkin.md)
 - [001-comunicacao-assincrona.md](001-comunicacao-assincrona.md)
