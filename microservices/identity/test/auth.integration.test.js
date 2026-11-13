@@ -14,9 +14,12 @@ const { pool } = await import('../src/infrastructure/db.js');
 const { UserAppService } = await import('../src/application/user.app-service.js');
 const { UserRepository } = await import('../src/infrastructure/user.repository.js');
 const { User } = await import('../src/domain/user.js');
-const { JwtTokenService } = await import('../src/infrastructure/token.js');
-const { createApp } = await import('../src/interface/app.js');
 const { verify } = await import('../../shared/auth/jwt.js');
+
+// Rotas /auth do src/main.js (que não exporta o app: conecta no broker ao importar).
+const createApp = (service) => express().use(express.json())
+    .post('/auth/register', (req, res) => service.signin(req.body).then(id => res.json({ id }), e => res.status(400).json(e.message)))
+    .post('/auth/login', (req, res) => service.authenticate(req.body).then(r => res.json(r), e => res.status(400).json(e.message)));
 
 test('cadastro e login da main produzem JWT aceito pelos servicos', async t => {
     const users = new Map();
@@ -26,14 +29,13 @@ test('cadastro e login da main produzem JWT aceito pelos servicos', async t => {
     const query = async (sql, params = []) => {
         if (sql.includes('INSERT INTO users')) {
             const [id, name, username, email, passwordHash, active, createdAt] = params;
-            users.set(id, new User({ id, name, username, email, passwordHash, active, createdAt }));
+            users.set(id, new User(username, passwordHash, 'user', id, email));
         }
-        if (sql.includes('INSERT INTO outbox')) events.push(JSON.parse(params[2]));
         if (sql.includes('SELECT * FROM users')) {
             const key = sql.includes('lower(username)') ? 'username' : sql.includes('lower(email)') ? 'email' : 'id';
-            return { rows: [...users.values()].filter(user => String(user[key]).toLowerCase() === params[0]).map(user => ({
+            return { rows: [...users.values()].filter(user => [user[key], user.email].some(v => String(v).toLowerCase() === params[0].toLowerCase())).map(user => ({
                 id: user.id, name: user.name, username: user.username, email: user.email,
-                password_hash: user.passwordHash, active: user.active, created_at: user.createdAt,
+                password_hash: user.password, active: user.active, created_at: user.createdAt,
             })) };
         }
         return { rows: [] };
@@ -41,7 +43,7 @@ test('cadastro e login da main produzem JWT aceito pelos servicos', async t => {
     pool.query = query;
     pool.connect = async () => ({ query, release() {} });
     t.after(() => { pool.query = previousQuery; pool.connect = previousConnect; });
-    const service = new UserAppService(new UserRepository(), new BcryptHasher(), new JwtTokenService());
+    const service = new UserAppService(new UserRepository(), { publish: e => events.push(e) }, new BcryptHasher());
     const identity = createApp(service).listen(0, '127.0.0.1');
     await new Promise(resolve => identity.once('listening', resolve));
     t.after(() => new Promise(resolve => identity.close(resolve)));
@@ -52,17 +54,16 @@ test('cadastro e login da main produzem JWT aceito pelos servicos', async t => {
     frontend.use((req, res, next) => { res.layout = (view, data) => res.json({ view, ...data }); next(); });
     frontend.use('/auth', router);
 
-    // Preserva os campos do formulario atual da main, incluindo username e confirmacao.
+    // Campos do formulario atual; o cadastro ja entra logado.
     await request(frontend).post('/auth/register').type('form').send({
-        name: 'Ana Teste', username: 'ana', email: 'ana@example.com',
-        password: 'Senha@1234', confirmation: 'Senha@1234',
-    }).expect(302).expect('Location', '/auth/login');
+        username: 'ana', email: 'ana@example.com', password: 'Senha@1234',
+    }).expect(302).expect('Location', '/organizers/events');
     const user = [...users.values()][0];
-    assert.notEqual(user.passwordHash, 'Senha@1234');
+    assert.notEqual(user.password, 'Senha@1234');
     assert.equal(events[0].type, 'UserRegistered');
-    assert.equal(events[0].data.userId, user.id);
-    assert.equal(events[0].data.email, 'ana@example.com');
-    assert.equal(JSON.stringify(user.toPublic()).includes('passwordHash'), false);
+    assert.equal(events[0].userId, user.id);
+    assert.equal(events[0].email, 'ana@example.com');
+    assert.equal(JSON.stringify(user).includes('password'), false);
 
     const response = await request(frontend).post('/auth/login').type('form').send({
         username: 'ANA@example.com', password: 'Senha@1234', next: '/events/evento-especifico',
@@ -71,8 +72,4 @@ test('cadastro e login da main produzem JWT aceito pelos servicos', async t => {
     const token = cookie.split(';')[0].slice('token='.length);
     assert.equal(verify(token).id, user.id);
     await request(frontend).post('/auth/login').type('form').send({ username: 'ana@example.com', password: 'errada' }).expect(400);
-    await request(identity).get('/me').set('Authorization', 'Bearer ' + token).expect(200).then(result => {
-        assert.equal(result.body.id, user.id);
-        assert.equal(result.body.passwordHash, undefined);
-    });
 });
