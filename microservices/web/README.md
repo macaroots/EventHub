@@ -1,6 +1,8 @@
 # Web
 
 Telas do organizador (`/organizers/...`):
+- `events/:id`, aba **Relatórios**: carrega indicadores de inscrições, presenças, atividades e pagamentos do microserviço `reports`, além de participantes paginados (25 por página). **Baixar relatório** exporta `relatorio.xlsx` com resumo, atividades, participantes e pagamentos. Os dados são projeções assíncronas; um evento recém-criado pode ainda não ter relatório disponível.
+- Conexão com relatórios: `REPORTS_URL` (padrão `http://reports:3006`; fora do Docker, use `http://localhost:3006`). O web encaminha o JWT do usuário; a autorização continua no `reports`. As chamadas têm timeout de 30 segundos e não usam cache. O Compose inclui o serviço e o volume `reports-data`; inicie o consumer antes de criar os eventos, pois não há reconstrução automática do histórico.
 - `events`: lista e cria. `events/:id`: edita, publica, encerra (pede os certificados), cancela, apaga, gerencia organizadores e lista atividades. `activities/:id` e `events/:id/activities/new`: formulário da atividade (a regra `minimumAge` vira um campo "Idade mínima").
 - `activities/:id/registrations`: gestão das inscrições da atividade (link na lista de atividades do evento e na atividade). Mostra a ocupação, filtra por status (`?status=`), mostra fila de espera e reservas aguardando pagamento, aprova a pendência `age verification` e cancela inscrições (motivo opcional). Quem autoriza é o registration (organizador do evento).
 - `activities/:id/checkin`: abre e fecha o check-in, gera um código novo, mostra presentes/confirmados e marca a presença na mão. `?display=1` mostra só o código em letras grandes, para o projetor, e recarrega a cada 10 s. A página de inscrições mostra o comparecimento e quem está presente.

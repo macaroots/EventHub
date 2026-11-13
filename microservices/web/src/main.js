@@ -8,6 +8,7 @@ import { router as activities } from './routes/activities.js';
 import { router as registration } from './routes/registration.js';
 import { router as organizerRegistrations } from './routes/organizer-registrations.js';
 import { router as payment } from './routes/payment.js';
+import { router as reports } from './routes/reports.js';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -22,7 +23,7 @@ app.use(express.static(path.join(import.meta.dirname, 'public')));
 app.use(layout);
 
 app.use('/auth', auth);
-app.use('/organizers', events, activities, organizerRegistrations);
+app.use('/organizers', events, activities, organizerRegistrations, reports);
 app.use(registration);
 app.use(payment);
 

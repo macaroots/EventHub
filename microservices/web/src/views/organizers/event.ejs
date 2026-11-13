@@ -6,7 +6,7 @@
         <h1><%= event.name %></h1>
         <span class="status-pill status-<%= event.status %>"><%= statusLabel %></span>
     </div>
-    <p class="event-subtitle">Gerencie as informações, atividades e organizadores do seu evento.</p>
+    <p class="event-subtitle">Gerencie as informações, atividades e organizadores e acompanhe os relatórios do seu evento.</p>
     <% if (canceled) { %><p class="notice notice-error">Cancelado: <%= event.cancelReason %></p><% } %>
     <% if (ended) { %><p class="notice notice-info">Encerrado: os certificados de quem teve presença foram solicitados.</p><% } %>
     <% if (!draft) { %><p class="muted">Evento e atividades não mudam depois de publicados.</p><% } %>
@@ -24,6 +24,10 @@
     <button class="event-tab" id="tab-organizers" type="button" role="tab" aria-selected="false" aria-controls="panel-organizers" data-tab="panel-organizers" tabindex="-1">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         Organizadores <span class="tab-count"><%= organizers.length %></span>
+    </button>
+    <button class="event-tab" id="tab-reports" type="button" role="tab" aria-selected="false" aria-controls="panel-reports" data-tab="panel-reports" tabindex="-1">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3h12l4 4v14H4zM8 16v-3M12 16V9M16 16v-5"/></svg>
+        Relatórios
     </button>
 </nav>
 
@@ -129,8 +133,31 @@
         <% } %>
     </div>
 </section>
+<section class="event-tab-panel" id="panel-reports" role="tabpanel" aria-labelledby="tab-reports" data-url="<%= base %>/reports" hidden>
+    <div class="data-panel">
+        <div class="panel-heading">
+            <div><span class="eyebrow">ACOMPANHAMENTO</span><h2>Relatórios do evento</h2><p>Inscrições, presenças e pagamentos consolidados.</p></div>
+            <button class="btn-primary" id="report-download" type="button">Baixar relatório</button>
+        </div>
+        <p class="muted">Os dados são atualizados de forma assíncrona e podem levar alguns instantes para aparecer.</p>
+        <p id="report-feedback" role="status" aria-live="polite"></p>
+        <button class="btn-secondary" id="report-retry" type="button" hidden>Tentar novamente</button>
+        <div id="report-content"></div>
+        <section aria-labelledby="report-participants-title">
+            <h3 id="report-participants-title">Participantes</h3>
+            <p id="report-participants-feedback" role="status" aria-live="polite"></p>
+            <div id="report-participants"></div>
+            <div class="report-pagination">
+                <button class="btn-secondary" id="report-previous" type="button" disabled>Anterior</button>
+                <span id="report-page"></span>
+                <button class="btn-secondary" id="report-next" type="button" disabled>Próxima</button>
+                <button class="btn-secondary" id="report-participants-retry" type="button" hidden>Tentar novamente</button>
+            </div>
+        </section>
+    </div>
+</section>
 </div>
-
+<script src="/js/event-reports.js" defer></script>
 <script>
 (() => {
     const tabs = [...document.querySelectorAll('.event-tab')];
@@ -145,6 +172,7 @@
         panels.forEach(panel => {
             panel.hidden = panel.id !== tab.dataset.tab;
         });
+        document.dispatchEvent(new CustomEvent('event-tab-activated', { detail: tab.dataset.tab }));
     };
     tabs.forEach((tab, index) => {
         tab.addEventListener('click', () => activate(tab));
