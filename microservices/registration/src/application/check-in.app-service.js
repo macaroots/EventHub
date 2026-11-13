@@ -15,16 +15,31 @@ export class CheckInAppService {
     open(activityId, user) {
         this.#assertOpenEvent(this.#manageable(activityId, user));
         const checkIn = this.checkInRepository.getById(activityId) ?? new CheckIn({ id: activityId });
-        checkIn.open();
-        this.checkInRepository.upsert(checkIn);
+        checkIn.open(new Date(Math.max(Date.now(), checkIn.openedAt ? Date.parse(checkIn.openedAt) + 1 : 0)));
+        this.messageBus.transaction(() => {
+            this.checkInRepository.upsert(checkIn);
+            for (const registration of this.registrationRepository.listByActivity(activityId)) {
+                if (registration.status === 'confirmed') this.messageBus.publish({
+                    type: 'CheckInOpened', registrationId: registration.id, userId: registration.userId,
+                    activityId, activityName: this.activityRepository.getHeader(activityId).name,
+                    code: checkIn.code, openedAt: checkIn.openedAt,
+                });
+            }
+        });
         return this.get(activityId, user);
     }
     close(activityId, user) {
         this.#manageable(activityId, user);
         const checkIn = this.checkInRepository.getById(activityId);
         if (checkIn) {
+            const closedAt = new Date(Math.max(Date.now(), Date.parse(checkIn.openedAt || 0) + 1)).toISOString();
             checkIn.close();
-            this.checkInRepository.update(checkIn);
+            this.messageBus.transaction(() => {
+                this.checkInRepository.update(checkIn);
+                for (const registration of this.registrationRepository.listByActivity(activityId)) {
+                    if (registration.status === 'confirmed') this.messageBus.publish({ type: 'CheckInClosed', registrationId: registration.id, userId: registration.userId, activityId, closedAt });
+                }
+            });
         }
         return this.get(activityId, user);
     }

@@ -1,5 +1,8 @@
 import { Router } from 'express';
 import * as identity from '../clients/identity.js';
+import { api } from '../clients/http.js';
+const notification = api(process.env.NOTIFICATION_URL || 'http://notification:3006');
+const syncContact = token => notification('/contacts/me', { cookies: { token } }, { method: 'PUT', signal: AbortSignal.timeout(2000) }).catch(() => {});
 
 export const router = Router();
 
@@ -27,6 +30,7 @@ router.post('/login', async (req, res) => {
         
         const { token } = await response.json();
         if (token) {
+            await syncContact(token);
             res.cookie('token', token, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',
@@ -78,6 +82,7 @@ router.post('/register', async (req, res) => {
             if (loginRes.ok) {
                 const { token } = await loginRes.json();
                 if (token) {
+                    await syncContact(token);
                     res.cookie('token', token, {
                         httpOnly: true,
                         secure: process.env.NODE_ENV === 'production',

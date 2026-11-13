@@ -21,6 +21,11 @@
     ><%= event.information ?? '' %></textarea>
 </div>
 
+<div class="hub-form-group">
+    <label for="eventLocation">Local do evento</label>
+    <input id="eventLocation" name="location" class="hub-form-input" placeholder="Ex: Auditório central ou Online" value="<%= event.location ?? '' %>">
+</div>
+
 <div class="form-grid-two">
     <div class="hub-form-group">
         <label for="startDate">Data de início</label>

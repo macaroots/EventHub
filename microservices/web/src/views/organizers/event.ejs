@@ -61,14 +61,29 @@
             </form>
             <% } %>
             <% if (published) { %>
-            <form method="post" action="<%= base %>/end" onsubmit="return confirm('Encerrar o evento? Inscrições e check-in fecham e os certificados são solicitados. Corrija as presenças antes.')">
-                <button class="btn-secondary" type="submit">Encerrar evento</button>
+            <form method="post" action="<%= base %>/end">
+                <button class="btn-secondary" type="button" onclick="document.getElementById('end-event-dialog').showModal()">Encerrar evento</button>
+                <noscript><button class="btn-secondary" type="submit">Encerrar evento</button></noscript>
+                <dialog id="end-event-dialog" class="event-action-dialog" aria-labelledby="end-event-title" aria-describedby="end-event-description">
+                    <span class="event-dialog-icon" aria-hidden="true">!</span>
+                    <h2 id="end-event-title">Encerrar evento?</h2>
+                    <p id="end-event-description">As inscrições e o check-in serão fechados, e os certificados serão solicitados. Confira as presenças antes de continuar.</p>
+                    <div class="event-dialog-actions"><button class="btn-secondary" type="button" onclick="document.getElementById('end-event-dialog').close()" autofocus>Voltar</button><button class="btn-primary" type="submit">Sim, encerrar evento</button></div>
+                </dialog>
             </form>
             <% } %>
             <% if (draft || published) { %>
             <form method="post" action="<%= base %>/cancel" class="critical-cancel">
-                <button class="btn-danger" type="submit" onclick="return confirm('Cancelar este evento?')">Cancelar evento</button>
-                <input name="reason" placeholder="Motivo do cancelamento" required>
+                <button class="btn-danger" type="button" onclick="document.getElementById('event-cancel-reason').disabled=false;document.getElementById('event-cancel-reason').required=true;document.getElementById('cancel-event-dialog').showModal()">Cancelar evento</button>
+                <dialog id="cancel-event-dialog" class="event-action-dialog" aria-labelledby="cancel-event-title" aria-describedby="cancel-event-description">
+                    <span class="event-dialog-icon event-dialog-icon--danger" aria-hidden="true">!</span>
+                    <h2 id="cancel-event-title">Cancelar evento?</h2>
+                    <p id="cancel-event-description">O evento e as inscrições serão cancelados. Informe o motivo para continuar.</p>
+                    <label class="event-dialog-label" for="event-cancel-reason">Motivo do cancelamento</label>
+                    <input id="event-cancel-reason" class="hub-form-input" name="reason" placeholder="Informe o motivo" disabled>
+                    <div class="event-dialog-actions"><button class="btn-secondary" type="button" onclick="document.getElementById('cancel-event-dialog').close()" autofocus>Voltar</button><button class="btn-danger" type="submit">Sim, cancelar evento</button></div>
+                </dialog>
+                <noscript><label for="event-cancel-reason-fallback">Motivo do cancelamento</label><input id="event-cancel-reason-fallback" name="reason" placeholder="Motivo do cancelamento" required><button class="btn-danger" type="submit">Cancelar evento</button></noscript>
             </form>
             <% } %>
             <% if (draft || canceled) { %>
@@ -146,16 +161,16 @@
     </div>
 </section>
 <section class="event-tab-panel" id="panel-reports" role="tabpanel" aria-labelledby="tab-reports" data-url="<%= base %>/reports" hidden>
-    <div class="data-panel">
-        <div class="panel-heading">
+    <div class="data-panel report-panel">
+        <div class="panel-heading report-panel-heading">
             <div><span class="eyebrow">ACOMPANHAMENTO</span><h2>Relatórios do evento</h2><p>Inscrições, presenças e pagamentos consolidados.</p></div>
             <button class="btn-primary" id="report-download" type="button">Baixar relatório</button>
         </div>
-        <p class="muted">Os dados são atualizados de forma assíncrona e podem levar alguns instantes para aparecer.</p>
+        <p class="muted report-update-note">Os dados são atualizados de forma assíncrona e podem levar alguns instantes para aparecer.</p>
         <p id="report-feedback" role="status" aria-live="polite"></p>
         <button class="btn-secondary" id="report-retry" type="button" hidden>Tentar novamente</button>
         <div id="report-content"></div>
-        <section aria-labelledby="report-participants-title">
+        <section class="report-participants-section" aria-labelledby="report-participants-title">
             <h3 id="report-participants-title">Participantes</h3>
             <p id="report-participants-feedback" role="status" aria-live="polite"></p>
             <div id="report-participants"></div>

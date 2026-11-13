@@ -1,0 +1,20 @@
+.registration-card { padding: 1.75rem; }
+.registration-card-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; }
+.registration-card-heading h1 { margin: .4rem 0 0; }
+.registration-summary { display: grid; gap: 1rem; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 1.15rem; margin: 0 0 1.5rem; border: 1px solid #e0e7ef; border-radius: 8px; background: #f8fafc; }
+.registration-summary dt { color: #687f9a; font-size: .8rem; margin-bottom: .3rem; }
+.registration-summary dd { color: #102c4e; font-weight: 600; margin: 0; overflow-wrap: anywhere; }
+.registration-actions { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: 1.25rem; }
+.registration-actions form { margin: 0; }
+.registration-card > a.btn-primary { display: inline-block; }
+.registration-card > .data-panel { margin-top: 1.5rem; }
+.cancel-dialog { position: fixed; inset: 0; margin: auto; max-height: calc(100dvh - 2rem); overflow-y: auto; width: min(90vw, 440px); border: 0; border-radius: 10px; padding: 1.5rem; color: #102c4e; box-shadow: 0 16px 50px #001b3c44; }
+.cancel-dialog::backdrop { background: #06172bb3; }
+.cancel-dialog h2 { margin-top: 0; }
+.cancel-dialog p { color: #607895; line-height: 1.5; }
+.cancel-dialog-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: .75rem; margin-top: 1.5rem; }
+@media (max-width: 600px) { .registration-card { padding: 1.2rem; }.registration-card-heading { align-items: flex-start; flex-direction: column; }.registration-summary { grid-template-columns: 1fr; } }
+
+.registration-payment-info { padding:1.2rem; margin:0 0 .5rem; border-radius:8px; background:#fff7ef; border:1px solid #ffdfc2; }
+.registration-payment-info p { color:#607895; line-height:1.5; }
+.registration-payment-info a { display:inline-block; }

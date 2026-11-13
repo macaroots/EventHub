@@ -9,6 +9,8 @@
         <link rel="stylesheet" href="/css/auth.css">
     <% } else { %>
         <link rel="stylesheet" href="/css/style.css">
+        <% if (currentPath.startsWith('/notifications')) { %><link rel="stylesheet" href="/css/notifications.css"><% } %>
+        <% if (currentPath.startsWith('/payments/')) { %><link rel="stylesheet" href="/css/checkout.css"><% } %>
     <% } %>
 </head>
 <body class="<%= locals.isAuthPage ? 'auth-body' : '' %>">
@@ -53,6 +55,7 @@
                 <a href="/" class="nav-link">Eventos</a>
                 <% if (locals.user) { %>
                 <a href="/registrations" class="nav-link">Minhas inscrições</a>
+                <a href="/notifications" class="nav-link">Notificações</a>
                 <a href="/organizers/events" class="nav-link">Gestão</a>
 
                 <div class="user-profile-pill">
@@ -94,7 +97,7 @@
         </a>
     </li>
 
-    <li class="sidebar-item <%= currentPath.startsWith('/registrations') ? 'active' : '' %>">
+    <li class="sidebar-item <%= currentPath.startsWith('/registrations') && !locals.checkInOnly ? 'active' : '' %>">
         <a href="/registrations">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
@@ -106,8 +109,18 @@
         </a>
     </li>
 
-    <li class="sidebar-item">
-        <a href="#pagamentos">
+    <li class="sidebar-item <%= locals.checkInOnly ? 'active' : '' %>">
+        <a href="/registrations?checkin=1">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="5" y="2" width="14" height="20" rx="2"/>
+                <path d="M12 18h.01"/>
+            </svg>
+            Check-in
+        </a>
+    </li>
+
+    <li class="sidebar-item <%= currentPath.startsWith('/payments') ? 'active' : '' %>">
+        <a href="/payments">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <rect x="1" y="4" width="22" height="16" rx="2"/>
                 <line x1="1" y1="10" x2="23" y2="10"/>
@@ -116,13 +129,13 @@
         </a>
     </li>
 
-    <li class="sidebar-item">
-        <a href="#comunicacoes">
+    <li class="sidebar-item <%= currentPath.startsWith('/notifications') ? 'active' : '' %>">
+        <a href="/notifications">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/>
                 <polyline points="22,6 12,13 2,6"/>
             </svg>
-            Comunicações
+            Notificações
         </a>
     </li>
 

@@ -8,6 +8,7 @@ export class EventSqliteRepository extends SqliteRepository {
                 id TEXT PRIMARY KEY,
                 name TEXT NOT NULL,
                 information TEXT,
+                location TEXT,
                 startDate TEXT,
                 endDate TEXT,
                 status TEXT NOT NULL,
@@ -16,6 +17,8 @@ export class EventSqliteRepository extends SqliteRepository {
                 organizers TEXT NOT NULL -- JSON: [userId]
             ) STRICT
         `);
+        const columns = db.prepare(`PRAGMA table_info(${this.tableName})`).all().map(column => column.name);
+        if (!columns.includes('location')) db.exec(`ALTER TABLE ${this.tableName} ADD COLUMN location TEXT`);
     }
     toRow(bean) { return { ...bean, organizers: JSON.stringify(bean.organizers) }; }
     fromRow(row) { return { ...row, organizers: JSON.parse(row.organizers) }; }

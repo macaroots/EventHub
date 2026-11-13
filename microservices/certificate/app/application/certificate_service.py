@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any, Mapping
+import asyncio
 
 from ..domain.certificate import Certificate
 from ..domain.errors import ForbiddenError, NotFoundError
@@ -27,6 +28,7 @@ class CertificateService:
         self.repository = repository
         self.pdf_generator = pdf_generator
         self.event_publisher = event_publisher
+        self._publishing = asyncio.Lock()
 
     async def criar(self, evento: Mapping[str, Any]) -> tuple[Certificate, bool]:
         """Create the certificate for a ``CertificateRequested`` payload.
@@ -50,19 +52,23 @@ class CertificateService:
         saved = self.repository.add_or_get(certificate)
         created = saved.id == certificate.id
 
-        if created and self.event_publisher is not None:
-            await self.event_publisher.publish(
-                {
-                    "type": "CertificateIssued",
-                    "certificateId": saved.id,
-                    "participantId": saved.user_id,
-                    "eventId": saved.event_id,
-                    "verificationToken": saved.verification_token,
-                    "issuedAt": saved.created_at,
-                }
-            )
+        if self.event_publisher is not None:
+            await self.flush_events()
 
         return saved, created
+
+    async def flush_events(self) -> None:
+        if self.event_publisher is None:
+            return
+        async with self._publishing:
+            for event_id, event in self.repository.pending_events():
+                try:
+                    published = await self.event_publisher.publish(event)
+                except Exception:
+                    return
+                if published is False:
+                    return
+                self.repository.mark_published(event_id)
 
     def get_for_event(self, user_id: str, event_id: str) -> Certificate:
         """Return the certificate already issued for ``(user, event)``.

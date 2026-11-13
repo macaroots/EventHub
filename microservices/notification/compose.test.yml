@@ -1,0 +1,38 @@
+# Ambiente isolado de teste. Não modifica os Compose dos outros microsserviços.
+name: eventhub-notification-test
+services:
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports: ["127.0.0.1:5673:5672"]
+    volumes: ["broker-data:/var/lib/rabbitmq"]
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  mailpit:
+    image: axllent/mailpit:latest
+    ports: ["127.0.0.1:8026:8025", "127.0.0.1:1026:1025"]
+  notification:
+    build: .
+    environment: &environment
+      JWT_SECRET: ${JWT_SECRET:?Configure JWT_SECRET em notification/.env}
+      RABBITMQ_URL: amqp://rabbitmq
+      NOTIFICATION_DB_PATH: /app/data/notifications.db
+      EMAIL_MODE: ${EMAIL_MODE:-log}
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
+      SMTP_FROM: no-reply@eventhub.test
+    ports: ["127.0.0.1:3006:3006"]
+    volumes: ["notification-data:/app/data"]
+  notification-worker:
+    build: .
+    environment: *environment
+    command: ["uv", "run", "--no-sync", "python", "-m", "src.worker"]
+    volumes: ["notification-data:/app/data"]
+    depends_on:
+      rabbitmq: {condition: service_healthy}
+      mailpit: {condition: service_started}
+volumes:
+  notification-data:
+  broker-data:

@@ -571,6 +571,11 @@ class ReportsRepository:
             (data["activityId"], data["id"]),
         )
 
+    def _apply_registration_promoted(self, conn: sqlite3.Connection, event: ParsedEvent) -> None:
+        now = _now_iso()
+        source = event.occurred_at or now
+        conn.execute("UPDATE registrations SET status='pending', source_at=?, updated_at=? WHERE id=? AND status='waitlisted' AND (source_at IS NULL OR ? >= source_at)", (source, now, event.data['registrationId'], source))
+
     def _apply_registration_confirmed(
         self, conn: sqlite3.Connection, event: ParsedEvent
     ) -> None:
@@ -1108,12 +1113,17 @@ _HANDLERS = {
     "ActivityDeleted": ReportsRepository._apply_activity_deleted,
     "RegistrationCreated": ReportsRepository._apply_registration_created,
     "RegistrationConfirmed": ReportsRepository._apply_registration_confirmed,
+    "RegistrationPromoted": ReportsRepository._apply_registration_promoted,
     "RegistrationCanceled": ReportsRepository._apply_registration_canceled,
     "PaymentRequested": ReportsRepository._apply_payment_requested,
     "PaymentApproved": ReportsRepository._apply_payment_approved,
     "PaymentConfirmed": ReportsRepository._apply_payment_approved,
     "PaymentDenied": ReportsRepository._apply_payment_denied,
     "UserCheckedIn": ReportsRepository._apply_user_checked_in,
+    "AttendanceRegistered": ReportsRepository._apply_user_checked_in,
+    "UserRegistered": ReportsRepository._apply_user_created,
+    "EventOrganizersChanged": ReportsRepository._apply_event_updated,
+    "EventEnded": ReportsRepository._apply_event_updated,
     "UserCreated": ReportsRepository._apply_user_created,
     "UserUpdated": ReportsRepository._apply_user_updated,
 }

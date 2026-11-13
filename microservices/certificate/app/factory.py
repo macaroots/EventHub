@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import logging
+import asyncio
+from contextlib import suppress
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -50,9 +52,17 @@ def create_app(
             await publisher.connect()
         if owns_consumer:
             await event_consumer.start()
+        async def relay():
+            while True:
+                await service.flush_events()
+                await asyncio.sleep(2)
+        relay_task = asyncio.create_task(relay())
         try:
             yield
         finally:
+            relay_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await relay_task
             if owns_consumer:
                 await event_consumer.close()
             if owns_publisher:

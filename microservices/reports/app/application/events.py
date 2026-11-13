@@ -19,18 +19,23 @@ EVENT_TYPES: tuple[str, ...] = (
     "ActivityDeleted",
     "RegistrationCreated",
     "RegistrationConfirmed",
+    "RegistrationPromoted",
     "RegistrationCanceled",
     "PaymentRequested",
     "PaymentApproved",
     "PaymentConfirmed",
     "PaymentDenied",
     "UserCheckedIn",
+    "AttendanceRegistered",
+    "UserRegistered",
+    "EventOrganizersChanged",
+    "EventEnded",
     "UserCreated",
     "UserUpdated",
 )
 
-EVENT_STATUSES = {"draft", "published", "canceled"}
-REGISTRATION_STATUSES = {"pending", "confirmed", "canceled"}
+EVENT_STATUSES = {"draft", "published", "canceled", "ended"}
+REGISTRATION_STATUSES = {"pending", "confirmed", "canceled", "waitlisted"}
 PAYMENT_STATUSES = {"requested", "approved", "denied"}
 
 _ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -308,7 +313,7 @@ def _parse_registration_created(payload: Mapping[str, Any]) -> dict[str, Any]:
             "status",
             REGISTRATION_STATUSES,
             default="pending",
-            aliases={"registered": "pending"},
+            aliases={"registered": "pending", "awaiting_payment": "pending"},
         ),
         "requirements": _optional_list(payload, "requirements") or [],
         "reasons": _optional_list(payload, "reasons") or [],
@@ -390,12 +395,17 @@ _PARSERS = {
     "ActivityDeleted": _parse_activity_deleted,
     "RegistrationCreated": _parse_registration_created,
     "RegistrationConfirmed": _parse_registration_confirmed,
+    "RegistrationPromoted": _parse_registration_confirmed,
     "RegistrationCanceled": _parse_registration_canceled,
     "PaymentRequested": _parse_payment_requested,
     "PaymentApproved": _parse_payment_approved,
     "PaymentConfirmed": _parse_payment_approved,
     "PaymentDenied": _parse_payment_denied,
     "UserCheckedIn": _parse_user_checked_in,
+    "AttendanceRegistered": _parse_user_checked_in,
+    "UserRegistered": _parse_user_created,
+    "EventOrganizersChanged": _parse_event_updated,
+    "EventEnded": _parse_event_updated,
     "UserCreated": _parse_user_created,
     "UserUpdated": _parse_user_updated,
 }
@@ -416,11 +426,19 @@ def parse_event(payload: Any) -> ParsedEvent:
         raise BadRequestError("type is required")
     event_type = event_type.strip()
 
-    message_id = _optional_str(payload, "messageId")
-    occurred_at = _optional_datetime(payload, "occurredAt")
-
+    envelope_data = payload.get("data")
+    if isinstance(envelope_data, Mapping):
+        message_id = _optional_str(payload, "id")
+        occurred_at = _optional_datetime(payload, "time")
+        event_payload = envelope_data
+    else:
+        message_id = _optional_str(payload, "messageId")
+        occurred_at = _optional_datetime(payload, "occurredAt")
+        event_payload = payload
     parser = _PARSERS.get(event_type)
-    data = parser(payload) if parser is not None else {}
+    data = parser(event_payload) if parser is not None else {}
+    if event_type == "EventEnded":
+        data["status"] = "ended"
 
     return ParsedEvent(
         type=event_type,

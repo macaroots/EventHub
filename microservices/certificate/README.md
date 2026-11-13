@@ -52,7 +52,7 @@ Fila `certificate`, exchange `event-hub` (topic), routing key `CertificateReques
 - Payload inválido vai para `nack(requeue=False)`; erro transitório para
   `nack(requeue=True)`.
 
-Depois de criar, o serviço publica `CertificateIssued` (best-effort, opcional).
+Depois de criar, o serviço grava `CertificateIssued` no outbox junto ao certificado e tenta publicá-lo novamente caso o RabbitMQ esteja indisponível.
 
 ## Configuração
 

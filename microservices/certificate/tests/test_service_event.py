@@ -46,6 +46,8 @@ def test_criar_persists_the_event_snapshot() -> None:
             "certificateId": certificate.id,
             "participantId": "user-1",
             "eventId": "event-1",
+            "eventName": "Congresso X",
+            "activities": [{"name": "Minicurso A"}, {"name": "Palestra B"}],
             "verificationToken": certificate.verification_token,
             "issuedAt": certificate.created_at,
         }

@@ -21,6 +21,11 @@ CREATE TABLE IF NOT EXISTS certificates (
     UNIQUE (user_id, event_id)
 );
 
+CREATE TABLE IF NOT EXISTS certificate_outbox (
+    certificate_id TEXT PRIMARY KEY,
+    payload TEXT NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_certificates_user ON certificates(user_id);
 CREATE INDEX IF NOT EXISTS idx_certificates_token ON certificates(verification_token);
 """
@@ -46,7 +51,7 @@ class CertificateRepository:
 
     def add_or_get(self, certificate: Certificate) -> Certificate:
         with self._lock, self._connection:
-            self._connection.execute(
+            result = self._connection.execute(
                 """
                 INSERT INTO certificates (
                     id, user_id, event_id, participant_name, event_name,
@@ -66,6 +71,9 @@ class CertificateRepository:
                     certificate.created_at,
                 ),
             )
+            if result.rowcount:
+                payload = {"type": "CertificateIssued", "certificateId": certificate.id, "participantId": certificate.user_id, "eventId": certificate.event_id, "eventName": certificate.event_name, "activities": [dict(a) for a in certificate.activities], "verificationToken": certificate.verification_token, "issuedAt": certificate.created_at}
+                self._connection.execute("INSERT INTO certificate_outbox (certificate_id,payload) VALUES (?,?)", (certificate.id, json.dumps(payload)))
 
         saved = self.get_by_user_and_event(certificate.user_id, certificate.event_id)
         if saved is None:  # pragma: no cover - defensive, the insert must exist
@@ -97,6 +105,15 @@ class CertificateRepository:
                 (user_id,),
             ).fetchall()
         return [self._to_certificate(row) for row in rows]
+
+    def pending_events(self):
+        with self._lock:
+            rows = self._connection.execute("SELECT certificate_id,payload FROM certificate_outbox ORDER BY rowid").fetchall()
+            return [(row["certificate_id"], json.loads(row["payload"])) for row in rows]
+
+    def mark_published(self, certificate_id):
+        with self._lock, self._connection:
+            self._connection.execute("DELETE FROM certificate_outbox WHERE certificate_id=?", (certificate_id,))
 
     def healthcheck(self) -> bool:
         with self._lock:

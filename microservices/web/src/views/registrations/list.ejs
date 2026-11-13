@@ -1,8 +1,8 @@
 <div class="container registration-page">
     <div class="events-section-header">
         <div>
-            <h1 class="section-title">Minhas inscrições</h1>
-            <p class="section-subtitle">Acompanhe suas inscrições em atividades e eventos.</p>
+            <h1 class="section-title"><%= locals.checkInOnly ? 'Registrar presença' : 'Minhas inscrições' %></h1>
+            <p class="section-subtitle"><%= locals.checkInOnly ? 'Selecione uma inscrição confirmada para registrar ou consultar sua presença.' : 'Acompanhe suas inscrições em atividades e eventos.' %></p>
         </div>
         <a href="/" class="btn-secondary registration-page-action">Ver mais eventos</a>
     </div>
@@ -10,7 +10,7 @@
     <% if (!registrations.length) { %>
         <div class="data-panel registration-empty">
             <div class="registration-empty-icon" aria-hidden="true">✓</div>
-            <p>Você ainda não possui nenhuma inscrição.</p>
+            <p><%= locals.checkInOnly ? 'Você ainda não possui inscrições confirmadas disponíveis para check-in.' : 'Você ainda não possui nenhuma inscrição.' %></p>
             <a href="/" class="btn-primary">Explorar eventos abertos</a>
         </div>
     <% } else { %>
@@ -46,7 +46,7 @@
                                 <% } %>
                             </td>
                             <td data-label="Detalhes" class="registration-actions">
-                                <a href="/registrations/<%= r.id %>" class="btn-secondary">Ver detalhes</a>
+                                <a href="/registrations/<%= encodeURIComponent(r.id) %><%= locals.checkInOnly && !r.attendance ? '#registrar-presenca' : '' %>" class="btn-secondary"><%= locals.checkInOnly && !r.attendance ? 'Registrar presença' : 'Ver detalhes' %></a>
                             </td>
                         </tr>
                     <% } %>

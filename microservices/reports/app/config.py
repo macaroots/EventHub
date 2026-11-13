@@ -30,7 +30,7 @@ class Settings:
     data_dir: str = "data"
     jwt_secret: str | None = None
     rabbitmq_url: str | None = None
-    exchange: str = "loja"
+    exchange: str = "event-hub"
     queue: str = "reports"
     currency: str = "BRL"
     max_export_rows: int = 10000
@@ -49,7 +49,7 @@ class Settings:
             data_dir=os.getenv("REPORTS_DATA_DIR") or os.getenv("DADOS") or "data",
             jwt_secret=os.getenv("JWT_SECRET"),
             rabbitmq_url=os.getenv("RABBITMQ_URL") or None,
-            exchange=os.getenv("REPORTS_EXCHANGE", "loja"),
+            exchange=os.getenv("REPORTS_EXCHANGE", "event-hub"),
             queue=os.getenv("REPORTS_QUEUE", "reports"),
             currency=os.getenv("REPORTS_CURRENCY", "BRL"),
             max_export_rows=_read_int("REPORTS_MAX_EXPORT_ROWS", 10000),

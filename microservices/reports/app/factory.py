@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -11,6 +12,7 @@ from .application.reports_service import ReportsService
 from .config import Settings
 from .domain.errors import AppError
 from .http.routes import create_router
+from .infrastructure.bootstrap import bootstrap
 from .infrastructure.consumer import ReportsConsumer
 from .infrastructure.database import ReportsRepository
 
@@ -32,10 +34,12 @@ def create_app(
     service = ReportsService(repository, settings)
 
     owns_consumer = consumer is None
-    event_consumer = consumer or ReportsConsumer(settings.rabbitmq_url, projections)
+    event_consumer = consumer or ReportsConsumer(settings.rabbitmq_url, projections, exchange=settings.exchange, queue=settings.queue)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
+        if os.getenv('REPORTS_BOOTSTRAP_EVENTS_DB'):
+            bootstrap(projections, os.getenv('REPORTS_BOOTSTRAP_EVENTS_DB'), os.getenv('REPORTS_BOOTSTRAP_REGISTRATION_DB'), os.getenv('REPORTS_BOOTSTRAP_PAYMENT_DB'))
         if owns_consumer:
             await event_consumer.start()
         try:

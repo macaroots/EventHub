@@ -100,3 +100,25 @@ def test_jwt_generation_and_decoding():
     decoded = decode_jwt_token(token)
     assert decoded["userId"] == "usr-test"
     assert decoded["role"] == "admin"
+
+async def test_simulated_denial_publishes_insufficient_funds():
+    from src.domain.payment import Payment
+    from src.application.payment_service import PaymentService
+
+    class MemoryRepository:
+        def __init__(self):
+            self.item = Payment(id="p1", registration_id="r1", user_id="u1", amount=25)
+            self.events = []
+        def find_by_id(self, payment_id):
+            return self.item if payment_id == self.item.id else None
+        def update(self, item):
+            self.events.extend(item.pull_messages())
+        def pending_events(self):
+            return []
+
+    repo = MemoryRepository()
+    service = PaymentService(repo, object())
+    result = await service.pay("p1", simulate_status="denied")
+    assert result.status == "denied"
+    assert repo.events[0]["type"] == "PaymentDenied"
+    assert repo.events[0]["reason"] == "Saldo insuficiente"

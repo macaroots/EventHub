@@ -4,12 +4,9 @@ import jwt from 'jsonwebtoken';
 export const currentUser = (req) => {
     try {
         const { userId, name, username, email } = jwt.verify(req.cookies.token, process.env.JWT_SECRET);
-        return userId ? {
-            sub: userId,
-            name: name || username || 'Usuário',
-            username: username || email,
-            email: email || username,
-        } : null;
+        const looksLikeId = value => typeof value === 'string' && (value === userId || /^[0-9a-f]{24,64}$/i.test(value) || /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(value));
+        const displayName = [name, username].find(value => typeof value === 'string' && value.trim() && !looksLikeId(value.trim())) || (typeof email === 'string' && email.includes('@') ? email.split('@')[0] : 'Usuário');
+        return userId ? { sub: userId, name: displayName, username: looksLikeId(username) ? undefined : username, email } : null;
     } catch {
         return null;
     }

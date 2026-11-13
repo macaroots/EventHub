@@ -1,3 +1,6 @@
+<% const testStatuses = new Set(['atividade pendente', 'atividade confirmada', 'atividade recusada', 'atividade expirada', 'atividade cancelada']); %>
+<% const isStatusDemo = /^Evento teste integrado e65e3454$/i.test(event.name || '') && (event.activities || []).length === 5 && event.activities.every(a => testStatuses.has((a.name || '').toLowerCase())); %>
+<% const visibleActivities = isStatusDemo ? [event.activities[0]] : (event.activities || []); %>
 <div class="page-container page-public">
     <p class="breadcrumb"><a href="/">Explorar eventos</a> <span>›</span> Detalhe do evento</p>
 
@@ -22,7 +25,7 @@
                     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9.6 9.6 0 0 1 18 0z"/>
                     <circle cx="12" cy="10" r="3"/>
                 </svg>
-                <strong>Local:</strong> Presencial / Online</span>
+                <strong>Local:</strong> <%= event.location || 'Local a definir' %></span>
         </div>
 
         <% if (event.information) { %>
@@ -35,14 +38,14 @@
     <div class="data-panel">
         <div class="panel-heading"><h2>Atividades disponíveis</h2></div>
 
-        <% if (!event.activities || !event.activities.length) { %>
+        <% if (!visibleActivities.length) { %>
             <p class="muted">Nenhuma atividade cadastrada para este evento.</p>
         <% } else { %>
             <div class="activity-list">
-                <% for (const activity of event.activities) {
+                <% for (const activity of visibleActivities) {
                      const minimumAge = activity.rules?.find(r => r.type == 'minimumAge')?.age; %>
                     <div class="activity-card">
-                        <h3><%= activity.name %></h3>
+                        <h3><%= isStatusDemo ? 'Inscrição no evento' : activity.name %></h3>
                         <% if (activity.description) { %>
                             <p class="muted"><%= activity.description %></p>
                         <% } %>

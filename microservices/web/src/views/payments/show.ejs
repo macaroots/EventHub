@@ -1,20 +1,53 @@
-<div class="page-container page-narrow">
-<p class="breadcrumb"><a href="/registrations/<%= registration.id %>">Inscrição</a> <span>›</span> Pagamento</p>
-<section class="data-panel form-panel">
-    <span class="eyebrow">PAGAMENTO</span>
-    <h1>Pagamento</h1>
-    <p class="payment-summary">
-        <%= registration.event?.name ?? '' %> / <%= registration.activity?.name ?? '' %>.
-        <%= payment.description %>: R$ <%= payment.amount.toFixed(2) %>.
-    </p>
-<% if (payment.status == 'pending') { %>
-    <form method="post" action="/payments/<%= payment.id %>" class="hub-form">
-        <div class="hub-form-group"><label for="receipt">Comprovante</label><input id="receipt" class="hub-form-input" name="receipt" required></div>
-        <button class="btn-primary">Enviar pagamento</button>
-    </form>
-    <p><small>Gateway simulado: o comprovante <code>deny</code> é recusado.</small></p>
-<% } else { %>
-    <p>Pagamento <%= { paid: 'aprovado', denied: 'recusado', canceled: 'cancelado (a reserva expirou ou a inscrição foi cancelada)' }[payment.status] ?? payment.status %>.</p>
-<% } %>
-</section>
+<% const paymentUrl = '/payments/' + encodeURIComponent(payment.id); %>
+<% const registrationUrl = '/registrations/' + encodeURIComponent(registration.id); %>
+<% const shownStatus = payment.status === 'pending' && registration.status === 'canceled' ? 'canceled' : payment.status; %>
+<% const amount = payment.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); %>
+<div class="page-container checkout-page">
+    <p class="breadcrumb"><a href="/registrations">Minhas inscrições</a> <span>›</span> Pagamento</p>
+    <span class="eyebrow">MINHA INSCRIÇÃO</span>
+    <h1>Pagamento da inscrição</h1>
+    <p class="checkout-subtitle">Acompanhe a cobrança da sua atividade.</p>
+    <div class="checkout-steps" aria-label="Etapas da inscrição"><span>1 &nbsp; Atividades</span><span>2 &nbsp; Resumo</span><strong><b>3</b> Pagamento</strong></div>
+    <section class="checkout-summary data-panel">
+        <div><h2><%= registration.event?.name || 'Evento' %></h2><p><%= registration.activity?.name || 'Atividade' %></p><small>Inscrição <%= registration.id %> · Cobrança demonstrativa</small></div>
+        <div class="checkout-amount"><strong><%= amount %></strong><span class="checkout-status status-<%= shownStatus %>"><%= ({pending:'Pendente de pagamento',paid:'Aprovado',expired:'Expirado',denied:'Recusado',canceled:'Cancelado'})[shownStatus] || shownStatus %></span></div>
+    </section>
+    <section class="data-panel checkout-panel">
+    <% if (payment.status === 'pending' && registration.status === 'awaiting_payment') { %>
+        <h2>Concluir compra</h2>
+        <% if (payment.expiresAt) { %><p id="payment-timer" class="checkout-timer" data-expires-at="<%= payment.expiresAt %>" data-status-url="<%= paymentUrl %>/status.json" role="status">Prazo para concluir: <strong>--:--</strong></p><script src="/js/payment-timer.js" defer></script><% } %>
+        <div class="checkout-tabs" aria-label="Método de pagamento"><a href="<%= paymentUrl %>?method=pix" class="<%= method === 'pix' ? 'selected' : '' %>" <%= method === 'pix' ? 'aria-current=page' : '' %>>PIX simulado</a><a href="<%= paymentUrl %>?method=card" class="<%= method === 'card' ? 'selected' : '' %>" <%= method === 'card' ? 'aria-current=page' : '' %>>Cartão simulado</a></div>
+        <div class="checkout-demo"><strong>Ambiente de demonstração</strong><p>Esta compra é simulada. Não envie dinheiro nem informe dados bancários reais.</p></div>
+        <% if (method === 'card') { %><div class="checkout-method"><h3>Cartão de teste</h3><div class="checkout-card"><span>EVENTHUB · DEMONSTRAÇÃO</span><strong>DEMO •••• 0142</strong><span>Não são solicitados dados reais</span></div></div>
+        <% } else { %>
+            <div class="checkout-method checkout-pix">
+                <div class="checkout-pix-mark" aria-label="Símbolo ilustrativo do PIX">
+                    <svg viewBox="0 0 80 80" aria-hidden="true" focusable="false">
+                        <path fill="#168f83" d="M40 3 21 22l10 10c5 5 13 5 18 0l10-10L40 3Zm0 74 19-19-10-10c-5-5-13-5-18 0L21 58l19 19ZM3 40l14-14 11 11c7 7 17 7 24 0l11-11 14 14-14 14-11-11c-7-7-17-7-24 0L17 54 3 40Z"/>
+                    </svg>
+                    <span>DEMONSTRAÇÃO</span>
+                </div>
+                <div class="checkout-pix-details"><h3>PIX ilustrativo · <%= amount %></h3><p>Código demonstrativo, não pagável</p><div class="checkout-code">PIX-DEMO-<%= payment.id %>-NAO-PAGAVEL</div><small>Este código não realiza transferências.</small></div>
+            </div>
+        <% } %>
+        <p class="checkout-description">Ingresso para <strong><%= registration.activity?.name || 'a atividade' %></strong> · <strong><%= amount %></strong></p>
+        <form method="post" action="<%= paymentUrl %>" class="checkout-purchase-actions"><input type="hidden" name="method" value="<%= method %>">
+            <button class="btn-primary" name="outcome" value="success" type="submit" data-payment-action>Simular compra</button>
+            <button class="btn-secondary" name="outcome" value="denied" type="submit" data-payment-action>Simular compra negada</button>
+        </form>
+        <form method="post" action="<%= paymentUrl %>/cancel" class="checkout-cancel-form">
+            <button type="button" class="btn-secondary" onclick="document.getElementById('cancel-purchase-dialog').showModal()">Cancelar compra</button>
+            <noscript><button type="submit" class="btn-secondary">Cancelar compra</button></noscript>
+            <dialog id="cancel-purchase-dialog" class="checkout-dialog"><h2>Cancelar compra?</h2><p>A inscrição será cancelada e a vaga liberada.</p><div class="checkout-actions"><button type="button" class="btn-secondary" onclick="document.getElementById('cancel-purchase-dialog').close()">Voltar</button><button type="submit" class="btn-danger">Confirmar cancelamento</button></div></dialog>
+        </form>
+    <% } else if (payment.status === 'paid') { %>
+        <div class="checkout-result checkout-result--success"><div class="checkout-result-icon">✓</div><h2>Pagamento aprovado</h2><h3><%= registration.status === 'confirmed' ? 'Inscrição confirmada' : 'Aguardando confirmação da inscrição' %></h3><p>Pagamento simulado de <%= amount %> aprovado. <%= registration.status === 'confirmed' ? 'Sua vaga está confirmada.' : 'A inscrição será atualizada assim que o pagamento for processado.' %></p></div>
+        <div class="checkout-actions"><a class="btn-primary" href="<%= registrationUrl %>">Ver inscrição</a><a class="btn-secondary" href="/registrations">Minhas inscrições</a></div>
+    <% } else { %>
+        <% const expired = payment.status === 'expired' || registration.reasons?.some(reason => /expir/i.test(reason)); %>
+        <div class="checkout-result checkout-result--error"><div class="checkout-result-icon">!</div><h2><%= expired ? 'O prazo desta cobrança terminou' : payment.status === 'denied' ? 'Compra negada' : 'Compra cancelada' %></h2><h3>Sua inscrição não foi confirmada</h3><p><%= expired ? 'A compra foi cancelada por tempo expirado. A cobrança anterior não pode ser utilizada.' : payment.status === 'denied' ? 'Compra cancelada por saldo insuficiente.' : 'Você cancelou a compra e a vaga foi liberada.' %></p><p>Uma nova inscrição depende da disponibilidade de vagas na atividade.</p></div>
+        <div class="checkout-actions"><% if (registration.event?.id) { %><a class="btn-primary" href="/events/<%= encodeURIComponent(registration.event.id) %>">Ver evento</a><% } %><a class="btn-secondary" href="/registrations">Minhas inscrições</a></div>
+    <% } %>
+    <p class="checkout-notifications"><a href="/notifications?registrationId=<%= encodeURIComponent(registration.id) %>">Ver notificações desta compra →</a></p>
+    </section>
 </div>
